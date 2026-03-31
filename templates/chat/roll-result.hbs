@@ -165,10 +165,12 @@
   {{#if isGM}}
   {{#if isWound}}
   {{#if targetRating}}
+  {{#unless isPlayerTakingDamage}}
   <div class="npc-damage-info gm-only">
     <div class="npc-damage-row"><i class="fas fa-skull"></i><span>NPC defeat threshold: <strong>{{multiply targetRating 3}}</strong> total wound rating (Rating {{targetRating}} × 3)</span></div>
     <div class="npc-damage-row wound-dealt-row"><i class="fas fa-heart-broken"></i><span>This wound: <strong>{{woundRating}}</strong> — auto-applied to active NPC in tracker</span></div>
   </div>
+  {{/unless}}
   {{/if}}
   {{/if}}
   {{#if isInstantKill}}

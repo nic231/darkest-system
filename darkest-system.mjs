@@ -433,7 +433,7 @@ Hooks.on('darkestSystem.doomGained', async (actor, roll) => {
 
   // Automatically create a doom item on the actor
   await actor.addDoom(
-    'A nameless dread settles upon you',
+    'A nameless dread settles upon you...',
     'Called Upon the Woods'
   );
 });

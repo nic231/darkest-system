@@ -68,6 +68,26 @@
     <polygon points="1110,675 1155,400 1200,675"/>
   </g>
 
+  <!-- House silhouette — nestled in the treeline, slightly left of centre -->
+  <g fill="#080705">
+    <!-- Main body -->
+    <rect x="480" y="530" width="110" height="90"/>
+    <!-- Steep roof -->
+    <polygon points="468,530 535,455 602,530"/>
+    <!-- Left dormer -->
+    <polygon points="484,510 503,490 522,510"/>
+    <rect x="489" y="510" width="28" height="20"/>
+    <!-- Chimney -->
+    <rect x="548" y="448" width="14" height="35"/>
+    <!-- Porch / step -->
+    <rect x="518" y="618" width="34" height="8"/>
+    <!-- Door -->
+    <rect x="524" y="578" width="22" height="42"/>
+  </g>
+  <!-- Faint amber window glow -->
+  <rect x="492" y="548" width="18" height="18" fill="#c49a2a" opacity="0.18"/>
+  <rect x="555" y="548" width="18" height="18" fill="#c49a2a" opacity="0.12"/>
+
   <!-- Bottom ground fill -->
   <rect x="0" y="620" width="1200" height="55" fill="#080705"/>
 

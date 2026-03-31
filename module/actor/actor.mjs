@@ -227,6 +227,7 @@ export class DarkestActor extends Actor {
 
     await roll.evaluate();
 
+    roll.isPlayerTakingDamage = true;
     await roll.toMessage({
       speaker: ChatMessage.getSpeaker({ actor: this }),
       flavor: options.flavor || `${this.name} takes ${woundType} damage`

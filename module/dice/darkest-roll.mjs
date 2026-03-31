@@ -224,7 +224,8 @@ export class DarkestRoll extends Roll {
       dice: this.dice,
       darkestDieRoll: this.darkestDieRoll,
       // GM flag for conditional display
-      isGM: game.user.isGM
+      isGM: game.user.isGM,
+      isPlayerTakingDamage: this.isPlayerTakingDamage ?? false
     };
 
     const content = await renderTemplate(

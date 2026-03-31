@@ -228,8 +228,8 @@ export class DarkestActorSheet extends ActorSheet {
     // Death check button
     html.find('.death-check').click(this._onDeathCheck.bind(this));
 
-    // Heal lowest wound button
-    html.find('.heal-lowest-wound').click(this._onHealLowestWound.bind(this));
+    // Heal wound button (choose lowest, highest, or specific)
+    html.find('.heal-wound-btn').click(this._onHealWound.bind(this));
 
     // Rest to recover from wounds
     html.find('.rest-wounds').click(this._onRestWounds.bind(this));
@@ -903,59 +903,89 @@ export class DarkestActorSheet extends ActorSheet {
   }
 
   /**
-   * Handle healing the lowest rated wound (removes it entirely)
+   * Handle healing a wound — opens a dialog to choose lowest, highest, or a specific wound
    */
-  async _onHealLowestWound(event) {
+  async _onHealWound(event) {
     event.preventDefault();
 
-    // Get all active (unhealed) wounds
-    const activeWounds = this.actor.items.filter(
-      i => i.type === 'wound' && !i.system.healed
-    );
+    const activeWounds = this.actor.items.filter(i => i.type === 'wound' && !i.system.healed);
 
     if (activeWounds.length === 0) {
       ui.notifications.info('No active wounds to heal.');
       return;
     }
 
-    // Find the lowest rated wound
-    const lowestWound = activeWounds.reduce((lowest, wound) =>
-      wound.system.rating < lowest.system.rating ? wound : lowest
-    );
+    const sorted = [...activeWounds].sort((a, b) => a.system.rating - b.system.rating);
+    const lowest = sorted[0];
+    const highest = sorted[sorted.length - 1];
 
-    const confirmed = await Dialog.confirm({
+    const woundRows = sorted.map(w =>
+      `<button type="button" class="heal-opt" data-id="${w.id}">
+        <span class="heal-opt-rating">Rating ${w.system.rating}</span>
+        <span class="heal-opt-name">${w.name}</span>
+        <span class="heal-opt-type">${w.system.type}</span>
+      </button>`
+    ).join('');
+
+    const single = sorted.length === 1;
+
+    const content = `<div class="darkest-dialog heal-choice-dialog">
+      <div class="heal-options">
+        ${single ? woundRows : `
+        <button type="button" class="heal-opt heal-opt-preset" data-id="${lowest.id}">
+          <i class="fas fa-arrow-down"></i>
+          <span>Heal Lowest</span>
+          <span class="heal-opt-preview">Rating ${lowest.system.rating} — ${lowest.name}</span>
+        </button>
+        <button type="button" class="heal-opt heal-opt-preset" data-id="${highest.id}">
+          <i class="fas fa-arrow-up"></i>
+          <span>Heal Highest</span>
+          <span class="heal-opt-preview">Rating ${highest.system.rating} — ${highest.name}</span>
+        </button>
+        <hr class="heal-divider"><p class="heal-choose-label">Choose a specific wound:</p>${woundRows}`}
+      </div>
+    </div>`;
+
+    const actor = this.actor;
+
+    new Dialog({
       title: 'Heal Wound',
-      content: `<p>Remove <strong>${lowestWound.name}</strong> (Rating ${lowestWound.system.rating})?</p>`
-    });
-
-    if (confirmed) {
-      await lowestWound.delete();
-      const content = `
-        <div class="darkest-roll action-roll success">
-          <div class="roll-header">
-            <h3 class="roll-title"><i class="fas fa-medkit"></i> Heal Lowest Wound</h3>
-          </div>
-          <div class="roll-details">
-            <div class="roll-formula">
-              <span class="label">Wound:</span>
-              <span class="value">${lowestWound.name}</span>
-              <span class="separator">·</span>
-              <span class="label">Rating:</span>
-              <span class="value">${lowestWound.system.rating}</span>
-              <span class="separator">·</span>
-              <span class="label">Type:</span>
-              <span class="value">${lowestWound.system.type}</span>
-            </div>
-          </div>
-          <div class="roll-result">
-            <div class="outcome success"><i class="fas fa-heart"></i> Wound healed!</div>
-          </div>
-        </div>`;
-      await ChatMessage.create({
-        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-        content
-      });
-    }
+      content,
+      buttons: {},
+      render: (html) => {
+        html.find('.heal-opt').click(async (ev) => {
+          const id = ev.currentTarget.dataset.id;
+          const wound = actor.items.get(id);
+          if (!wound) return;
+          await wound.delete();
+          await ChatMessage.create({
+            speaker: ChatMessage.getSpeaker({ actor }),
+            content: `<div class="darkest-roll action-roll success">
+              <div class="roll-header">
+                <h3 class="roll-title"><i class="fas fa-medkit"></i> Wound Healed</h3>
+              </div>
+              <div class="roll-details">
+                <div class="roll-formula">
+                  <span class="label">Wound:</span>
+                  <span class="value">${wound.name}</span>
+                  <span class="separator">·</span>
+                  <span class="label">Rating:</span>
+                  <span class="value">${wound.system.rating}</span>
+                  <span class="separator">·</span>
+                  <span class="label">Type:</span>
+                  <span class="value">${wound.system.type}</span>
+                </div>
+              </div>
+              <div class="roll-result">
+                <div class="outcome success"><i class="fas fa-heart"></i> Wound removed!</div>
+              </div>
+            </div>`
+          });
+          // Close dialog after selection
+          Object.values(ui.windows).find(w => w._element?.[0]?.querySelector('.heal-choice-dialog'))?.close();
+        });
+      }
+    }, { width: 360 }).render(true);
   }
 
   /**
