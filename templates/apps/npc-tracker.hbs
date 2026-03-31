@@ -1,0 +1,52 @@
+<div class="npc-tracker">
+
+  {{#if hasSlots}}
+  <div class="npc-slots">
+    {{#each slots}}
+    <div class="npc-slot {{#if isActive}}active{{/if}} {{#if defeated}}defeated{{/if}}">
+
+      <div class="slot-header">
+        <button type="button" class="slot-select-btn {{#if isActive}}is-active{{/if}}" data-index="{{index}}" title="{{#if isActive}}Active target{{else}}Set as active target{{/if}}">
+          <i class="fas {{#if isActive}}fa-crosshairs{{else}}fa-circle{{/if}}"></i>
+        </button>
+        <div class="slot-name-block">
+          <span class="slot-name">{{name}}</span>
+          <span class="slot-rating-label">Rating {{rating}} · Threshold {{threshold}}</span>
+        </div>
+        {{#if defeated}}
+        <span class="slot-defeated-badge"><i class="fas fa-skull"></i> Defeated</span>
+        {{/if}}
+        <div class="slot-actions">
+          <button type="button" class="slot-reset-btn" data-index="{{index}}" title="Reset wound total"><i class="fas fa-undo"></i></button>
+          <button type="button" class="slot-remove-btn" data-index="{{index}}" title="Remove from tracker"><i class="fas fa-times"></i></button>
+        </div>
+      </div>
+
+      <div class="slot-damage-row">
+        <button type="button" class="slot-dmg-minus" data-index="{{index}}" title="−1 wound">−1</button>
+        <div class="slot-progress-wrap">
+          <div class="slot-progress-bar {{#if defeated}}defeated{{else}}{{barClass}}{{/if}}" style="width: {{pct}}%"></div>
+          <span class="slot-progress-label">{{woundTotal}} / {{threshold}}</span>
+        </div>
+        <button type="button" class="slot-dmg-plus" data-index="{{index}}" title="+1 wound">+1</button>
+      </div>
+
+    </div>
+    {{/each}}
+  </div>
+  {{else}}
+  <div class="npc-tracker-empty">
+    <i class="fas fa-dragon"></i>
+    <p>Drag an NPC here to begin tracking</p>
+  </div>
+  {{/if}}
+
+  <footer class="tracker-footer">
+    {{#if canAdd}}
+    <p class="tracker-hint"><i class="fas fa-hand-point-up"></i> <span>{{localize "DARKEST.NPC.TrackerHint"}}</span></p>
+    {{else}}
+    <p class="tracker-hint tracker-full"><i class="fas fa-exclamation-triangle"></i> <span>{{localize "DARKEST.NPC.TrackerFull"}}</span></p>
+    {{/if}}
+  </footer>
+
+</div>

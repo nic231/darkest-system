@@ -1,0 +1,54 @@
+<div class="doom-tally-container">
+  {{!-- Main Doom Display --}}
+  <div class="doom-total-display">
+    <div class="doom-icon">
+      <i class="fas fa-skull"></i>
+    </div>
+    <div class="doom-count">
+      <span class="doom-number">{{total}}</span>
+      <span class="doom-label">DOOM</span>
+    </div>
+  </div>
+
+  {{!-- GM Adjustment Indicator --}}
+  {{#if hasAdjustment}}
+  <div class="adjustment-indicator">
+    <small>(Base: {{rawTotal}}, Adjusted: {{#if (gt adjustment 0)}}+{{/if}}{{adjustment}})</small>
+  </div>
+  {{/if}}
+
+  {{!-- Character Breakdown --}}
+  <div class="character-breakdown">
+    <div class="breakdown-header">
+      <i class="fas fa-users"></i> By Character
+    </div>
+    <div class="character-list">
+      {{#each characters}}
+      <div class="character-entry" data-actor-id="{{id}}" title="Click to open sheet">
+        <span class="character-name">{{name}}</span>
+        <span class="character-dooms">{{dooms}}</span>
+      </div>
+      {{else}}
+      <div class="no-characters">No characters with dooms</div>
+      {{/each}}
+    </div>
+  </div>
+
+  {{!-- GM Controls --}}
+  {{#if isGM}}
+  <div class="gm-controls">
+    <div class="control-label">GM Adjustment</div>
+    <div class="control-buttons">
+      <button type="button" class="doom-decrement" title="Decrease doom tally">
+        <i class="fas fa-minus"></i>
+      </button>
+      <button type="button" class="doom-reset" title="Reset adjustment to 0">
+        <i class="fas fa-undo"></i>
+      </button>
+      <button type="button" class="doom-increment" title="Increase doom tally">
+        <i class="fas fa-plus"></i>
+      </button>
+    </div>
+  </div>
+  {{/if}}
+</div>

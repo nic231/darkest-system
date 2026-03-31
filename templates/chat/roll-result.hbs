@@ -1,0 +1,183 @@
+<div class="darkest-roll {{#if isDamageRoll}}damage-roll{{else}}action-roll{{/if}} {{#if isSuccess}}success{{else}}failure{{/if}} {{#if isGM}}{{#if isTransgression}}transgression{{/if}}{{/if}}">
+
+  {{#unless isDamageRoll}}
+  {{!-- Action Roll --}}
+  <div class="roll-header">
+    <h3 class="roll-title">{{localize "DARKEST.Roll.Action"}}</h3>
+    {{#if isGM}}
+    {{#if isTransgression}}
+    <div class="transgression-warning"><i class="fas fa-eye"></i> {{localize "DARKEST.Roll.Transgression"}}</div>
+    {{/if}}
+    {{/if}}
+  </div>
+
+  <div class="roll-details">
+    <div class="roll-formula">
+      <span class="label">{{localize "DARKEST.Rating"}}:</span>
+      <span class="value">{{characterRating}}</span>
+      <span class="separator">vs</span>
+      <span class="label">{{localize "DARKEST.Roll.TaskRating"}}:</span>
+      <span class="value">{{taskRating}}</span>
+      <span class="separator">·</span>
+      <span class="label">{{localize "DARKEST.Chat.Target"}}:</span>
+      <span class="value target-highlight">{{targetNumber}}</span>
+    </div>
+
+    {{#if (gt boons banes)}}
+    <div class="rolled-with-bonus"><i class="fas fa-plus-circle"></i> Rolled with Boon</div>
+    {{else if (gt banes boons)}}
+    <div class="rolled-with-penalty"><i class="fas fa-minus-circle"></i> Rolled with Bane</div>
+    {{/if}}
+  </div>
+
+  {{!-- Dice breakdown: [d1] [d2] + Rating = Total --}}
+  <div class="dice-display">
+    <div class="dice-row">
+      {{#each dice}}
+        {{#each this.results}}
+        <span class="die d6 {{#if discarded}}discarded{{/if}}">{{result}}</span>
+        {{/each}}
+      {{/each}}
+      <span class="dice-op">+</span>
+      <span class="rating-component" title="Character Rating">{{characterRating}}</span>
+      {{#if modifierName}}<span class="modifier-tag"><i class="fas fa-tag"></i> {{modifierName}}</span>{{/if}}
+      {{#if callUponWoods}}
+      <span class="dice-op">+</span>
+      <span class="die d6 darkest {{#if isGM}}{{#if isTransgression}}highest{{/if}}{{/if}}" title="Darkest Die">{{darkestDieResult}}</span>
+      {{/if}}
+      <span class="dice-op">=</span>
+      <span class="dice-total">{{total}}</span>
+    </div>
+
+    {{!-- Darkest Die shown separately when not added to total --}}
+    {{#unless callUponWoods}}
+    <div class="darkest-die-container">
+      <span class="darkest-die-label">{{localize "DARKEST.Roll.DarkestDie"}}:</span>
+      <span class="die d6 darkest {{#if isGM}}{{#if isTransgression}}highest{{/if}}{{/if}}">{{darkestDieResult}}</span>
+    </div>
+    {{/unless}}
+  </div>
+
+  {{#if callUponWoods}}
+  <div class="call-upon-woods">
+    <i class="fas fa-tree"></i> {{localize "DARKEST.Roll.CallUponWoods"}} (+{{darkestDieResult}})
+    {{#if gainsDoom}}
+    <div class="doom-gained"><i class="fas fa-skull"></i> You gain a Doom!</div>
+    {{/if}}
+  </div>
+  {{/if}}
+
+  <div class="roll-result">
+    <div class="outcome {{#if isSpecialSuccess}}special-success{{else if isSuccess}}success{{else if isPartialSuccess}}partial-success{{else}}failure{{/if}}">
+      {{#if isImpossible}}
+        {{localize "DARKEST.Roll.Impossible"}}
+      {{else if isAutoSuccess}}
+        {{localize "DARKEST.Roll.AutoSuccess"}}
+      {{else if isSpecialSuccess}}
+        {{localize "DARKEST.Roll.SpecialSuccess"}}
+      {{else if isSuccess}}
+        {{localize "DARKEST.Roll.Success"}}
+      {{else if isPartialSuccess}}
+        {{localize "DARKEST.Roll.PartialSuccess"}}
+      {{else}}
+        {{localize "DARKEST.Roll.Failure"}}
+      {{/if}}
+    </div>
+  </div>
+
+  {{#if isSpecialSuccess}}
+  <div class="special-success-message"><i class="fas fa-star"></i> <span>{{localize "DARKEST.Roll.SpecialSuccessDesc"}}</span></div>
+  {{/if}}
+
+  {{#if isPartialSuccess}}
+  <div class="partial-success-message"><i class="fas fa-adjust"></i> <span>{{localize "DARKEST.Roll.PartialSuccessDesc"}}</span></div>
+  {{/if}}
+
+  {{#if isTransgression}}
+  {{#if isGM}}
+  <div class="transgression-message gm-only"><i class="fas fa-exclamation-triangle"></i> {{localize "DARKEST.Roll.TransgressionWarning"}}</div>
+  {{else}}
+  <div class="transgression-message player-ominous"><i class="fas fa-tree"></i> {{localize "DARKEST.Roll.WoodsStir"}}</div>
+  {{/if}}
+  {{/if}}
+
+  {{else}}
+  {{!-- Damage Roll --}}
+  <div class="roll-header">
+    <h3 class="roll-title">{{localize "DARKEST.Roll.Damage"}}</h3>
+  </div>
+
+  <div class="roll-details">
+    <div class="roll-formula">
+      <span class="label">{{localize "DARKEST.Chat.Attack"}}:</span>
+      <span class="value">{{characterRating}}</span>
+      {{#if ratingAdjName}}<span class="modifier-tag"><i class="fas fa-tag"></i> {{ratingAdjName}}</span>{{/if}}
+      <span class="dice-op">−</span>
+      <span class="label">{{localize "DARKEST.Chat.Defense"}}:</span>
+      <span class="value">{{defenseRating}}</span>
+      {{#if defenseAdjName}}<span class="modifier-tag"><i class="fas fa-tag"></i> {{defenseAdjName}}</span>{{/if}}
+    </div>
+  </div>
+
+  {{!-- Damage dice in a horizontal row with full breakdown --}}
+  <div class="dice-display">
+    <div class="dice-formula-labels">
+      <span class="formula-label">d6 roll</span>
+      <span class="formula-label-op"></span>
+      <span class="formula-label">attack</span>
+      <span class="formula-label-op"></span>
+      <span class="formula-label">defense</span>
+      <span class="formula-label-op"></span>
+      <span class="formula-label">wound</span>
+    </div>
+    <div class="dice-row">
+      {{#each dice}}
+        {{#each this.results}}
+        <span class="die d6 damage-die {{#if discarded}}discarded{{/if}}">{{result}}</span>
+        {{/each}}
+      {{/each}}
+      <span class="dice-op">+</span>
+      <span class="rating-component attack" title="Attack Rating">{{characterRating}}</span>
+      <span class="dice-op">−</span>
+      <span class="rating-component defense" title="Defense Rating">{{defenseRating}}</span>
+      <span class="dice-op">=</span>
+      <span class="dice-total">{{total}}</span>
+    </div>
+    {{#if (gt boons banes)}}
+    <div class="rolled-with-bonus"><i class="fas fa-plus-circle"></i> Rolled with Boon (2d6, kept highest)</div>
+    {{else if (gt banes boons)}}
+    <div class="rolled-with-penalty"><i class="fas fa-minus-circle"></i> Rolled with Bane (2d6, kept lowest)</div>
+    {{/if}}
+  </div>
+
+  <div class="roll-result">
+    {{#if isWound}}
+    <div class="wound-result">
+      <i class="fas fa-heart-broken"></i>
+      <span class="wound-type-badge {{woundType}}">{{#if (eq woundType "mental")}}<i class="fas fa-brain"></i> Mental{{else}}<i class="fas fa-fist-raised"></i> Physical{{/if}}</span>
+      Wound Rating {{woundRating}}
+    </div>
+    {{else}}
+    <div class="no-wound graze"><i class="fas fa-shield-alt"></i> A scratch, a glancing blow — no wound inflicted</div>
+    {{/if}}
+  </div>
+
+  {{#if isGM}}
+  {{#if isWound}}
+  {{#if targetRating}}
+  <div class="npc-damage-info gm-only">
+    <div class="npc-damage-row"><i class="fas fa-skull"></i><span>NPC defeat threshold: <strong>{{multiply targetRating 3}}</strong> total wound rating (Rating {{targetRating}} × 3)</span></div>
+    <div class="npc-damage-row wound-dealt-row"><i class="fas fa-heart-broken"></i><span>This wound: <strong>{{woundRating}}</strong> — auto-applied to active NPC in tracker</span></div>
+  </div>
+  {{/if}}
+  {{/if}}
+  {{#if isInstantKill}}
+  <div class="instant-kill-warning">
+    <i class="fas fa-skull-crossbones"></i> <strong>LETHAL BLOW!</strong>
+    <p>Wound Rating {{woundRating}} is 3+ higher than target Rating {{targetRating}}.</p>
+    <p>Target is instantly killed or knocked unconscious!</p>
+  </div>
+  {{/if}}
+  {{/if}}
+  {{/unless}}
+</div>

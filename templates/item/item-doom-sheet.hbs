@@ -1,0 +1,45 @@
+<form class="flexcol darkest-sheet item-sheet doom-sheet" autocomplete="off">
+
+  {{!-- Sheet Header --}}
+  <header class="sheet-header flexrow">
+    <div class="doom-icon {{#if system.resolved}}resolved{{/if}}">
+      <i class="fas fa-skull"></i>
+    </div>
+
+    <div class="header-fields">
+      <h1 class="item-name">
+        <input name="name" type="text" value="{{item.name}}" placeholder="Doom Name" />
+      </h1>
+    </div>
+  </header>
+
+  {{!-- Sheet Body --}}
+  <section class="sheet-body">
+
+    <div class="form-group">
+      <label>{{localize "DARKEST.Doom.Source"}}</label>
+      <input type="text" name="system.source" value="{{system.source}}" placeholder="The Woods" />
+    </div>
+
+    <div class="form-group checkbox">
+      <label>
+        <input type="checkbox" name="system.resolved" {{#if system.resolved}}checked{{/if}} />
+        {{localize "DARKEST.Doom.Resolved"}}
+      </label>
+    </div>
+
+    <div class="form-group stacked">
+      <label>{{localize "DARKEST.Actor.Description"}}</label>
+      <div class="editor-container">
+        {{editor enrichedDescription target="system.description" button=true editable=true}}
+      </div>
+    </div>
+
+    <div class="form-group stacked">
+      <label>{{localize "DARKEST.Doom.Effect"}}</label>
+      <textarea name="system.effect" placeholder="What happens when this doom manifests...">{{system.effect}}</textarea>
+    </div>
+
+  </section>
+
+</form>

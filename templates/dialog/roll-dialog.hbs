@@ -1,0 +1,95 @@
+<form class="darkest-dialog roll-dialog">
+  <div class="form-group">
+    <label>{{localize "DARKEST.Dialog.TaskRating"}}</label>
+    <select name="taskRating" class="task-rating-select">
+      {{#each taskDifficulty}}
+      <option value="{{rating}}" {{#if (eq rating ../defaultTaskRating)}}selected{{/if}}>
+        {{label}} ({{rating}})
+      </option>
+      {{/each}}
+    </select>
+  </div>
+
+  {{!-- Rating Modifier Selection --}}
+  {{#if ratingModifiers.length}}
+  <div class="form-group">
+    <label>Skill / Modifier</label>
+    <select name="ratingModifier" class="rating-modifier-select">
+      <option value="" data-modifier="0">Base Rating ({{characterRating}})</option>
+      {{#each ratingModifiers}}
+      <option value="{{name}}" data-modifier="{{value}}">{{name}} ({{effectiveValue}})</option>
+      {{/each}}
+    </select>
+  </div>
+  {{/if}}
+
+  {{!-- Target Number Breakdown --}}
+  <div class="target-number-display" data-character-rating="{{characterRating}}">
+    <div class="target-breakdown">
+      <span class="target-calc">7 + <span class="task-rating-display">{{defaultTaskRating}}</span></span>
+      <span class="target-separator">−</span>
+      <span class="effective-rating-display" title="Your effective rating">{{characterRating}}</span>
+      <span class="target-separator">=</span>
+      <span class="target-need-label">Need:</span>
+      <span class="target-value target-need">{{defaultTargetNeed}}</span>
+      <span class="target-need-sublabel">on the dice</span>
+    </div>
+  </div>
+
+  {{!-- Special Success Indicator --}}
+  <div class="special-success-indicator not-possible" data-character-rating="{{characterRating}}">
+    <i class="fas fa-star"></i>
+    <span class="indicator-text">Checking...</span>
+  </div>
+
+  <div class="form-group boon-bane-group">
+    <label>{{localize "DARKEST.Dialog.NumBoons"}}</label>
+    <div class="counter-controls">
+      <button type="button" class="counter-btn decrement" data-field="boons"><i class="fas fa-minus"></i></button>
+      <input type="number" name="boons" value="0" min="0" max="5" readonly />
+      <button type="button" class="counter-btn increment" data-field="boons"><i class="fas fa-plus"></i></button>
+    </div>
+  </div>
+
+  <div class="form-group boon-bane-group">
+    <label>{{localize "DARKEST.Dialog.NumBanes"}}</label>
+    <div class="counter-controls">
+      <button type="button" class="counter-btn decrement" data-field="banes" data-min="{{woundBanes}}"><i class="fas fa-minus"></i></button>
+      <input type="number" name="banes" value="{{banes}}" min="{{woundBanes}}" max="5" readonly data-wound-banes="{{woundBanes}}" />
+      <button type="button" class="counter-btn increment" data-field="banes"><i class="fas fa-plus"></i></button>
+    </div>
+    {{#if woundBanes}}
+    <small class="hint locked-banes"><i class="fas fa-lock"></i> {{woundBanes}} from wounds (cannot reduce)</small>
+    {{/if}}
+  </div>
+
+  {{!-- Live boon/bane descriptor --}}
+  <div class="boon-bane-descriptor" style="display:none;">
+    <small class="boon-bane-text"></small>
+  </div>
+
+  <div class="form-group call-upon-woods-group">
+    <label>
+      <input type="checkbox" name="callUponWoods" />
+      {{#if isHouseMode}}Call Upon the House{{else}}{{localize "DARKEST.Roll.CallUponWoods"}}{{/if}}
+    </label>
+    <small class="warning">
+      <i class="fas fa-exclamation-triangle"></i>
+      Adds the Darkest Die to your roll, but {{#if isHouseMode}}the House won't like it{{else}}The Woods won't like it{{/if}} — you gain a {{#if isHouseMode}}<span class="doom-emphasis" title="A Doom is a token of misfortune.&#10;It will make it harder to cheat death and will follow you out of the House.&#10;You can remove a Doom willingly, but doing so will let the GM do something terrible..."><i class="fas fa-skull"></i> Doom</span>{{else}}<span class="doom-emphasis" title="A Doom is a token of misfortune.&#10;It will make it harder to cheat death and will follow you out of the Woods.&#10;You can remove a Doom willingly, but doing so will let the GM do something terrible..."><i class="fas fa-skull"></i> Doom</span>{{/if}}.
+    </small>
+  </div>
+
+  {{#if equipment.length}}
+  <div class="dialog-equipment-ref">
+    <div class="dialog-equip-header collapsed"><i class="fas fa-chevron-down"></i> Equipment</div>
+    <div class="dialog-equip-list collapsed">
+      {{#each equipment}}
+      <div class="dialog-equip-item">
+        <span class="equip-name">{{name}}</span>
+        {{#if system.combatNote}}<span class="equip-note">{{system.combatNote}}</span>{{/if}}
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+</form>

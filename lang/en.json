@@ -1,0 +1,175 @@
+{
+  "DARKEST": {
+    "System": "The Darkest System",
+
+    "Rating": "Rating",
+    "RatingShort": "RTG",
+    "TargetNumber": "Target Number",
+
+    "Boon": "Boon",
+    "Boons": "Boons",
+    "Bane": "Bane",
+    "Banes": "Banes",
+
+    "Roll": {
+      "Action": "Action Roll",
+      "Damage": "Damage Roll",
+      "DealDamage": "Deal Damage",
+      "TakeDamage": "Take Damage",
+      "TaskRating": "Task Rating",
+      "Result": "Result",
+      "Success": "Success!",
+      "Failure": "Failure",
+      "Impossible": "Impossible",
+      "AutoSuccess": "Automatic Success",
+      "SpecialSuccess": "SPECIAL SUCCESS!",
+      "SpecialSuccessDesc": "You may narrate an enhanced outcome: faster, further, more graceful. In combat: double damage or a situational effect!",
+      "PartialSuccess": "Partial Success",
+      "PartialSuccessDesc": "Not a complete failure - you achieve partial results, or it takes longer than expected.",
+      "Transgression": "TRANSGRESSION!",
+      "TransgressionWarning": "The Darkest Die was highest - the witch acts!",
+      "CallUponWoods": "Call Upon the Woods",
+      "CallUponWoodsWarning": "Adding the Darkest Die grants +{bonus} but triggers a transgression and you gain a Doom!",
+      "DarkestDie": "Darkest Die",
+      "WoodsStir": "The Woods Stir..."
+    },
+
+    "Wound": {
+      "Name": "Wound",
+      "Plural": "Wounds",
+      "Rating": "Wound Rating",
+      "Type": "Type",
+      "Physical": "Physical",
+      "Mental": "Mental",
+      "Healed": "Healed",
+      "New": "New Wound",
+      "HighestRating": "Highest Wound"
+    },
+
+    "Doom": {
+      "Name": "Doom",
+      "Plural": "Dooms",
+      "Effect": "Effect",
+      "Resolved": "Resolved",
+      "Source": "Source",
+      "New": "New Doom"
+    },
+
+    "Ability": {
+      "Name": "Ability",
+      "Plural": "Abilities",
+      "Type": "Type",
+      "Passive": "Passive",
+      "Active": "Active",
+      "GrantsBoon": "Grants Boon",
+      "RatingMod": "Rating Modifier",
+      "Uses": "Uses",
+      "UsesPerDay": "Uses Per Day",
+      "Unlimited": "Unlimited",
+      "New": "New Ability"
+    },
+
+    "Equipment": {
+      "Name": "Equipment",
+      "Plural": "Equipment",
+      "Quantity": "Qty",
+      "ArmorBonus": "Armor Bonus",
+      "ArmorType": "Armor Type",
+      "None": "None",
+      "Light": "Light (+1)",
+      "Heavy": "Heavy (+2)",
+      "New": "New Equipment"
+    },
+
+    "Armor": {
+      "Name": "Armor",
+      "Physical": "Physical Armor",
+      "Mental": "Mental Armor"
+    },
+
+    "Actor": {
+      "Character": "Character",
+      "NPC": "NPC",
+      "Creature": "Creature",
+      "Biography": "Biography",
+      "Notes": "Notes",
+      "Description": "Description",
+      "Tactics": "Tactics",
+      "Abilities": "Abilities",
+      "ShockRating": "Shock Rating"
+    },
+
+    "Modifications": {
+      "Title": "Rating Modifications",
+      "Physical": "Physical",
+      "Mental": "Mental",
+      "Stealth": "Stealth",
+      "Social": "Social",
+      "Custom": "Custom"
+    },
+
+    "Status": {
+      "Unconscious": "Unconscious",
+      "Catatonic": "Catatonic",
+      "Incapacitated": "Incapacitated"
+    },
+
+    "Chat": {
+      "DealsDamage": "deals damage",
+      "TakesDamage": "takes damage",
+      "WoundInflicted": "Wound Inflicted",
+      "NoWound": "No wound (scratch/graze)",
+      "FallsUnconscious": "falls unconscious!",
+      "Target": "Target",
+      "Attack": "Attack",
+      "Defense": "Defense"
+    },
+
+    "NPC": {
+      "AbilitiesHeader": "Abilities & Special Powers",
+      "TrackerHint": "Drag an NPC from the Actors directory to add it. Defeated when wound total reaches Rating × 3.",
+      "TrackerFull": "Tracker full (6 slots). Remove an NPC to add another."
+    },
+
+    "Settings": {
+      "GameMode": "Game Mode",
+      "GameModeHint": "Select which game this system is being used for. Changes the transgression tracker behaviour.",
+      "GameModeDarkestWoods": "The Darkest Woods",
+      "GameModeDarkestHouse": "The Darkest House",
+      "EnableSpecialSuccess": "Enable Special Success",
+      "EnableSpecialSuccessHint": "Optional rule: if you succeed and your highest single die + Rating ≥ the target, you achieve a special success (enhanced outcome or double damage).",
+      "EnablePartialSuccess": "Enable Partial Success",
+      "EnablePartialSuccessHint": "Optional rule: if you fail but rolled doubles on your kept dice, you achieve a partial success (halfway to your goal)."
+    },
+
+    "Dialog": {
+      "RollTitle": "Make a Roll",
+      "TaskRating": "Task/Enemy Rating",
+      "NumBoons": "Number of Boons",
+      "NumBanes": "Number of Banes",
+      "Cancel": "Cancel",
+      "Roll": "Roll"
+    },
+
+    "SheetLabels": {
+      "Actor": "Darkest Actor Sheet",
+      "Item": "Darkest Item Sheet"
+    },
+
+    "TargetNumber": "Target Number",
+
+    "CurrentRegion": "Current Region",
+
+    "Transgression": {
+      "TrackerTitle": "Transgression Tracker",
+      "Level": "Level",
+      "Loops": "Loops",
+      "Increment": "Increase Transgression",
+      "Decrement": "Decrease Transgression",
+      "Reset": "Reset",
+      "Warning": "Warning: Approaching critical!",
+      "Critical": "CRITICAL: The witch can open the Dark Forest door!",
+      "NoRegion": "No region selected"
+    }
+  }
+}

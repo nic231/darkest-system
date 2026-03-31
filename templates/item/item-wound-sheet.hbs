@@ -1,0 +1,51 @@
+<form class="flexcol darkest-sheet item-sheet wound-sheet" autocomplete="off">
+
+  {{!-- Sheet Header --}}
+  <header class="sheet-header flexrow">
+    <div class="wound-icon {{system.type}}">
+      <i class="fas fa-heart-broken"></i>
+    </div>
+
+    <div class="header-fields">
+      <h1 class="item-name">
+        <input name="name" type="text" value="{{item.name}}" placeholder="Wound Name" />
+      </h1>
+    </div>
+  </header>
+
+  {{!-- Sheet Body --}}
+  <section class="sheet-body">
+
+    <div class="form-group">
+      <label>{{localize "DARKEST.Wound.Rating"}}</label>
+      <input type="number" name="system.rating" value="{{system.rating}}" data-dtype="Number" min="1" max="10" />
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "DARKEST.Wound.Type"}}</label>
+      <select name="system.type">
+        {{#each woundTypes as |label key|}}
+        <option value="{{key}}" {{#if (eq key ../system.type)}}selected{{/if}}>
+          {{localize label}}
+        </option>
+        {{/each}}
+      </select>
+    </div>
+
+    <div class="form-group checkbox">
+      <label>
+        <input type="checkbox" name="system.healed" {{#if system.healed}}checked{{/if}} />
+        {{localize "DARKEST.Wound.Healed"}}
+      </label>
+    </div>
+
+    <div class="form-group stacked">
+      <label>{{localize "DARKEST.Actor.Description"}}</label>
+      <div class="editor-container">
+        {{editor enrichedDescription target="system.description" button=true editable=true}}
+      </div>
+    </div>
+
+  </section>
+
+</form>

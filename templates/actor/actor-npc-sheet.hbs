@@ -1,0 +1,79 @@
+<form class="flexcol darkest-sheet actor-sheet npc-sheet" autocomplete="off">
+
+  {{!-- Sheet Header --}}
+  <header class="sheet-header flexrow">
+    <div class="profile-img-wrap">
+      <img class="profile-img clickable" src="{{actor.img}}" title="Click to view full size" />
+      <img class="profile-img-edit-target" src="{{actor.img}}" data-edit="img" style="display:none" />
+      <button type="button" class="profile-img-edit" title="Change image"><i class="fas fa-pencil-alt"></i></button>
+    </div>
+
+    <div class="header-fields">
+      <h1 class="charname">
+        <input name="name" type="text" value="{{actor.name}}" placeholder="NPC Name" />
+      </h1>
+
+      {{!-- Rating Display --}}
+      <div class="rating-container">
+        <label>{{localize "DARKEST.Rating"}}</label>
+        <div class="rating-dots">
+          {{#each ratingDots}}
+          <span class="rating-dot {{class}}" data-value="{{value}}" data-field="system.rating"
+            title="{{localize 'DARKEST.Rating'}} {{value}}"></span>
+          {{/each}}
+        </div>
+        <span class="rating-value">{{system.rating}}</span>
+      </div>
+
+      {{!-- Region --}}
+      {{#if region}}
+      <div class="npc-region">
+        <i class="fas fa-map-marker-alt"></i> {{region}}
+      </div>
+      {{/if}}
+    </div>
+  </header>
+
+  {{!-- Sheet Navigation --}}
+  <nav class="sheet-tabs tabs" data-group="primary">
+    <a class="item" data-tab="main">Main</a>
+    <a class="item" data-tab="description">{{localize "DARKEST.Actor.Description"}}</a>
+  </nav>
+
+  {{!-- Sheet Body --}}
+  <section class="sheet-body">
+
+    {{!-- Main Tab --}}
+    <div class="tab main" data-group="primary" data-tab="main">
+
+      {{!-- Abilities text --}}
+      <section class="abilities-text-section">
+        <h3>{{localize "DARKEST.NPC.AbilitiesHeader"}}</h3>
+        <div class="editor-container">
+          {{editor enrichedAbilities target="system.abilities" button=true editable=true}}
+        </div>
+      </section>
+
+      {{!-- Tactics --}}
+      <section class="tactics-section">
+        <h3>{{localize "DARKEST.Actor.Tactics"}}</h3>
+        <div class="editor-container">
+          {{editor enrichedTactics target="system.tactics" button=true editable=true}}
+        </div>
+      </section>
+
+    </div>
+
+    {{!-- Description Tab --}}
+    <div class="tab description" data-group="primary" data-tab="description">
+      <section class="description-section">
+        <h3>{{localize "DARKEST.Actor.Description"}}</h3>
+        <div class="editor-container">
+          {{editor enrichedDescription target="system.description" button=true editable=true}}
+        </div>
+      </section>
+    </div>
+
+  </section>
+
+</form>

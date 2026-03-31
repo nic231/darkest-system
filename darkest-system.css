@@ -1,0 +1,3619 @@
+/* ----------------------------------------
+   The Darkest System - Foundry VTT Styles
+---------------------------------------- */
+
+/* Color Variables
+   Palette drawn from the background artwork:
+   warm charcoal treeline, ashen fog, single amber eye-glow
+*/
+:root {
+  /* Surfaces — warm brown-charcoal, not cold grey */
+  --darkest-bg-dark: #1e1c19;
+  --darkest-bg-medium: #2a2723;
+  --darkest-bg-light: #3a3630;
+
+  /* Text — warm off-white like fog, not clinical white */
+  --darkest-text: #cec9c0;
+  --darkest-text-muted: #7a7268;
+
+  /* Accent — the single amber eye in the artwork */
+  --darkest-accent: #8b5e1a;
+  --darkest-accent-light: #c49a2a;
+
+  /* States */
+  --darkest-success: #3d6b3d;
+  --darkest-warning: #9e7520;
+  --darkest-danger: #7a2e2e;
+
+  /* Doom/supernatural — the unseen creature's ash tone */
+  --darkest-purple: #4e3f6e;
+
+  /* Borders — umber warmth, barely visible */
+  --darkest-border: rgba(120, 100, 70, 0.35);
+  --darkest-border-strong: rgba(140, 115, 80, 0.55);
+}
+
+/* ----------------------------------------
+   Foundry Window Chrome Overrides
+---------------------------------------- */
+
+/* ----------------------------------------
+   Foundry Window Chrome Overrides
+---------------------------------------- */
+
+/* Strip all padding/margin from window-content — our sheet manages its own layout */
+.app.sheet.actor .window-content,
+.application.sheet.actor .window-content {
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+}
+
+/* The form fills the window-content completely */
+.app.sheet.actor .window-content > form,
+.application.sheet.actor .window-content > form {
+  flex: 1 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* Tab bar — force compact height, kill Foundry's line-height bloat */
+.darkest-sheet .sheet-tabs.tabs,
+.darkest-sheet nav.sheet-tabs {
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: unset !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+
+.darkest-sheet .sheet-tabs .item,
+.darkest-sheet nav.sheet-tabs .item {
+  display: inline-block !important;
+  padding: 6px 14px !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+  height: auto !important;
+}
+
+/* Sheet body fills all remaining space */
+.darkest-sheet .sheet-body {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  padding: 8px 10px !important;
+}
+
+/* ----------------------------------------
+   General Sheet Styles
+---------------------------------------- */
+.darkest-sheet {
+  font-family: 'Signika', sans-serif;
+  background: var(--darkest-bg-dark);
+  color: var(--darkest-text);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.darkest-sheet input,
+.darkest-sheet select,
+.darkest-sheet textarea {
+  background: var(--darkest-bg-medium);
+  border: 1px solid var(--darkest-border);
+  color: var(--darkest-text);
+  padding: 4px 8px;
+  border-radius: 3px;
+}
+
+.darkest-sheet input:focus,
+.darkest-sheet select:focus,
+.darkest-sheet textarea:focus {
+  outline: none;
+  border-color: var(--darkest-accent);
+  box-shadow: 0 0 5px rgba(124, 63, 63, 0.5);
+}
+
+.darkest-sheet input[type="number"] {
+  width: 50px;
+  text-align: center;
+}
+
+.darkest-sheet textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.darkest-sheet h3 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--darkest-accent-light);
+  border-bottom: 1px solid var(--darkest-border);
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+
+.darkest-sheet .form-group {
+  margin-bottom: 12px;
+}
+
+.darkest-sheet .form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.darkest-sheet .form-group.checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.darkest-sheet .form-group.stacked {
+  display: flex;
+  flex-direction: column;
+}
+
+.darkest-sheet .hint {
+  color: var(--darkest-text-muted);
+  font-size: 11px;
+  font-style: italic;
+}
+
+/* ----------------------------------------
+   Sheet Header
+---------------------------------------- */
+.darkest-sheet .sheet-header {
+  background: var(--darkest-bg-medium);
+  padding: 6px 10px;
+  border-bottom: 2px solid var(--darkest-accent);
+  gap: 8px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.darkest-sheet .profile-img-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+}
+
+.darkest-sheet .profile-img {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--darkest-accent);
+  border-radius: 3px;
+  object-fit: cover;
+  display: block;
+}
+
+/* NPC sheet gets a larger portrait */
+.npc-sheet .profile-img-wrap {
+  width: 110px;
+  height: 110px;
+  overflow: hidden;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.npc-sheet .profile-img {
+  width: 110px;
+  height: 110px;
+  min-width: 110px;
+  min-height: 110px;
+  object-fit: cover;
+  display: block;
+}
+
+.darkest-sheet .profile-img.clickable {
+  cursor: pointer;
+  transition: filter 0.15s, box-shadow 0.15s;
+}
+
+.darkest-sheet .profile-img.clickable:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 0 0 2px var(--darkest-accent-light);
+}
+
+.darkest-sheet .profile-img-edit {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 3px;
+  color: #ccc;
+  font-size: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+}
+
+.darkest-sheet .profile-img-wrap:hover .profile-img-edit {
+  opacity: 1;
+}
+
+/* Allow larger NPC portrait to expand the header */
+.npc-sheet .sheet-header {
+  align-items: flex-start;
+}
+
+.npc-sheet .npc-region {
+  font-size: 11px;
+  color: var(--darkest-text-muted, rgba(200,190,170,0.7));
+  margin-top: 2px;
+}
+
+.npc-sheet .abilities-text-section,
+.npc-sheet .tactics-section {
+  margin-bottom: 10px;
+}
+
+.npc-sheet .abilities-text-section h3,
+.npc-sheet .tactics-section h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--darkest-accent);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 4px;
+  padding-bottom: 2px;
+}
+
+.npc-sheet .editor-container {
+  min-height: 80px;
+}
+
+/* ProseMirror auto-height on NPC sheet — no scroll, grows with content */
+.npc-sheet .editor-container .prosemirror,
+.npc-sheet .editor-container .ProseMirror {
+  min-height: 80px;
+  height: auto;
+  overflow: visible;
+}
+
+.npc-sheet .editor-container .editor-content {
+  min-height: 80px;
+  height: auto;
+  overflow: visible;
+}
+
+/* Legacy tinymce editor also auto-height */
+.npc-sheet .editor-container .tox-tinymce {
+  height: auto !important;
+  min-height: 80px;
+}
+
+.darkest-sheet .header-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* Kill Foundry's h1 styling on the charname */
+.darkest-sheet .charname,
+.darkest-sheet h1.charname {
+  margin: 0;
+  font-size: inherit;
+  border: none;
+  padding: 0;
+}
+
+.darkest-sheet .charname input {
+  width: 100%;
+  font-size: 15px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--darkest-border);
+  color: var(--darkest-text);
+  font-weight: bold;
+  padding: 0 0 1px 0;
+  height: auto;
+  line-height: 1.3;
+}
+
+/* ----------------------------------------
+   Rating Dots
+---------------------------------------- */
+.rating-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+}
+
+.rating-container label {
+  font-weight: 600;
+  font-size: 12px;
+  min-width: 50px;
+}
+
+.rating-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.rating-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid var(--darkest-accent);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rating-dot.filled {
+  background: var(--darkest-accent);
+}
+
+.rating-dot.empty {
+  background: transparent;
+}
+
+.rating-dot:hover {
+  transform: scale(1.2);
+  border-color: var(--darkest-accent-light);
+}
+
+.rating-value {
+  font-size: 15px;
+  font-weight: bold;
+  min-width: 20px;
+  text-align: center;
+}
+
+.shock-rating label {
+  color: var(--darkest-purple);
+}
+
+.shock-rating .rating-dot {
+  border-color: var(--darkest-purple);
+}
+
+.shock-rating .rating-dot.filled {
+  background: var(--darkest-purple);
+}
+
+/* ----------------------------------------
+   Status Indicators
+---------------------------------------- */
+.banes-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--darkest-danger);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.status-indicator.unconscious {
+  background: var(--darkest-danger);
+  color: white;
+}
+
+.status-indicator.catatonic {
+  background: #6a3d8f;
+  color: white;
+}
+
+/* ----------------------------------------
+   Sheet Tabs
+---------------------------------------- */
+.darkest-sheet .sheet-tabs {
+  background: var(--darkest-bg-medium);
+  border-bottom: 1px solid var(--darkest-border);
+  flex-shrink: 0;
+}
+
+.darkest-sheet .sheet-tabs .item {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--darkest-text-muted);
+  border-bottom: 2px solid transparent;
+}
+
+.darkest-sheet .sheet-tabs .item:hover {
+  color: var(--darkest-text);
+}
+
+.darkest-sheet .sheet-tabs .item.active {
+  color: var(--darkest-accent-light);
+  border-bottom-color: var(--darkest-accent);
+}
+
+/* ----------------------------------------
+   Sheet Body
+---------------------------------------- */
+.darkest-sheet .sheet-body {
+  padding: 8px 10px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.darkest-sheet .tab {
+  display: none;
+}
+
+.darkest-sheet .tab.active {
+  display: block;
+}
+
+/* ----------------------------------------
+   Roll Buttons
+---------------------------------------- */
+.roll-buttons {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.roll-buttons button {
+  flex: 1;
+  padding: 7px 10px;
+  background: var(--darkest-accent);
+  color: var(--darkest-text);
+  border: 1px solid var(--darkest-border-strong);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.03em;
+  transition: background 0.2s;
+}
+
+.roll-buttons button:hover {
+  background: var(--darkest-accent-light);
+}
+
+.roll-buttons button i {
+  margin-right: 6px;
+}
+
+/* ----------------------------------------
+   Collapsible Sections
+---------------------------------------- */
+.collapsible-section {
+  margin-bottom: 8px;
+}
+
+.collapsible-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--darkest-bg-medium);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 12px;
+}
+
+.collapsible-header:hover {
+  background: var(--darkest-bg-light);
+}
+
+.collapsible-header i {
+  transition: transform 0.2s;
+}
+
+.collapsible-header.collapsed i {
+  transform: rotate(-90deg);
+}
+
+.collapsible-content {
+  padding: 10px;
+  border: 1px solid var(--darkest-border);
+  border-top: none;
+  border-radius: 0 0 3px 3px;
+}
+
+.collapsible-content.collapsed {
+  display: none;
+}
+
+/* ----------------------------------------
+   Modifications Grid
+---------------------------------------- */
+.modifications-section {
+  margin-bottom: 8px;
+}
+
+.modifications-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--darkest-border);
+  margin-bottom: 6px;
+}
+
+.modifications-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--darkest-text-muted);
+  flex: 1;
+}
+
+.modifications-header .add-modification {
+  padding: 2px 7px;
+  background: var(--darkest-bg-dark);
+  border: 1px solid var(--darkest-border);
+  color: var(--darkest-text);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s;
+}
+
+.modifications-header .add-modification:hover {
+  background: var(--darkest-success);
+  color: white;
+  border-color: var(--darkest-success);
+}
+
+.modifications-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0 4px;
+}
+
+.modification-row.custom-mod {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.modification-row.custom-mod .mod-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.modification-row.custom-mod .mod-value {
+  width: 44px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.modification-row.custom-mod .effective {
+  color: var(--darkest-text-muted);
+  font-size: 12px;
+  flex-shrink: 0;
+  width: 28px;
+  text-align: left;
+}
+
+.modification-row.custom-mod .remove-modification {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--darkest-text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.modification-row.custom-mod .remove-modification:hover {
+  color: var(--darkest-danger);
+}
+
+.no-modifications {
+  color: var(--darkest-text-muted);
+  font-style: italic;
+  padding: 6px 4px;
+  font-size: 12px;
+  margin: 0;
+}
+
+/* ----------------------------------------
+   Armor Section
+---------------------------------------- */
+.armor-section {
+  margin-bottom: 8px;
+}
+
+.armor-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.armor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.armor-row label {
+  min-width: 90px;
+}
+
+.defense-rating {
+  color: var(--darkest-text-muted);
+  font-size: 11px;
+}
+
+/* ----------------------------------------
+   Item Lists
+---------------------------------------- */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.section-header h3 {
+  flex: 1;
+  margin: 0;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.section-header .wound-count,
+.section-header .doom-count {
+  color: var(--darkest-text-muted);
+  font-size: 11px;
+}
+
+.section-header button {
+  padding: 2px 6px;
+  font-size: 11px;
+  background: var(--darkest-bg-medium);
+  border: 1px solid var(--darkest-border);
+  color: var(--darkest-text);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.section-header button:hover {
+  background: var(--darkest-bg-light);
+}
+
+.item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item-list .item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--darkest-bg-medium);
+  border-radius: 3px;
+  margin-bottom: 3px;
+  font-size: 12px;
+}
+
+.item-list .item:hover {
+  background: var(--darkest-bg-light);
+}
+
+.item-list .item-header {
+  font-weight: bold;
+  color: var(--darkest-text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+}
+
+.item-controls {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.item-controls a {
+  color: var(--darkest-text-muted);
+  cursor: pointer;
+}
+
+.item-controls a:hover {
+  color: var(--darkest-text);
+}
+
+.item-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.empty-list {
+  color: var(--darkest-text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 8px;
+  font-size: 11px;
+}
+
+/* ----------------------------------------
+   Wounds
+---------------------------------------- */
+.wound-rating .rating-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 11px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.rating-badge.physical {
+  background: var(--darkest-danger);
+}
+
+.rating-badge.mental {
+  background: var(--darkest-purple);
+}
+
+.rating-badge.healed {
+  opacity: 0.5;
+}
+
+.wound-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.wound-name {
+  font-weight: 600;
+}
+
+.wound-type {
+  font-size: 11px;
+  color: var(--darkest-text-muted);
+  text-transform: capitalize;
+}
+
+.wound.healed {
+  opacity: 0.6;
+}
+
+.wound-locked-badge {
+  font-size: 10px;
+  color: #c07d00;
+  margin-left: 4px;
+}
+
+.wound.rest-locked {
+  background: rgba(180, 120, 0, 0.06);
+}
+
+.wound-unlock {
+  color: #c07d00;
+  cursor: pointer;
+}
+
+.wound-unlock:hover {
+  color: #4caf50;
+}
+
+.highest-wound-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(122, 46, 46, 0.25);
+  border-left: 2px solid var(--darkest-danger);
+  border-radius: 3px;
+  margin-bottom: 5px;
+  font-size: 11px;
+}
+
+/* ----------------------------------------
+   Dooms
+---------------------------------------- */
+.doom-icon {
+  font-size: 20px;
+  color: var(--darkest-purple);
+}
+
+.doom-icon.resolved {
+  opacity: 0.5;
+}
+
+.doom-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.doom-name {
+  font-weight: 600;
+}
+
+.doom-source {
+  font-size: 11px;
+  color: var(--darkest-text-muted);
+}
+
+.doom.resolved {
+  opacity: 0.6;
+}
+
+/* Doom Actions */
+.doom-actions {
+  margin-bottom: 6px;
+  display: flex;
+  gap: 6px;
+}
+
+.doom-actions button {
+  flex: 1;
+  padding: 5px 10px;
+  background: var(--darkest-purple);
+  color: var(--darkest-text);
+  border: 1px solid rgba(110, 79, 140, 0.5);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.doom-actions button:hover {
+  background: #5e3f82;
+}
+
+.doom-actions button i {
+  margin-right: 4px;
+}
+
+/* Wound Actions */
+.wound-actions {
+  margin-bottom: 6px;
+  display: flex;
+  gap: 6px;
+}
+
+.wound-actions button {
+  flex: 1;
+  padding: 5px 10px;
+  background: var(--darkest-danger);
+  color: var(--darkest-text);
+  border: 1px solid rgba(122, 46, 46, 0.5);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.wound-actions button:hover {
+  background: #9a3a3a;
+}
+
+.wound-actions button i {
+  margin-right: 4px;
+}
+
+@keyframes pulse-urgent {
+  0%, 100% { background: rgba(180, 40, 40, 0.4); box-shadow: none; }
+  50% { background: rgba(200, 30, 30, 0.7); box-shadow: 0 0 8px rgba(220, 50, 50, 0.6); }
+}
+
+.wound-actions .death-check.urgent {
+  background: rgba(180, 40, 40, 0.4);
+  border-color: #cc3333;
+  color: #ff8888;
+  animation: pulse-urgent 1.5s ease-in-out infinite;
+}
+
+/* ----------------------------------------
+   Abilities
+---------------------------------------- */
+.ability-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.ability-name {
+  font-weight: 600;
+}
+
+.ability-type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--darkest-text-muted);
+}
+
+.ability-type .uses {
+  padding: 2px 6px;
+  background: var(--darkest-bg-dark);
+  border-radius: 3px;
+}
+
+/* ----------------------------------------
+   Equipment
+---------------------------------------- */
+.equipment-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.equipment-name {
+  font-weight: 600;
+}
+
+.armor-type {
+  font-size: 11px;
+  color: var(--darkest-success);
+}
+
+/* ----------------------------------------
+   Editor Container
+---------------------------------------- */
+.editor-container {
+  min-height: 150px;
+  background: var(--darkest-bg-medium);
+  border: 1px solid var(--darkest-border);
+  border-radius: 3px;
+}
+
+.editor-container .editor {
+  height: 100%;
+}
+
+/* ----------------------------------------
+   Item Sheets
+---------------------------------------- */
+.item-sheet .sheet-header {
+  gap: 10px;
+}
+
+.item-sheet .item-img {
+  width: 80px;
+  height: 80px;
+  border: 2px solid var(--darkest-accent);
+  border-radius: 5px;
+}
+
+.item-sheet .item-name input {
+  width: 100%;
+  font-size: 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--darkest-border);
+  color: var(--darkest-text);
+  font-weight: bold;
+}
+
+.wound-sheet .wound-icon,
+.doom-sheet .doom-icon {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  border-radius: 5px;
+}
+
+.wound-sheet .wound-icon {
+  background: var(--darkest-danger);
+  color: white;
+}
+
+.wound-sheet .wound-icon.mental {
+  background: var(--darkest-purple);
+}
+
+.doom-sheet .doom-icon {
+  background: var(--darkest-purple);
+  color: white;
+}
+
+.doom-sheet .doom-icon.resolved {
+  opacity: 0.5;
+}
+
+.ability-sheet .uses-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 18px;
+  margin-top: 8px;
+}
+
+.ability-sheet .uses-remaining {
+  font-weight: bold;
+  color: var(--darkest-accent-light);
+}
+
+.ability-sheet .uses-label {
+  color: var(--darkest-text-muted);
+  font-size: 12px;
+}
+
+.ability-sheet .use-ability {
+  width: 100%;
+  padding: 10px;
+  margin-top: 15px;
+  background: var(--darkest-accent);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.ability-sheet .use-ability:hover {
+  background: var(--darkest-accent-light);
+}
+
+/* ----------------------------------------
+   Chat Cards
+---------------------------------------- */
+.darkest-roll {
+  background: var(--darkest-bg-dark);
+  color: var(--darkest-text);
+  padding: 10px;
+  border-radius: 5px;
+  border-left: 4px solid var(--darkest-accent);
+}
+
+.darkest-roll.success {
+  border-left-color: var(--darkest-success);
+}
+
+.darkest-roll.failure {
+  border-left-color: var(--darkest-danger);
+}
+
+.darkest-roll.transgression {
+  border-left-color: var(--darkest-purple);
+}
+
+.darkest-roll .roll-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.darkest-roll .roll-title {
+  margin: 0;
+  font-size: 16px;
+  color: var(--darkest-accent-light);
+}
+
+.darkest-roll .transgression-warning {
+  padding: 4px 8px;
+  background: var(--darkest-purple);
+  color: white;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: bold;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.darkest-roll .roll-details {
+  background: var(--darkest-bg-medium);
+  padding: 8px;
+  border-radius: 3px;
+  margin-bottom: 10px;
+}
+
+.darkest-roll .roll-formula {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.darkest-roll .label {
+  color: var(--darkest-text-muted);
+}
+
+.darkest-roll .value {
+  font-weight: bold;
+}
+
+.darkest-roll .target-number {
+  margin-top: 6px;
+}
+
+.darkest-roll .boons,
+.darkest-roll .banes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.darkest-roll .boons {
+  color: var(--darkest-success);
+}
+
+.darkest-roll .banes {
+  color: var(--darkest-danger);
+}
+
+.darkest-roll .dice-display {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+/* Label row above damage dice breakdown */
+.darkest-roll .dice-formula-labels {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 2px;
+}
+
+.darkest-roll .dice-formula-labels .formula-label {
+  width: 32px;
+  text-align: center;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--darkest-text-muted);
+  opacity: 0.75;
+}
+
+.darkest-roll .dice-formula-labels .formula-label-op {
+  width: 20px; /* matches dice-op approximate width */
+}
+
+/* Horizontal dice breakdown row: [d1] [d2] + Rating = Total */
+.darkest-roll .dice-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.darkest-roll .dice-op {
+  color: var(--darkest-text-muted);
+  font-size: 14px;
+  font-weight: bold;
+  padding: 0 2px;
+}
+
+.darkest-roll .rating-component {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(139, 94, 26, 0.2);
+  border: 2px solid var(--darkest-accent);
+  border-radius: 5px;
+  font-weight: bold;
+  font-size: 15px;
+  color: var(--darkest-accent-light);
+}
+
+.darkest-roll .rating-component.attack {
+  background: rgba(139, 94, 26, 0.2);
+  border-color: var(--darkest-accent);
+  color: var(--darkest-accent-light);
+}
+
+.darkest-roll .rating-component.defense {
+  background: rgba(78, 63, 110, 0.2);
+  border-color: var(--darkest-purple);
+  color: #a080d0;
+}
+
+/* Damage die: red/crimson to stand out as a rolled die, not a static value */
+.darkest-roll .die.damage-die {
+  background: rgba(180, 30, 30, 0.15);
+  border-color: #c0392b;
+  color: #e74c3c;
+}
+
+.darkest-roll .dice-total {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 32px;
+  background: rgba(139, 94, 26, 0.3);
+  border: 2px solid var(--darkest-accent-light);
+  border-radius: 5px;
+  font-weight: bold;
+  font-size: 17px;
+  color: var(--darkest-accent-light);
+  padding: 0 6px;
+}
+
+.darkest-roll .regular-dice {
+  display: flex;
+  gap: 6px;
+}
+
+.darkest-roll .die {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--darkest-bg-light);
+  border: 2px solid var(--darkest-border);
+  border-radius: 5px;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.darkest-roll .die.discarded {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.darkest-roll .darkest-die-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.darkest-roll .darkest-die-label {
+  color: var(--darkest-text-muted);
+  font-size: 12px;
+}
+
+.darkest-roll .die.darkest {
+  background: var(--darkest-purple);
+  border-color: var(--darkest-purple);
+  color: white;
+}
+
+.darkest-roll .die.darkest.highest {
+  animation: pulse 2s infinite;
+  box-shadow: 0 0 10px var(--darkest-purple);
+}
+
+.darkest-roll .call-upon-woods {
+  background: rgba(92, 63, 124, 0.3);
+  padding: 8px;
+  border-radius: 3px;
+  margin-bottom: 10px;
+}
+
+.darkest-roll .doom-gained {
+  margin-top: 6px;
+  color: var(--darkest-danger);
+  font-weight: bold;
+}
+
+.darkest-roll .roll-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: var(--darkest-bg-medium);
+  border-radius: 3px;
+}
+
+.darkest-roll .total .value {
+  font-size: 24px;
+}
+
+.darkest-roll .outcome {
+  padding: 6px 12px;
+  border-radius: 3px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.darkest-roll .outcome.success {
+  background: var(--darkest-success);
+  color: white;
+}
+
+.darkest-roll .outcome.failure {
+  background: var(--darkest-danger);
+  color: white;
+}
+
+.darkest-roll .transgression-message {
+  margin-top: 10px;
+  padding: 8px;
+  background: rgba(92, 63, 124, 0.3);
+  border-left: 3px solid var(--darkest-purple);
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.darkest-roll .transgression-message.player-ominous {
+  background: rgba(26, 26, 26, 0.8);
+  border-left-color: #2d4a2d;
+  color: #4a7c4a;
+  font-style: italic;
+  font-weight: bold;
+  text-align: center;
+  animation: woods-stir 3s ease-in-out infinite;
+}
+
+.darkest-roll .transgression-message.player-ominous i {
+  margin-right: 8px;
+  color: #2d4a2d;
+}
+
+@keyframes woods-stir {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* Special Success & Partial Success Outcomes */
+.darkest-roll .outcome.special-success {
+  background: linear-gradient(135deg, #8b5e1a, #c49a2a);
+  color: #1e1c19;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { box-shadow: 0 0 5px #c9a227; }
+  50% { box-shadow: 0 0 15px #f0d060; }
+}
+
+.darkest-roll .outcome.partial-success {
+  background: var(--darkest-warning);
+  color: white;
+}
+
+.darkest-roll .special-success-message {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(201, 162, 39, 0.2);
+  border-left: 3px solid #c9a227;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #f0d060;
+}
+
+.darkest-roll .special-success-message i {
+  color: #c9a227;
+  margin-right: 8px;
+}
+
+.darkest-roll .partial-success-message {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(140, 111, 47, 0.3);
+  border-left: 3px solid var(--darkest-warning);
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.darkest-roll .partial-success-message i {
+  color: var(--darkest-warning);
+  margin-right: 8px;
+}
+
+.darkest-roll .wound-result {
+  color: var(--darkest-danger);
+  font-weight: bold;
+  line-height: 1.5;
+}
+
+.darkest-roll .wound-result i,
+.darkest-roll .no-wound i {
+  margin-right: 5px;
+}
+
+.darkest-roll .no-wound {
+  color: var(--darkest-success);
+}
+
+/* Wound Type Indicator */
+.darkest-roll .wound-type-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.darkest-roll .wound-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.darkest-roll .wound-type-badge.physical {
+  background: var(--darkest-danger);
+  color: white;
+}
+
+.darkest-roll .wound-type-badge.mental {
+  background: var(--darkest-purple);
+  color: white;
+}
+
+/* Instant Kill Warning */
+.darkest-roll .instant-kill-warning {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(140, 63, 63, 0.4);
+  border: 2px solid var(--darkest-danger);
+  border-radius: 5px;
+  text-align: center;
+  animation: pulse-danger 2s infinite;
+}
+
+.darkest-roll .instant-kill-warning i {
+  font-size: 24px;
+  color: var(--darkest-danger);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.darkest-roll .instant-kill-warning strong {
+  display: block;
+  font-size: 16px;
+  color: var(--darkest-danger);
+  margin-bottom: 6px;
+}
+
+.darkest-roll .instant-kill-warning p {
+  margin: 4px 0;
+  font-size: 12px;
+}
+
+/* ----------------------------------------
+   Ability Chat Card
+---------------------------------------- */
+.darkest-ability-use {
+  background: var(--darkest-bg-dark);
+  color: var(--darkest-text);
+  padding: 10px;
+  border-radius: 5px;
+  border-left: 4px solid var(--darkest-purple);
+}
+
+.darkest-ability-use h3 {
+  margin: 0 0 8px 0;
+  color: var(--darkest-accent-light);
+}
+
+/* ----------------------------------------
+   Unconscious Chat Card
+---------------------------------------- */
+.darkest-unconscious {
+  background: var(--darkest-danger);
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* ----------------------------------------
+   Resist Unconsciousness Chat Prompt
+---------------------------------------- */
+.darkest-unconscious-prompt {
+  background: var(--darkest-bg-medium);
+  border: 1px solid rgba(180, 80, 80, 0.5);
+  border-left: 4px solid #cc4444;
+  border-radius: 5px;
+  padding: 10px 12px;
+  color: var(--darkest-text);
+}
+
+.darkest-unconscious-prompt .prompt-header {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #e07070;
+}
+
+.darkest-unconscious-prompt .prompt-header i {
+  margin-right: 6px;
+}
+
+.darkest-unconscious-prompt .prompt-details {
+  margin-bottom: 10px;
+  font-size: 0.9em;
+}
+
+.darkest-unconscious-prompt .prompt-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.darkest-unconscious-prompt .prompt-row.highlight {
+  font-weight: bold;
+  color: var(--darkest-accent-light);
+  border-bottom: none;
+  margin-top: 4px;
+}
+
+.darkest-unconscious-prompt .prompt-bane-note {
+  margin-top: 6px;
+  font-size: 0.85em;
+  color: #cc6666;
+}
+
+.darkest-unconscious-prompt .prompt-bane-note i {
+  margin-right: 4px;
+}
+
+.resist-unconscious-btn {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  margin-top: 8px;
+  background: rgba(160, 50, 50, 0.35);
+  border: 1px solid rgba(180, 60, 60, 0.6);
+  border-radius: 4px;
+  color: #e08080;
+  font-weight: bold;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.resist-unconscious-btn:hover {
+  background: rgba(180, 50, 50, 0.55);
+  color: #ffaaaa;
+}
+
+.resist-unconscious-btn i {
+  margin-right: 6px;
+}
+
+/* ----------------------------------------
+   Doom Spent Chat Card
+---------------------------------------- */
+.darkest-doom-spent {
+  background: var(--darkest-bg-dark);
+  color: var(--darkest-text);
+  padding: 12px;
+  border-radius: 5px;
+  border-left: 4px solid var(--darkest-purple);
+}
+
+.darkest-doom-spent i {
+  color: var(--darkest-purple);
+  margin-right: 8px;
+}
+
+.darkest-doom-spent .doom-consequence {
+  margin: 8px 0 0 0;
+  font-style: italic;
+  color: var(--darkest-text-muted);
+}
+
+.darkest-doom-spent-gm {
+  background: var(--darkest-bg-dark);
+  color: var(--darkest-text);
+  padding: 12px;
+  border-radius: 5px;
+  border-left: 4px solid var(--darkest-danger);
+}
+
+.darkest-doom-spent-gm i {
+  color: var(--darkest-danger);
+  margin-right: 8px;
+}
+
+.darkest-doom-spent-gm ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.darkest-doom-spent-gm li {
+  margin: 4px 0;
+  color: var(--darkest-text-muted);
+}
+
+.darkest-doom-spent-gm em {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--darkest-warning);
+}
+
+/* ----------------------------------------
+   Death Check Chat Cards
+---------------------------------------- */
+.darkest-survive {
+  background: var(--darkest-success);
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.darkest-survive i {
+  margin-right: 8px;
+}
+
+.darkest-death {
+  background: var(--darkest-danger);
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  font-weight: bold;
+  text-align: center;
+  animation: pulse 2s infinite;
+}
+
+.darkest-death i {
+  margin-right: 8px;
+}
+
+/* ----------------------------------------
+   Dialog Styles
+---------------------------------------- */
+/* Fix Foundry dialog window sizing for our dialogs */
+.app.dialog .darkest-dialog {
+  background: var(--darkest-bg-dark);
+}
+
+.app.dialog:has(.darkest-dialog) {
+  height: auto !important;
+  max-height: 90vh;
+}
+
+.app.dialog:has(.darkest-dialog) .window-content {
+  height: auto !important;
+  overflow-y: auto;
+  padding-bottom: 0;
+}
+
+.app.dialog:has(.darkest-dialog) .dialog-content {
+  height: auto !important;
+  overflow: visible;
+  padding-bottom: 4px;
+}
+
+.app.dialog:has(.darkest-dialog) .dialog-buttons {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  background: var(--darkest-bg-dark);
+  border-top: 1px solid var(--darkest-border);
+  gap: 8px;
+}
+
+.darkest-dialog {
+  background: var(--darkest-bg-dark);
+  padding: 10px;
+  color: var(--darkest-text);
+}
+
+/* Ensure all text in dialogs is visible */
+.darkest-dialog,
+.darkest-dialog label,
+.darkest-dialog span,
+.darkest-dialog p,
+.darkest-dialog small,
+.darkest-dialog .hint {
+  color: var(--darkest-text);
+}
+
+.darkest-dialog select,
+.darkest-dialog input {
+  background: var(--darkest-bg-medium);
+  color: var(--darkest-text);
+  border: 1px solid var(--darkest-border);
+}
+
+.darkest-dialog select option {
+  background: var(--darkest-bg-medium);
+  color: var(--darkest-text);
+}
+
+.darkest-dialog .form-group {
+  margin-bottom: 15px;
+}
+
+.darkest-dialog .form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+  color: var(--darkest-text);
+}
+
+.darkest-dialog .call-upon-woods-group {
+  background: rgba(92, 63, 124, 0.2);
+  padding: 10px;
+  border-radius: 5px;
+  border-left: 3px solid var(--darkest-purple);
+}
+
+.darkest-dialog .call-upon-woods-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.darkest-dialog .warning {
+  display: block;
+  margin-top: 6px;
+  color: var(--darkest-warning);
+  font-size: 11px;
+}
+
+.doom-emphasis {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: bold;
+  color: #cc3333;
+  border-bottom: 1px dashed rgba(204, 51, 51, 0.5);
+  cursor: help;
+  white-space: nowrap;
+}
+
+.doom-emphasis i {
+  font-size: 10px;
+}
+
+/* Special Success Indicator in Roll Dialog */
+.darkest-dialog .special-success-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 15px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.darkest-dialog .special-success-indicator.possible {
+  background: rgba(139, 94, 26, 0.25);
+  border: 1px solid rgba(196, 154, 42, 0.6);
+  color: var(--darkest-accent-light);
+}
+
+.darkest-dialog .special-success-indicator.possible i {
+  color: var(--darkest-accent-light);
+}
+
+.darkest-dialog .special-success-indicator.not-possible {
+  background: rgba(80, 75, 65, 0.25);
+  border: 1px solid rgba(120, 100, 70, 0.3);
+  color: var(--darkest-text-muted);
+}
+
+.darkest-dialog .special-success-indicator.not-possible i {
+  color: var(--darkest-text-muted);
+}
+
+.darkest-dialog .calculated-defense {
+  background: var(--darkest-bg-medium);
+  padding: 10px;
+  border-radius: 5px;
+  border-left: 3px solid var(--darkest-accent);
+}
+
+.darkest-dialog .defense-total {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--darkest-accent-light);
+}
+
+/* Counter Controls (+/- buttons) */
+.darkest-dialog .counter-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.darkest-dialog .counter-controls input {
+  width: 40px;
+  text-align: center;
+  -moz-appearance: textfield;
+  font-weight: bold;
+  font-size: 15px;
+}
+
+.darkest-dialog .counter-controls input[name$="boons"] {
+  color: var(--darkest-success, #4caf50);
+}
+
+.darkest-dialog .counter-controls input[name$="banes"] {
+  color: var(--darkest-danger, #e57373);
+}
+
+.darkest-dialog .counter-controls input::-webkit-outer-spin-button,
+.darkest-dialog .counter-controls input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.darkest-dialog .counter-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--darkest-bg-medium);
+  border: 1px solid var(--darkest-border);
+  color: var(--darkest-text);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.darkest-dialog .counter-btn:hover {
+  background: var(--darkest-bg-light);
+  border-color: var(--darkest-accent);
+}
+
+.darkest-dialog .counter-btn.increment:hover {
+  color: var(--darkest-success);
+}
+
+.darkest-dialog .counter-btn.decrement:hover {
+  color: var(--darkest-danger);
+}
+
+.darkest-dialog .boon-bane-group .counter-controls {
+  margin-top: 4px;
+}
+
+/* Defense breakdown in take damage dialog */
+.darkest-dialog .defense-breakdown {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background: var(--darkest-bg-medium);
+  border-radius: 4px;
+  border: 1px solid var(--darkest-border);
+}
+
+.defense-breakdown-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.breakdown-cell-label {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--darkest-text-muted);
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.breakdown-cell-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--darkest-text);
+  background: var(--darkest-bg-dark);
+  border: 2px solid var(--darkest-border);
+  border-radius: 5px;
+}
+
+.defense-base-cell .breakdown-cell-value {
+  border-color: var(--darkest-accent);
+  color: var(--darkest-accent-light);
+}
+
+.breakdown-op {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--darkest-text-muted);
+  margin-bottom: 6px;
+}
+
+.defense-adj-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.defense-adj-label {
+  font-size: 12px;
+  color: var(--darkest-text-muted);
+  white-space: nowrap;
+  margin: 0 !important;
+  font-weight: normal !important;
+}
+
+.defense-total-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.defense-total-label {
+  color: var(--darkest-text-muted);
+}
+
+.effective-defense-display {
+  font-size: 16px;
+  color: var(--darkest-accent-light);
+}
+
+/* Locked banes indicator */
+.darkest-dialog .locked-banes {
+  color: var(--darkest-warning);
+}
+
+.darkest-dialog .locked-banes i {
+  margin-right: 4px;
+}
+
+.darkest-dialog .boon-bane-descriptor {
+  margin: -4px 0 10px 0;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.darkest-dialog .boon-text {
+  color: #5aaa5a;
+}
+
+.darkest-dialog .bane-text {
+  color: #cc6666;
+}
+
+/* Target Number Display in Dialogs */
+.darkest-dialog .target-number-display {
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: var(--darkest-bg-medium);
+  border-radius: 5px;
+  border-left: 3px solid var(--darkest-accent);
+}
+
+.darkest-dialog .target-breakdown {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.darkest-dialog .target-calc {
+  color: var(--darkest-text-muted);
+}
+
+.darkest-dialog .target-separator {
+  color: var(--darkest-text-muted);
+  font-weight: bold;
+}
+
+/* Effective rating coloured by boon/bane state */
+.darkest-dialog .effective-rating-display {
+  font-size: 16px;
+  font-weight: bold;
+  min-width: 24px;
+  text-align: center;
+}
+.darkest-dialog .effective-rating-display.neutral { color: var(--darkest-text); }
+.darkest-dialog .effective-rating-display.boon    { color: #5aaa5a; }
+.darkest-dialog .effective-rating-display.bane    { color: #cc4444; }
+
+.darkest-dialog .target-need-label {
+  color: var(--darkest-text-muted);
+  font-size: 11px;
+}
+
+.darkest-dialog .target-need {
+  font-size: 22px;
+  font-weight: bold;
+  color: var(--darkest-accent-light);
+  min-width: 28px;
+  text-align: center;
+}
+
+.darkest-dialog .target-need-sublabel {
+  color: var(--darkest-text-muted);
+  font-size: 11px;
+}
+
+/* ----------------------------------------
+   Transgression Tracker
+---------------------------------------- */
+/* ----------------------------------------
+   Doom Tally Application
+---------------------------------------- */
+.doom-tally {
+  background: var(--darkest-bg-dark);
+  color: var(--darkest-text);
+}
+
+.doom-tally-container {
+  padding: 10px;
+}
+
+.doom-total-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  padding: 15px;
+  background: linear-gradient(135deg, var(--darkest-bg-medium), var(--darkest-purple));
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.doom-total-display .doom-icon {
+  font-size: 36px;
+  color: var(--darkest-text);
+  opacity: 0.8;
+}
+
+.doom-total-display .doom-count {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.doom-total-display .doom-number {
+  font-size: 48px;
+  font-weight: bold;
+  line-height: 1;
+  color: white;
+  text-shadow: 0 0 10px var(--darkest-purple);
+}
+
+.doom-total-display .doom-label {
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--darkest-text-muted);
+}
+
+.doom-tally .adjustment-indicator {
+  text-align: center;
+  color: var(--darkest-text-muted);
+  font-size: 11px;
+  margin-bottom: 10px;
+}
+
+.doom-tally .character-breakdown {
+  background: var(--darkest-bg-medium);
+  border-radius: 5px;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.doom-tally .breakdown-header {
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: var(--darkest-text-muted);
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--darkest-border);
+}
+
+.doom-tally .breakdown-header i {
+  margin-right: 6px;
+}
+
+.doom-tally .character-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doom-tally .character-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background: var(--darkest-bg-dark);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.doom-tally .character-entry:hover {
+  background: var(--darkest-bg-light);
+}
+
+.doom-tally .character-name {
+  font-size: 12px;
+}
+
+.doom-tally .character-dooms {
+  font-weight: bold;
+  color: var(--darkest-purple);
+  padding: 2px 6px;
+  background: rgba(92, 63, 124, 0.3);
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.doom-tally .no-characters {
+  color: var(--darkest-text-muted);
+  font-style: italic;
+  font-size: 11px;
+  text-align: center;
+  padding: 8px;
+}
+
+.doom-tally .gm-controls {
+  background: var(--darkest-bg-medium);
+  border-radius: 5px;
+  padding: 8px;
+}
+
+.doom-tally .control-label {
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: var(--darkest-text-muted);
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.doom-tally .control-buttons {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+}
+
+.doom-tally .control-buttons button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--darkest-bg-dark);
+  border: 1px solid var(--darkest-border);
+  color: var(--darkest-text);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.doom-tally .control-buttons button:hover {
+  background: var(--darkest-bg-light);
+  border-color: var(--darkest-accent);
+}
+
+.doom-tally .doom-increment:hover {
+  color: var(--darkest-danger);
+}
+
+.doom-tally .doom-decrement:hover {
+  color: var(--darkest-success);
+}
+
+.doom-tally .doom-reset:hover {
+  color: var(--darkest-warning);
+}
+
+/* ----------------------------------------
+   Transgression Tracker
+---------------------------------------- */
+.transgression-tracker {
+  padding: 8px 6px;
+  color: var(--darkest-text);
+}
+
+/* House mode tracker */
+.transgression-tracker.house-mode {
+  padding: 8px 10px;
+}
+
+.house-tracker-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--darkest-border, #444);
+}
+
+.house-tracker-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--darkest-accent, #c0392b);
+  flex: 1;
+}
+
+.house-level-summary {
+  font-size: 12px;
+  color: var(--darkest-text-muted, #aaa);
+}
+
+.house-global-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.house-global-controls .increment-btn {
+  padding: 3px 8px;
+  background: var(--darkest-accent, #c0392b);
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.house-global-controls .increment-btn:hover {
+  background: #a93226;
+}
+
+.house-global-controls .decrement-btn,
+.house-global-controls .reset-btn {
+  padding: 3px 6px;
+  background: #333;
+  color: #aaa;
+  border: 1px solid #555;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.house-global-controls .decrement-btn:hover,
+.house-global-controls .reset-btn:hover {
+  background: #444;
+}
+
+.house-level-dots {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.house-actions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.house-action-item {
+  display: flex;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  border-left: 3px solid transparent;
+  color: #333;
+  line-height: 1.4;
+}
+
+.house-action-item.triggered {
+  color: #999;
+  text-decoration: line-through;
+  border-left-color: #ccc;
+  background: transparent;
+}
+
+.house-action-item.triggered .house-action-number {
+  color: #bbb;
+}
+
+.house-action-item.next {
+  background: rgba(192, 57, 43, 0.12);
+  border-left-color: var(--darkest-accent, #c0392b);
+  font-weight: bold;
+  color: #111;
+}
+
+.house-action-item.upcoming {
+  color: #444;
+  background: transparent;
+}
+
+.house-action-number {
+  font-weight: bold;
+  color: var(--darkest-accent, #c0392b);
+  min-width: 18px;
+  flex-shrink: 0;
+}
+
+.house-action-item.upcoming .house-action-number {
+  color: #888;
+}
+
+.house-action-badge {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--darkest-accent, #c0392b);
+  white-space: nowrap;
+}
+
+.house-action-chat strong {
+  font-size: 13px;
+  color: #c0392b;
+}
+
+.house-action-chat p {
+  margin: 4px 0 0;
+  font-style: italic;
+}
+
+.transgression-tracker .regions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Region Row ── */
+.transgression-tracker .region-row {
+  display: flex;
+  flex-direction: column;
+  background: var(--darkest-bg-medium);
+  border-radius: 5px;
+  border-left: 3px solid transparent;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.transgression-tracker .region-summary {
+  display: grid;
+  grid-template-columns: 160px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.transgression-tracker .region-summary:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+/* Active region — amber glow */
+.transgression-tracker .region-row.current {
+  border-left-color: var(--darkest-accent-light);
+}
+
+.transgression-tracker .region-row.current .region-summary {
+  background: rgba(196, 154, 42, 0.1);
+}
+
+.transgression-tracker .region-row.current .region-summary:hover {
+  background: rgba(196, 154, 42, 0.16);
+}
+
+/* Warning — 2 loops */
+.transgression-tracker .region-row.warning {
+  border-left-color: var(--darkest-warning);
+}
+
+/* Critical — 3 loops */
+.transgression-tracker .region-row.critical {
+  border-left-color: var(--darkest-danger);
+}
+
+.transgression-tracker .region-row.critical .region-summary {
+  animation: pulse-danger 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-danger {
+  0%, 100% { background: var(--darkest-bg-medium); }
+  50% { background: rgba(122, 46, 46, 0.35); }
+}
+
+/* ── Region Info ── */
+.transgression-tracker .region-info {
+  min-width: 0;
+}
+
+.transgression-tracker .region-name-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.transgression-tracker .region-active-icon {
+  font-size: 10px;
+  color: var(--darkest-accent-light);
+  flex-shrink: 0;
+}
+
+.transgression-tracker .region-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--darkest-text);
+}
+
+.transgression-tracker .region-row.current .region-name {
+  color: var(--darkest-accent-light);
+}
+
+.transgression-tracker .witch-name {
+  display: block;
+  font-size: 11px;
+  color: var(--darkest-text-muted);
+  font-style: italic;
+  margin-top: 1px;
+}
+
+.transgression-tracker .key-phrase {
+  display: block;
+  font-size: 11.5px;
+  color: rgba(180, 165, 210, 0.75);
+  font-style: italic;
+  margin-top: 3px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.transgression-tracker .region-row.current .key-phrase {
+  color: rgba(180, 165, 210, 0.95);
+}
+
+/* ── Transgression Level ── */
+.transgression-tracker .transgression-level {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-start;
+}
+
+.transgression-tracker .level-dots {
+  display: flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.transgression-tracker .level-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(78, 63, 110, 0.6);
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.transgression-tracker .level-dot:hover {
+  transform: scale(1.25);
+  border-color: var(--darkest-accent-light);
+}
+
+.transgression-tracker .level-dot.filled {
+  background: var(--darkest-purple);
+  border-color: var(--darkest-purple);
+  box-shadow: 0 0 4px rgba(78, 63, 110, 0.5);
+}
+
+/* Warning: filled dots turn amber */
+.transgression-tracker .region-row.warning .level-dot.filled {
+  background: var(--darkest-warning);
+  border-color: var(--darkest-warning);
+  box-shadow: 0 0 4px rgba(158, 117, 32, 0.5);
+}
+
+/* Critical: filled dots turn red */
+.transgression-tracker .region-row.critical .level-dot.filled {
+  background: var(--darkest-danger);
+  border-color: var(--darkest-danger);
+  box-shadow: 0 0 6px rgba(122, 46, 46, 0.7);
+}
+
+/* ── Loop Pips ── */
+.transgression-tracker .loop-pips {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.transgression-tracker .loop-pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1.5px solid rgba(120, 100, 70, 0.4);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.transgression-tracker .loop-pip.filled {
+  background: var(--darkest-warning);
+  border-color: var(--darkest-warning);
+}
+
+.transgression-tracker .loop-pip.filled.critical {
+  background: var(--darkest-danger);
+  border-color: var(--darkest-danger);
+  box-shadow: 0 0 5px rgba(122, 46, 46, 0.8);
+}
+
+/* ── Controls ── */
+.transgression-tracker .region-controls {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.transgression-tracker .region-controls button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--darkest-bg-dark);
+  border: 1px solid var(--darkest-border);
+  color: var(--darkest-text-muted);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 10px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.transgression-tracker .region-controls button:hover {
+  background: var(--darkest-bg-light);
+  border-color: var(--darkest-border-strong);
+}
+
+.transgression-tracker .increment-btn:hover {
+  color: #c47a7a;
+  border-color: var(--darkest-danger);
+}
+
+.transgression-tracker .decrement-btn:hover {
+  color: #6b9e6b;
+  border-color: var(--darkest-success);
+}
+
+.transgression-tracker .reset-btn:hover {
+  color: var(--darkest-accent-light);
+  border-color: var(--darkest-accent);
+}
+
+/* ── Events Toggle Button ── */
+.transgression-tracker .events-toggle-btn {
+  color: var(--darkest-purple) !important;
+  border-color: rgba(78, 63, 110, 0.4) !important;
+}
+
+.transgression-tracker .events-toggle-btn:hover {
+  color: #8b7ab8 !important;
+  border-color: var(--darkest-purple) !important;
+}
+
+/* ── Transgression Events Panel ── */
+.transgression-tracker .transgression-events {
+  padding: 6px 14px 10px 14px;
+  border-top: 1px solid var(--darkest-border);
+  background: rgba(0,0,0,0.2);
+}
+
+.transgression-tracker .transgression-events.collapsed {
+  display: none;
+}
+
+.transgression-tracker .events-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  counter-reset: event-counter;
+}
+
+.transgression-tracker .event-item {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  align-items: start;
+  gap: 6px;
+  padding: 7px 8px 7px 0;
+  border-bottom: 1px solid rgba(120, 100, 70, 0.12);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--darkest-text);
+  counter-increment: event-counter;
+}
+
+.transgression-tracker .event-item:last-child {
+  border-bottom: none;
+}
+
+.transgression-tracker .event-item::before {
+  content: counter(event-counter);
+  font-size: 10px;
+  font-weight: bold;
+  color: rgba(78, 63, 110, 0.7);
+  text-align: right;
+  padding-top: 2px;
+  flex-shrink: 0;
+}
+
+/* Already triggered — clearly dimmed, struck through */
+.transgression-tracker .event-item.triggered {
+  color: rgba(140, 130, 118, 0.35);
+}
+
+.transgression-tracker .event-item.triggered .event-text {
+  text-decoration: line-through;
+  text-decoration-color: rgba(140, 130, 118, 0.3);
+}
+
+.transgression-tracker .event-item.triggered::before {
+  color: rgba(78, 63, 110, 0.2);
+}
+
+/* Next event — highlighted row */
+.transgression-tracker .event-item.next {
+  background: rgba(78, 63, 110, 0.18);
+  border-bottom-color: transparent;
+  border-radius: 4px;
+  padding: 7px 8px;
+  color: var(--darkest-text);
+  margin: 2px 0;
+}
+
+.transgression-tracker .event-item.next::before {
+  color: var(--darkest-purple);
+}
+
+/* Warning — next event amber */
+.transgression-tracker .region-row.warning .event-item.next {
+  background: rgba(158, 117, 32, 0.15);
+}
+
+.transgression-tracker .region-row.warning .event-item.next::before {
+  color: var(--darkest-warning);
+}
+
+/* Critical — next event red */
+.transgression-tracker .region-row.critical .event-item.next {
+  background: rgba(122, 46, 46, 0.22);
+}
+
+.transgression-tracker .region-row.critical .event-item.next::before {
+  color: var(--darkest-danger);
+}
+
+
+/* ── Footer ── */
+.transgression-tracker .tracker-footer {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--darkest-border);
+}
+
+.transgression-tracker .tracker-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--darkest-text-muted);
+  font-style: italic;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.transgression-tracker .tracker-hint i {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ----------------------------------------
+   NPC Combat Tracker
+---------------------------------------- */
+.npc-tracker {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.npc-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.npc-slot {
+  border: 1px solid var(--darkest-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.15);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.npc-slot.active {
+  border-color: var(--darkest-accent, #c0392b);
+  background: rgba(192, 57, 43, 0.1);
+}
+
+.npc-slot.defeated {
+  opacity: 0.6;
+  border-color: #555;
+}
+
+.slot-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.slot-select-btn {
+  background: none;
+  border: 2px solid var(--darkest-border);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  color: var(--darkest-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.slot-select-btn.is-active {
+  border-color: var(--darkest-accent, #c0392b);
+  color: var(--darkest-accent, #c0392b);
+}
+
+.slot-select-btn:hover {
+  border-color: var(--darkest-accent, #c0392b);
+  color: var(--darkest-accent, #c0392b);
+}
+
+.slot-name-block {
+  flex: 1;
+  min-width: 0;
+}
+
+.slot-name {
+  display: block;
+  font-weight: bold;
+  font-size: 13px;
+  color: var(--darkest-text-primary, #e8d5b0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slot-rating-label {
+  display: block;
+  font-size: 10px;
+  color: var(--darkest-text-muted);
+}
+
+.slot-defeated-badge {
+  font-size: 10px;
+  color: #e74c3c;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.slot-defeated-badge i {
+  margin-right: 3px;
+}
+
+.slot-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.slot-actions button {
+  background: none;
+  border: 1px solid var(--darkest-border);
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  color: var(--darkest-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.slot-remove-btn:hover {
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+.slot-reset-btn:hover {
+  border-color: #3498db;
+  color: #3498db;
+}
+
+.slot-damage-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.slot-dmg-minus,
+.slot-dmg-plus {
+  background: none;
+  border: 1px solid var(--darkest-border);
+  border-radius: 4px;
+  width: 28px;
+  height: 22px;
+  cursor: pointer;
+  color: var(--darkest-text-muted);
+  font-size: 11px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.slot-dmg-minus:hover {
+  border-color: #3498db;
+  color: #3498db;
+}
+
+.slot-dmg-plus:hover {
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+.slot-progress-wrap {
+  flex: 1;
+  height: 22px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  border: 1px solid var(--darkest-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.slot-progress-bar {
+  height: 100%;
+  background: var(--darkest-accent, #c0392b);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.slot-progress-bar.defeated {
+  background: #555;
+}
+
+.slot-progress-bar.warning {
+  background: #c07d00;
+}
+
+.slot-progress-bar.critical {
+  background: #8b0000;
+}
+
+.slot-progress-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 3px rgba(0,0,0,0.8);
+  pointer-events: none;
+}
+
+/* Empty state */
+.npc-tracker-empty {
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--darkest-text-muted);
+}
+
+.npc-tracker-empty i {
+  font-size: 28px;
+  display: block;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+.npc-tracker-empty p {
+  margin: 0;
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* Footer */
+.npc-tracker .tracker-footer {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--darkest-border);
+}
+
+.npc-tracker .tracker-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--darkest-text-muted);
+  font-style: italic;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.npc-tracker .tracker-hint i {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.npc-tracker .tracker-full {
+  color: #e67e22;
+}
+
+/* Chat: NPC damage info block */
+.npc-damage-info {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border-left: 3px solid #c0392b;
+  border-radius: 0 4px 4px 0;
+  font-size: 12px;
+}
+
+.npc-damage-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.5;
+}
+
+.npc-damage-row i {
+  flex-shrink: 0;
+  color: #e74c3c;
+}
+
+.npc-damage-row.wound-dealt-row i {
+  color: #e67e22;
+}
+
+/* ----------------------------------------
+   Deal/Take Damage Dialog Styles
+---------------------------------------- */
+.deal-damage-dialog .dialog-hint,
+.take-damage-dialog .dialog-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 5px;
+  font-size: 13px;
+}
+
+.deal-damage-dialog .dialog-hint {
+  background: rgba(168, 85, 85, 0.2);
+  border-left: 3px solid var(--darkest-danger);
+  color: var(--darkest-text);
+}
+
+.deal-damage-dialog .dialog-hint i,
+.take-damage-dialog .dialog-hint i {
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.deal-damage-dialog .dialog-hint i {
+  color: var(--darkest-danger);
+}
+
+.take-damage-dialog .dialog-hint {
+  background: rgba(140, 63, 63, 0.2);
+  border-left: 3px solid var(--darkest-accent);
+  color: var(--darkest-text);
+}
+
+.take-damage-dialog .dialog-hint i {
+  color: var(--darkest-accent);
+}
+
+.take-damage-dialog .defense-breakdown {
+  display: flex;
+  gap: 15px;
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--darkest-bg-dark);
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--darkest-text-muted);
+}
+
+.take-damage-dialog .breakdown-item i {
+  margin-right: 4px;
+}
+
+.take-damage-dialog .breakdown-item.physical-armor i {
+  color: var(--darkest-danger);
+}
+
+.take-damage-dialog .breakdown-item.mental-armor i {
+  color: var(--darkest-purple);
+}
+
+/* ----------------------------------------
+   Wound Applied Chat Message
+---------------------------------------- */
+.darkest-wound-applied {
+  background: var(--darkest-bg-dark);
+  color: var(--darkest-text);
+  padding: 10px 12px;
+  border-radius: 5px;
+  border-left: 4px solid var(--darkest-danger);
+  line-height: 1.5;
+}
+
+.darkest-wound-applied i {
+  color: var(--darkest-danger);
+  margin-right: 6px;
+}
+
+/* ----------------------------------------
+   Death Check Breakdown Display
+---------------------------------------- */
+.death-check-breakdown {
+  background: var(--darkest-bg-dark);
+  padding: 12px;
+  border-radius: 5px;
+  border-left: 4px solid var(--darkest-danger);
+  margin-bottom: 8px;
+}
+
+.death-check-breakdown h3 {
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--darkest-border);
+  color: var(--darkest-accent-light);
+  font-size: 14px;
+}
+
+.death-check-breakdown h3 i {
+  margin-right: 8px;
+  color: var(--darkest-danger);
+}
+
+.death-check-breakdown .breakdown-section {
+  background: var(--darkest-bg-medium);
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.death-check-breakdown .breakdown-section:last-child {
+  margin-bottom: 0;
+}
+
+.death-check-breakdown .breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.death-check-breakdown .breakdown-row .label {
+  color: var(--darkest-text-muted);
+}
+
+.death-check-breakdown .breakdown-row .value {
+  font-weight: 500;
+}
+
+.death-check-breakdown .breakdown-row.calculation {
+  border-top: 1px dashed var(--darkest-border);
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
+.death-check-breakdown .breakdown-row.calculation .value strong {
+  color: var(--darkest-accent-light);
+  font-size: 14px;
+}
+
+.death-check-breakdown .breakdown-row.result .value strong {
+  font-size: 16px;
+  color: white;
+}
+
+/* Death Check Outcome Messages */
+.death-check-outcome {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 5px;
+  align-items: flex-start;
+}
+
+.death-check-outcome.success {
+  background: linear-gradient(135deg, var(--darkest-bg-dark), rgba(74, 124, 74, 0.3));
+  border-left: 4px solid var(--darkest-success);
+}
+
+.death-check-outcome.failure {
+  background: linear-gradient(135deg, var(--darkest-bg-dark), rgba(140, 63, 63, 0.3));
+  border-left: 4px solid var(--darkest-danger);
+  animation: pulse-danger 2s infinite;
+}
+
+.death-check-outcome .outcome-icon {
+  font-size: 28px;
+}
+
+.death-check-outcome.success .outcome-icon {
+  color: var(--darkest-success);
+}
+
+.death-check-outcome.failure .outcome-icon {
+  color: var(--darkest-danger);
+}
+
+.death-check-outcome .outcome-text {
+  flex: 1;
+}
+
+.death-check-outcome .outcome-text strong {
+  font-size: 16px;
+}
+
+.death-check-outcome.success .outcome-text strong {
+  color: var(--darkest-success);
+}
+
+.death-check-outcome.failure .outcome-text strong {
+  color: var(--darkest-danger);
+}
+
+.death-check-outcome .doom-fade {
+  margin: 8px 0 0 0;
+  font-size: 12px;
+  color: var(--darkest-text-muted);
+  font-style: italic;
+}
+
+.death-check-outcome .death-message {
+  margin: 8px 0 0 0;
+  font-size: 12px;
+  color: var(--darkest-text-muted);
+}
+
+/* ===== Dialog Equipment Reference Panel ===== */
+
+.dialog-equipment-ref {
+  margin-top: 10px;
+  border-top: 1px solid var(--darkest-border);
+  padding-top: 6px;
+}
+
+.dialog-equip-header {
+  font-size: 11px;
+  color: var(--darkest-text-muted);
+  cursor: pointer;
+  padding: 3px 0;
+  user-select: none;
+}
+
+.dialog-equip-header i {
+  transition: transform 0.15s;
+  margin-right: 4px;
+}
+
+.dialog-equip-header.collapsed i {
+  transform: rotate(-90deg);
+}
+
+.dialog-equip-list {
+  padding: 4px 0 0 0;
+}
+
+.dialog-equip-list.collapsed {
+  display: none;
+}
+
+/* Rating adjuster row in damage dialogs */
+.rating-adjust-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rating-adj-controls {
+  flex-shrink: 0;
+}
+
+.rating-adj-name {
+  flex: 1;
+  min-width: 80px;
+  font-size: 12px;
+}
+
+.effective-attack-display,
+.effective-defense-display {
+  font-weight: bold;
+  font-size: 14px;
+  color: var(--darkest-accent-light);
+}
+
+.effective-attack-display.adj-positive,
+.effective-defense-display.adj-positive {
+  color: var(--darkest-success);
+}
+
+.effective-attack-display.adj-negative,
+.effective-defense-display.adj-negative {
+  color: var(--darkest-danger);
+}
+
+/* Modifier tag in chat roll result */
+.darkest-roll .modifier-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--darkest-accent-light);
+  background: rgba(139, 94, 26, 0.15);
+  border: 1px solid rgba(139, 94, 26, 0.3);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-style: italic;
+}
+
+.damage-equipment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.damage-equip-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 3px 4px;
+  border-radius: 3px;
+}
+
+.damage-equip-option:hover {
+  background: var(--darkest-bg-light);
+}
+
+.damage-equip-option .equip-bonus {
+  color: var(--darkest-success);
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.damage-equip-option .equip-note {
+  color: var(--darkest-text-muted);
+  font-style: italic;
+  font-size: 11px;
+}
+
+.dialog-equip-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 2px 4px;
+  font-size: 11px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.dialog-equip-item .equip-name {
+  color: var(--darkest-text);
+  font-weight: bold;
+}
+
+.dialog-equip-item .equip-note {
+  color: var(--darkest-accent-light);
+  font-style: italic;
+  margin-left: 8px;
+  text-align: right;
+}
+
+/* Attack rating display in deal-damage dialog */
+.deal-damage-dialog .form-group:has(.attack-rating-display) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.deal-damage-dialog .form-group:has(.attack-rating-display) label {
+  display: inline;
+  margin-bottom: 0;
+}
+
+.attack-rating-display {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--darkest-accent);
+  padding: 2px 6px;
+}
+
+/* ----------------------------------------
+   Rest Dialog & Results
+---------------------------------------- */
+
+.rest-wounds {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: #2a5a2a;
+  color: #aed6ae;
+  border: 1px solid #4a8a4a;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.rest-wounds:hover {
+  background: #3a7a3a;
+}
+
+.rest-dialog .rest-summary {
+  font-size: 13px;
+  margin-bottom: 8px;
+  color: #5a4a3a;
+}
+
+.rest-dialog .rest-sep {
+  margin: 0 6px;
+  opacity: 0.5;
+}
+
+.rest-dialog .locked-wounds-note {
+  font-size: 11px;
+  color: #c07d00;
+  margin-bottom: 8px;
+  margin-top: 4px;
+}
+
+.rest-type-section {
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+
+.rest-type-section:last-child {
+  margin-bottom: 0;
+}
+
+.rest-type-header {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rest-type-header.physical {
+  color: #b85050;
+}
+
+.rest-type-header.mental {
+  color: #7060b0;
+}
+
+.rest-dialog .rest-wound-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  font-size: 12px;
+}
+
+.rest-dialog .rest-wound-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.rest-dialog .rest-wound-name {
+  flex: 1;
+  color: #3a2a1a;
+}
+
+.rest-dialog .rest-wound-target {
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+}
+
+.rest-result h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #aed6ae;
+}
+
+.rest-results-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+}
+
+.rest-results-list li {
+  padding: 3px 0;
+}
+
+.rest-results-list .rest-success {
+  color: #4caf50;
+}
+
+.rest-results-list .rest-failure {
+  color: #e57373;
+}
+
+.rest-results-list .roll-detail {
+  font-size: 11px;
+  opacity: 0.75;
+  margin-left: 4px;
+}
+
+.rest-results-list .locked-note {
+  display: block;
+  font-size: 10px;
+  opacity: 0.65;
+  margin-left: 20px;
+}
+
+/* Per-wound rest roll sections in chat */
+.rest-wound-results {
+  margin-top: 6px;
+}
+
+.rest-wound-result {
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding: 6px 0 4px;
+}
+
+.rest-wound-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.rest-wound-result.rest-success .rest-wound-label {
+  color: #4caf50;
+}
+
+.rest-wound-result.rest-failure .rest-wound-label {
+  color: #e57373;
+}
+
+.rest-wound-outcome {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Labelled-cell dice row */
+.rest-roll-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.rest-roll-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.rest-roll-cell-label {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--darkest-text-muted, #888);
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.rest-roll-row .dice-op {
+  /* push ops down to align with die centres */
+  margin-bottom: 3px;
+  color: var(--darkest-text-muted);
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.discarded-cell {
+  opacity: 0.45;
+}
+
+.rest-target-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--darkest-text-muted, #888);
+  border: 2px solid rgba(128,128,128,0.4);
+  border-radius: 5px;
+}
+
+.rest-locked-note {
+  font-size: 10px;
+  color: #c07d00;
+  padding: 3px 0 0 2px;
+}

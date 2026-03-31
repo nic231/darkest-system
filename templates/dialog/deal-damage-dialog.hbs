@@ -1,0 +1,113 @@
+<form class="darkest-dialog deal-damage-dialog">
+  <p class="dialog-hint"><i class="fas fa-fist-raised"></i><span>You are <strong>attacking</strong> — roll to see how much damage you deal.</span></p>
+
+  <div class="form-group">
+    <label>Target {{localize "DARKEST.Rating"}}</label>
+    <select name="targetRating" class="target-rating-select">
+      {{#each taskDifficulty}}
+      <option value="{{rating}}" {{#if (eq rating 4)}}selected{{/if}}>
+        {{label}} ({{rating}})
+      </option>
+      {{/each}}
+    </select>
+    <small class="hint">Target's base Rating</small>
+  </div>
+
+  {{#if ratingModifiers.length}}
+  <div class="form-group">
+    <label>Skill / Modifier</label>
+    <select name="ratingModifier" class="rating-modifier-select">
+      <option value="" data-modifier="0">Base Rating ({{characterRating}})</option>
+      {{#each ratingModifiers}}
+      <option value="{{name}}" data-modifier="{{value}}">{{name}} ({{effectiveValue}})</option>
+      {{/each}}
+    </select>
+  </div>
+  {{/if}}
+
+  <div class="form-group calculated-defense">
+    <label>Your Attack {{localize "DARKEST.Rating"}}</label>
+    <div class="defense-breakdown">
+      <div class="defense-breakdown-cell">
+        <span class="breakdown-cell-label">Rating</span>
+        <span class="breakdown-cell-value">{{characterRating}}</span>
+      </div>
+      <span class="breakdown-op skill-mod-display" style="display:none">+</span>
+      <div class="defense-breakdown-cell skill-mod-display" style="display:none">
+        <span class="breakdown-cell-label">Skill</span>
+        <span class="breakdown-cell-value skill-mod-value">0</span>
+      </div>
+      <span class="breakdown-op">=</span>
+      <div class="defense-breakdown-cell defense-base-cell">
+        <span class="breakdown-cell-label">Base</span>
+        <span class="breakdown-cell-value attack-rating-display">{{characterRating}}</span>
+      </div>
+    </div>
+    <div class="defense-adj-row">
+      <label class="defense-adj-label">Situational modifier</label>
+      <div class="counter-controls rating-adj-controls">
+        <button type="button" class="counter-btn decrement" data-field="ratingAdj"><i class="fas fa-minus"></i></button>
+        <input type="number" name="ratingAdj" value="0" min="-5" max="10" readonly />
+        <button type="button" class="counter-btn increment" data-field="ratingAdj"><i class="fas fa-plus"></i></button>
+      </div>
+    </div>
+    <div class="defense-total-row">
+      <span class="defense-total-label">Total attack:</span>
+      <strong class="effective-attack-display">{{characterRating}}</strong>
+    </div>
+  </div>
+
+  <div class="form-group boon-bane-group">
+    <label>{{localize "DARKEST.Dialog.NumBoons"}}</label>
+    <div class="counter-controls">
+      <button type="button" class="counter-btn decrement" data-field="boons"><i class="fas fa-minus"></i></button>
+      <input type="number" name="boons" value="0" min="0" max="5" readonly />
+      <button type="button" class="counter-btn increment" data-field="boons"><i class="fas fa-plus"></i></button>
+    </div>
+  </div>
+
+  <div class="form-group boon-bane-group">
+    <label>{{localize "DARKEST.Dialog.NumBanes"}}</label>
+    <div class="counter-controls">
+      <button type="button" class="counter-btn decrement" data-field="banes" data-min="{{woundBanes}}"><i class="fas fa-minus"></i></button>
+      <input type="number" name="banes" value="{{banes}}" min="{{woundBanes}}" max="5" readonly data-wound-banes="{{woundBanes}}" />
+      <button type="button" class="counter-btn increment" data-field="banes"><i class="fas fa-plus"></i></button>
+    </div>
+    {{#if woundBanes}}
+    <small class="hint locked-banes"><i class="fas fa-lock"></i> {{woundBanes}} from wounds (cannot reduce)</small>
+    {{/if}}
+  </div>
+
+  <div class="boon-bane-descriptor" style="display:none;">
+    <small class="boon-bane-text"></small>
+  </div>
+
+  {{#if damageEquipment.length}}
+  <div class="form-group">
+    <label>Weapon Bonus</label>
+    <div class="damage-equipment-list">
+      {{#each damageEquipment}}
+      <label class="damage-equip-option">
+        <input type="checkbox" name="damageEquip" value="{{system.damageRatingBonus}}" data-name="{{name}}" />
+        {{name}} <span class="equip-bonus">(+{{system.damageRatingBonus}} Rating)</span>
+        {{#if system.combatNote}}<span class="equip-note">— {{system.combatNote}}</span>{{/if}}
+      </label>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{#if otherEquipment.length}}
+  <div class="dialog-equipment-ref">
+    <div class="dialog-equip-header collapsed"><i class="fas fa-chevron-down"></i> Equipment</div>
+    <div class="dialog-equip-list collapsed">
+      {{#each otherEquipment}}
+      <div class="dialog-equip-item">
+        <span class="equip-name">{{name}}</span>
+        {{#if system.combatNote}}<span class="equip-note">{{system.combatNote}}</span>{{/if}}
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+</form>

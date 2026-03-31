@@ -1,0 +1,55 @@
+<form class="flexcol darkest-sheet item-sheet equipment-sheet" autocomplete="off">
+
+  {{!-- Sheet Header --}}
+  <header class="sheet-header flexrow">
+    <img class="item-img" src="{{item.img}}" data-edit="img" title="{{item.name}}" />
+
+    <div class="header-fields">
+      <h1 class="item-name">
+        <input name="name" type="text" value="{{item.name}}" placeholder="Equipment Name" />
+      </h1>
+    </div>
+  </header>
+
+  {{!-- Sheet Body --}}
+  <section class="sheet-body">
+
+    <div class="form-group">
+      <label>{{localize "DARKEST.Equipment.Quantity"}}</label>
+      <input type="number" name="system.quantity" value="{{system.quantity}}" data-dtype="Number" min="0" />
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "DARKEST.Equipment.ArmorType"}}</label>
+      <select name="system.armorType">
+        {{#each armorTypes as |label key|}}
+        <option value="{{key}}" {{#if (eq key ../system.armorType)}}selected{{/if}}>
+          {{localize label}}
+        </option>
+        {{/each}}
+      </select>
+      <small class="hint">Light armor adds +1 to defense, Heavy armor adds +2</small>
+    </div>
+
+    <div class="form-group">
+      <label>Damage Rating Bonus</label>
+      <input type="number" name="system.damageRatingBonus" value="{{system.damageRatingBonus}}" data-dtype="Number" min="0" max="5" />
+      <small class="hint">Adds to attack rating when dealing damage (e.g. iron spike = 1).</small>
+    </div>
+
+    <div class="form-group">
+      <label>Combat Note (optional)</label>
+      <input type="text" name="system.combatNote" value="{{system.combatNote}}" placeholder="e.g. Boon at long range, Bane up close" />
+      <small class="hint">Shown as a reminder when rolling — adjust boons/banes manually.</small>
+    </div>
+
+    <div class="form-group stacked">
+      <label>{{localize "DARKEST.Actor.Description"}}</label>
+      <div class="editor-container">
+        {{editor enrichedDescription target="system.description" button=true editable=true}}
+      </div>
+    </div>
+
+  </section>
+
+</form>

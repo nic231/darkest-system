@@ -1,0 +1,137 @@
+{{#if isHouseMode}}
+{{!-- ============================== --}}
+{{!-- DARKEST HOUSE MODE             --}}
+{{!-- ============================== --}}
+<div class="transgression-tracker house-mode">
+
+  <div class="house-tracker-header">
+    <h3 class="house-tracker-title"><i class="fas fa-home"></i> House Actions</h3>
+    <div class="house-level-summary">
+      <span class="house-level-label">Action <strong>{{level}}</strong> / 10</span>
+      {{#if loops}}<span class="house-loops-label"> · Cycle {{loops}}</span>{{/if}}
+    </div>
+    <div class="house-global-controls">
+      <button type="button" class="decrement-btn" title="Go back one action">
+        <i class="fas fa-minus"></i>
+      </button>
+      <button type="button" class="increment-btn" title="The house acts — advance to next action">
+        <i class="fas fa-plus"></i> The House Acts
+      </button>
+      <button type="button" class="reset-btn" title="Reset to beginning">
+        <i class="fas fa-undo"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="house-level-dots">
+    {{#each levelDots}}
+    <span class="level-dot {{#if filled}}filled{{/if}}" title="Action {{index}}"></span>
+    {{/each}}
+  </div>
+
+  <ol class="house-actions-list">
+    {{#each houseActions}}
+    <li class="house-action-item {{#if triggered}}triggered{{/if}} {{#if next}}next{{/if}} {{#if upcoming}}upcoming{{/if}}">
+      <span class="house-action-number">{{number}}.</span>
+      <span class="house-action-text">{{text}}</span>
+      {{#if next}}<span class="house-action-badge"><i class="fas fa-arrow-right"></i> NEXT</span>{{/if}}
+    </li>
+    {{/each}}
+  </ol>
+
+  <footer class="tracker-footer">
+    <p class="tracker-hint">
+      <i class="fas fa-info-circle"></i>
+      Use actions in order. Skip inapplicable actions. After #10, start over. Actions post to GM chat.
+    </p>
+  </footer>
+
+</div>
+
+{{else}}
+{{!-- ============================== --}}
+{{!-- DARKEST WOODS MODE (original)  --}}
+{{!-- ============================== --}}
+<div class="transgression-tracker">
+
+  {{#if isEmpty}}
+  <div class="tracker-empty-state">
+    <p><i class="fas fa-book-open"></i> No regions configured.</p>
+    <p>Install the companion content module, or add regions manually via the system settings.</p>
+  </div>
+  {{/if}}
+
+  <div class="regions-list">
+    {{#each regions}}
+    <div class="region-row {{#if isCurrent}}current{{/if}} {{#if isWarning}}warning{{/if}} {{#if isCritical}}critical{{/if}}"
+         data-region="{{slug}}">
+
+      <div class="region-summary">
+
+        <div class="region-info">
+          <div class="region-name-line">
+            {{#if isCurrent}}<i class="fas fa-eye region-active-icon"></i>{{/if}}
+            <h4 class="region-name">{{name}}</h4>
+          </div>
+          <span class="witch-name">{{witch}}</span>
+          <span class="key-phrase">{{keyPhrase}}</span>
+        </div>
+
+        <div class="transgression-level">
+          <div class="level-dots">
+            {{#each levelDots}}
+            <span class="level-dot {{#if filled}}filled{{/if}}"
+                  data-region="{{../slug}}"
+                  data-level="{{index}}"
+                  title="Level {{index}}"></span>
+            {{/each}}
+          </div>
+          <div class="loop-pips">
+            {{#each loopPips}}
+            <span class="loop-pip {{#if filled}}filled{{/if}} {{#if critical}}critical{{/if}}"></span>
+            {{/each}}
+          </div>
+        </div>
+
+        <div class="region-controls">
+          <button type="button" class="events-toggle-btn" data-region="{{slug}}" title="Show transgression events">
+            <i class="fas fa-list"></i>
+          </button>
+          <button type="button" class="decrement-btn" data-region="{{slug}}" title="Decrease transgression">
+            <i class="fas fa-minus"></i>
+          </button>
+          <button type="button" class="increment-btn" data-region="{{slug}}" title="Increase transgression">
+            <i class="fas fa-plus"></i>
+          </button>
+          <button type="button" class="reset-btn" data-region="{{slug}}" title="Reset">
+            <i class="fas fa-undo"></i>
+          </button>
+        </div>
+
+      </div>
+
+      {{#if transgressionEvents.length}}
+      <div class="transgression-events collapsed" data-region="{{slug}}">
+        <ol class="events-list">
+          {{#each transgressionEvents}}
+          <li class="event-item {{#if triggered}}triggered{{/if}} {{#if next}}next{{/if}}">
+            <span class="event-text">{{text}}</span>
+          </li>
+          {{/each}}
+        </ol>
+      </div>
+      {{/if}}
+
+    </div>
+    {{/each}}
+  </div>
+
+  <footer class="tracker-footer">
+    <p class="tracker-hint">
+      <i class="fas fa-info-circle"></i>
+      Click a region to mark it active. Click dots to set level. Use <i class="fas fa-list"></i> to view escalation events.
+    </p>
+  </footer>
+
+</div>
+{{/if}}

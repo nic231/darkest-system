@@ -1,0 +1,67 @@
+<form class="darkest-dialog check-dialog">
+  <p class="dialog-hint"><i class="fas fa-dizzy"></i> Rolling <strong>{{checkLabel}}</strong> vs wound rating <strong>{{woundRating}}</strong>.</p>
+
+  {{#if ratingModifiers.length}}
+  <div class="form-group">
+    <label>Skill / Modifier</label>
+    <select name="ratingModifier" class="rating-modifier-select">
+      <option value="" data-modifier="0">Base Rating ({{characterRating}})</option>
+      {{#each ratingModifiers}}
+      <option value="{{name}}" data-modifier="{{value}}">{{name}} ({{effectiveValue}})</option>
+      {{/each}}
+    </select>
+  </div>
+  {{/if}}
+
+  {{!-- Target Number Breakdown --}}
+  <div class="target-number-display" data-character-rating="{{characterRating}}">
+    <div class="target-breakdown">
+      <span class="target-calc">7 + <span class="wound-rating-display">{{woundRating}}</span></span>
+      <span class="target-separator">−</span>
+      <span class="effective-rating-display" title="Your effective rating">{{characterRating}}</span>
+      <span class="target-separator">=</span>
+      <span class="target-need-label">Need:</span>
+      <span class="target-value target-need">{{diceNeeded}}</span>
+      <span class="target-need-sublabel">on the dice</span>
+    </div>
+  </div>
+
+  <div class="form-group boon-bane-group">
+    <label>{{localize "DARKEST.Dialog.NumBoons"}}</label>
+    <div class="counter-controls">
+      <button type="button" class="counter-btn decrement" data-field="boons"><i class="fas fa-minus"></i></button>
+      <input type="number" name="boons" value="0" min="0" max="5" readonly />
+      <button type="button" class="counter-btn increment" data-field="boons"><i class="fas fa-plus"></i></button>
+    </div>
+  </div>
+
+  <div class="form-group boon-bane-group">
+    <label>{{localize "DARKEST.Dialog.NumBanes"}}</label>
+    <div class="counter-controls">
+      <button type="button" class="counter-btn decrement" data-field="banes" data-min="{{woundBanes}}"><i class="fas fa-minus"></i></button>
+      <input type="number" name="banes" value="{{woundBanes}}" min="{{woundBanes}}" max="5" readonly data-wound-banes="{{woundBanes}}" />
+      <button type="button" class="counter-btn increment" data-field="banes"><i class="fas fa-plus"></i></button>
+    </div>
+    {{#if woundBanes}}
+    <small class="hint locked-banes"><i class="fas fa-lock"></i> {{woundBanes}} from wounds (cannot reduce)</small>
+    {{/if}}
+  </div>
+
+  <div class="boon-bane-descriptor" style="display:none;">
+    <small class="boon-bane-text"></small>
+  </div>
+
+  {{#if equipment.length}}
+  <div class="dialog-equipment-ref">
+    <div class="dialog-equip-header collapsed"><i class="fas fa-chevron-down"></i> Equipment</div>
+    <div class="dialog-equip-list collapsed">
+      {{#each equipment}}
+      <div class="dialog-equip-item">
+        <span class="equip-name">{{name}}</span>
+        {{#if system.combatNote}}<span class="equip-note">{{system.combatNote}}</span>{{/if}}
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+</form>

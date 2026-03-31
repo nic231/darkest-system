@@ -1,0 +1,75 @@
+{
+  "Actor": {
+    "types": ["character", "npc"],
+    "templates": {
+      "base": {
+        "rating": 3,
+        "biography": "",
+        "notes": ""
+      }
+    },
+    "character": {
+      "templates": ["base"],
+      "ratingModifications": {
+        "physical": 0,
+        "mental": 0,
+        "stealth": 0,
+        "social": 0
+      },
+      "customModifications": [],
+      "armor": {
+        "physical": 0
+      },
+      "banes": 0,
+      "unconscious": false,
+      "catatonic": false,
+      "dead": false
+    },
+    "npc": {
+      "templates": ["base"],
+      "description": "",
+      "tactics": "",
+      "abilities": ""
+    }
+  },
+  "Item": {
+    "types": ["wound", "doom", "ability", "equipment"],
+    "templates": {
+      "base": {
+        "description": ""
+      }
+    },
+    "wound": {
+      "templates": ["base"],
+      "rating": 1,
+      "type": "physical",
+      "healed": false,
+      "restFailedAt": null
+    },
+    "doom": {
+      "templates": ["base"],
+      "effect": "",
+      "resolved": false,
+      "source": ""
+    },
+    "ability": {
+      "templates": ["base"],
+      "grantsBoon": false,
+      "grantsRatingMod": 0,
+      "usesPerDay": 0,
+      "usesRemaining": 0,
+      "unlimited": true,
+      "abilityType": "passive"
+    },
+    "equipment": {
+      "templates": ["base"],
+      "quantity": 1,
+      "armorBonus": 0,
+      "armorType": "none",
+      "grantsBoon": false,
+      "grantsBane": false,
+      "combatNote": "",
+      "damageRatingBonus": 0
+    }
+  }
+}

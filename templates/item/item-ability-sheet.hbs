@@ -1,0 +1,94 @@
+<form class="flexcol darkest-sheet item-sheet ability-sheet" autocomplete="off">
+
+  {{!-- Sheet Header --}}
+  <header class="sheet-header flexrow">
+    <img class="item-img" src="{{item.img}}" data-edit="img" title="{{item.name}}" />
+
+    <div class="header-fields">
+      <h1 class="item-name">
+        <input name="name" type="text" value="{{item.name}}" placeholder="Ability Name" />
+      </h1>
+
+      {{#if system.usesPerDay}}
+      <div class="uses-display">
+        <span class="uses-remaining">{{system.usesRemaining}}</span>
+        <span class="uses-separator">/</span>
+        <span class="uses-max">{{system.usesPerDay}}</span>
+        <span class="uses-label">uses</span>
+      </div>
+      {{/if}}
+    </div>
+  </header>
+
+  {{!-- Sheet Navigation --}}
+  <nav class="sheet-tabs tabs" data-group="primary">
+    <a class="item" data-tab="description">{{localize "DARKEST.Actor.Description"}}</a>
+    <a class="item" data-tab="details">Details</a>
+  </nav>
+
+  {{!-- Sheet Body --}}
+  <section class="sheet-body">
+
+    {{!-- Description Tab --}}
+    <div class="tab description" data-group="primary" data-tab="description">
+      <div class="form-group stacked">
+        <label>{{localize "DARKEST.Actor.Description"}}</label>
+        <div class="editor-container">
+          {{editor enrichedDescription target="system.description" button=true editable=true}}
+        </div>
+      </div>
+
+      {{#if item.isOwner}}
+      <button type="button" class="use-ability">
+        <i class="fas fa-magic"></i> Use Ability
+      </button>
+      {{/if}}
+    </div>
+
+    {{!-- Details Tab --}}
+    <div class="tab details" data-group="primary" data-tab="details">
+
+      <div class="form-group">
+        <label>{{localize "DARKEST.Ability.Type"}}</label>
+        <select name="system.type">
+          {{#each abilityTypes as |label key|}}
+          <option value="{{key}}" {{#if (eq key ../system.type)}}selected{{/if}}>
+            {{localize label}}
+          </option>
+          {{/each}}
+        </select>
+      </div>
+
+      <div class="form-group checkbox">
+        <label>
+          <input type="checkbox" name="system.grantsBoon" {{#if system.grantsBoon}}checked{{/if}} />
+          {{localize "DARKEST.Ability.GrantsBoon"}}
+        </label>
+        <small class="hint">When this ability applies, the character gains a boon on their roll</small>
+      </div>
+
+      <div class="form-group">
+        <label>{{localize "DARKEST.Ability.RatingMod"}}</label>
+        <input type="number" name="system.ratingModifier" value="{{system.ratingModifier}}" data-dtype="Number" />
+        <small class="hint">Modifier to rating when this ability applies</small>
+      </div>
+
+      <div class="form-group">
+        <label>{{localize "DARKEST.Ability.UsesPerDay"}}</label>
+        <input type="number" name="system.usesPerDay" value="{{system.usesPerDay}}" data-dtype="Number" min="0" />
+        <small class="hint">0 = unlimited uses</small>
+      </div>
+
+      {{#if system.usesPerDay}}
+      <div class="form-group">
+        <label>{{localize "DARKEST.Ability.Uses"}} Remaining</label>
+        <input type="number" name="system.usesRemaining" value="{{system.usesRemaining}}" data-dtype="Number" min="0"
+          max="{{system.usesPerDay}}" />
+      </div>
+      {{/if}}
+
+    </div>
+
+  </section>
+
+</form>

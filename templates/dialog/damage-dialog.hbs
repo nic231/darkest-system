@@ -1,0 +1,60 @@
+<form class="darkest-dialog damage-dialog">
+  <div class="form-group">
+    <label>Attack {{localize "DARKEST.Rating"}}</label>
+    <input type="number" name="attackRating" value="{{attackRating}}" min="1" max="10" readonly />
+  </div>
+
+  <div class="form-group">
+    <label>{{localize "DARKEST.Wound.Type"}}</label>
+    <select name="woundType">
+      <option value="physical" selected>{{localize "DARKEST.Wound.Physical"}}</option>
+      <option value="mental">{{localize "DARKEST.Wound.Mental"}}</option>
+    </select>
+    <small class="hint">Determines which armor applies to defense</small>
+  </div>
+
+  <div class="form-group">
+    <label>Target {{localize "DARKEST.Rating"}}</label>
+    <input type="number" name="targetRating" value="0" min="0" max="10" />
+    <small class="hint">Target's base Rating (without armor)</small>
+  </div>
+
+  <div class="form-group">
+    <label>Target Armor</label>
+    <input type="number" name="targetArmor" value="0" min="0" max="3" />
+    <small class="hint">Physical or Mental armor (based on wound type)</small>
+  </div>
+
+  <div class="form-group calculated-defense">
+    <label>Defense {{localize "DARKEST.Rating"}} (Total)</label>
+    <span class="defense-total" id="defenseTotal">0</span>
+    <small class="hint">Rating + Armor = Defense</small>
+  </div>
+
+  <div class="form-group">
+    <label>{{localize "DARKEST.Dialog.NumBoons"}}</label>
+    <input type="number" name="boons" value="0" min="0" max="5" />
+  </div>
+
+  <div class="form-group">
+    <label>{{localize "DARKEST.Dialog.NumBanes"}}</label>
+    <input type="number" name="banes" value="0" min="0" max="5" />
+  </div>
+</form>
+
+<script>
+  // Auto-calculate defense total
+  const form = document.currentScript.previousElementSibling;
+  const targetRating = form.querySelector('[name="targetRating"]');
+  const targetArmor = form.querySelector('[name="targetArmor"]');
+  const defenseTotal = form.querySelector('#defenseTotal');
+
+  function updateDefense() {
+    const total = (parseInt(targetRating.value) || 0) + (parseInt(targetArmor.value) || 0);
+    defenseTotal.textContent = total;
+  }
+
+  targetRating.addEventListener('input', updateDefense);
+  targetArmor.addEventListener('input', updateDefense);
+  updateDefense();
+</script>
