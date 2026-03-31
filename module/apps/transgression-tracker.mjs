@@ -60,14 +60,100 @@ export class TransgressionTracker extends Application {
    */
   static getTransgressions() {
     const defaultData = {};
-    for (const regionId of Object.keys(WITCHES)) {
+    for (const regionId of Object.keys(TransgressionTracker.getAllRegions())) {
       defaultData[regionId] = { level: 0, loops: 0 };
     }
     return game.settings.get('darkest-system', 'transgressions') || defaultData;
   }
 
   static hasContent() {
-    return Object.keys(WITCHES).length > 0;
+    return Object.keys(TransgressionTracker.getAllRegions()).length > 0;
+  }
+
+  /** Returns merged injected + custom regions */
+  static getAllRegions() {
+    const custom = game.settings.get('darkest-system', 'customRegions') || {};
+    return foundry.utils.mergeObject(foundry.utils.deepClone(WITCHES), custom);
+  }
+
+  static getCustomRegions() {
+    return game.settings.get('darkest-system', 'customRegions') || {};
+  }
+
+  static async setCustomRegions(data) {
+    await game.settings.set('darkest-system', 'customRegions', data);
+  }
+
+  /** Open add/edit dialog for a region */
+  static async openRegionDialog(existingSlug = null) {
+    const ALL = TransgressionTracker.getAllRegions();
+    const existing = existingSlug ? ALL[existingSlug] : null;
+    const isCustom = existingSlug ? !WITCHES[existingSlug] : true;
+
+    const eventFields = Array.from({ length: 10 }, (_, i) => {
+      const text = existing?.transgressionEvents?.[i] || '';
+      return `<div class="region-event-row">
+        <label>${i + 1}.</label>
+        <input type="text" name="event_${i}" value="${text.replace(/"/g, '&quot;')}" placeholder="Event ${i + 1} description (optional)">
+      </div>`;
+    }).join('');
+
+    const content = `<div class="darkest-dialog region-edit-dialog">
+      <div class="form-group">
+        <label>Region Name</label>
+        <input type="text" name="regionName" value="${existing?.name || ''}" placeholder="e.g. The Lost">
+      </div>
+      <div class="form-group">
+        <label>Antagonist Name</label>
+        <input type="text" name="witchName" value="${existing?.witch || ''}" placeholder="e.g. The Isolating Pack">
+      </div>
+      <div class="form-group">
+        <label>Key Phrase</label>
+        <input type="text" name="keyPhrase" value="${existing?.keyPhrase || ''}" placeholder="Optional flavour phrase">
+      </div>
+      <div class="form-group region-events-group">
+        <label>Transgression Events <span class="form-hint">(optional — fill in from your source material)</span></label>
+        ${eventFields}
+      </div>
+    </div>`;
+
+    return new Promise((resolve) => {
+      new Dialog({
+        title: existingSlug ? 'Edit Region' : 'Add Region',
+        content,
+        buttons: {
+          save: {
+            icon: '<i class="fas fa-save"></i>',
+            label: 'Save',
+            callback: async (html) => {
+              const name = html.find('[name="regionName"]').val().trim();
+              if (!name) { ui.notifications.warn('Region name is required.'); return; }
+
+              const witch = html.find('[name="witchName"]').val().trim();
+              const keyPhrase = html.find('[name="keyPhrase"]').val().trim();
+              const events = Array.from({ length: 10 }, (_, i) =>
+                html.find(`[name="event_${i}"]`).val().trim()
+              ).filter(Boolean);
+
+              const slug = existingSlug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+              const custom = TransgressionTracker.getCustomRegions();
+              custom[slug] = { name, witch, keyPhrase, transgressionEvents: events };
+              await TransgressionTracker.setCustomRegions(custom);
+
+              const tracker = Object.values(ui.windows).find(w => w instanceof TransgressionTracker);
+              if (tracker) tracker.render();
+              resolve(slug);
+            }
+          },
+          cancel: {
+            icon: '<i class="fas fa-times"></i>',
+            label: 'Cancel',
+            callback: () => resolve(null)
+          }
+        },
+        default: 'save'
+      }, { width: 480 }).render(true);
+    });
   }
 
   /**
@@ -81,31 +167,24 @@ export class TransgressionTracker extends Application {
    * Get the current region based on active scene
    */
   static getCurrentRegion() {
+    const ALL = TransgressionTracker.getAllRegions();
     const scene = game.scenes.active;
     if (!scene) return null;
 
-    // Check if scene has a region flag
     const regionSlug = scene.getFlag('darkest-system', 'region');
-    if (regionSlug && WITCHES[regionSlug]) {
-      return regionSlug;
-    }
+    if (regionSlug && ALL[regionSlug]) return regionSlug;
 
-    // Try to match scene name to region
     const sceneName = scene.name.toLowerCase();
-    for (const [slug, data] of Object.entries(WITCHES)) {
-      if (sceneName.includes(data.name.toLowerCase())) {
-        return slug;
-      }
+    for (const [slug, data] of Object.entries(ALL)) {
+      if (sceneName.includes(data.name.toLowerCase())) return slug;
     }
 
     return game.settings.get('darkest-system', 'currentRegion') || null;
   }
 
-  /**
-   * Set the current region
-   */
   static async setCurrentRegion(regionSlug) {
-    if (WITCHES[regionSlug] || regionSlug === null) {
+    const ALL = TransgressionTracker.getAllRegions();
+    if (ALL[regionSlug] || regionSlug === null) {
       await game.settings.set('darkest-system', 'currentRegion', regionSlug);
     }
   }
@@ -119,13 +198,16 @@ export class TransgressionTracker extends Application {
       return this._incrementHouseAction();
     }
 
-    if (!regionSlug || !WITCHES[regionSlug]) {
+    const ALL = TransgressionTracker.getAllRegions();
+    if (!regionSlug || !ALL[regionSlug]) {
       ui.notifications.warn('No valid region selected for transgression tracking');
       return null;
     }
 
     const transgressions = this.getTransgressions();
+    if (!transgressions[regionSlug]) transgressions[regionSlug] = { level: 0, loops: 0 };
     const region = transgressions[regionSlug];
+    const antagonist = ALL[regionSlug].witch || ALL[regionSlug].name;
 
     region.level++;
     if (region.level > 10) {
@@ -133,16 +215,14 @@ export class TransgressionTracker extends Application {
       region.loops++;
 
       if (region.loops >= 3) {
-        // Critical warning - witch can open the Dark Forest door
         ui.notifications.error(
-          `CRITICAL: ${WITCHES[regionSlug].witch} has completed 3 transgression cycles! ` +
+          `CRITICAL: ${antagonist} has completed 3 transgression cycles! ` +
           `They can now open the door to the Dark Forest!`,
           { permanent: true }
         );
       } else {
         ui.notifications.warn(
-          `${WITCHES[regionSlug].witch} has completed a transgression cycle! ` +
-          `Loop ${region.loops}/3`
+          `${antagonist} has completed a transgression cycle! Loop ${region.loops}/3`
         );
       }
     }
@@ -234,10 +314,11 @@ export class TransgressionTracker extends Application {
       };
     }
 
+    const ALL = TransgressionTracker.getAllRegions();
     const transgressions = TransgressionTracker.getTransgressions();
     const currentRegion = TransgressionTracker.getCurrentRegion();
 
-    const regions = Object.entries(WITCHES).map(([slug, data]) => {
+    const regions = Object.entries(ALL).map(([slug, data]) => {
       const transgression = transgressions[slug] || { level: 0, loops: 0 };
       return {
         slug,
@@ -249,6 +330,7 @@ export class TransgressionTracker extends Application {
         isCurrent: slug === currentRegion,
         isWarning: transgression.loops >= 2,
         isCritical: transgression.loops >= 3,
+        isCustom: !WITCHES[slug],
         levelDots: Array.from({ length: 10 }, (_, i) => ({
           index: i + 1,
           filled: i < transgression.level
@@ -268,10 +350,11 @@ export class TransgressionTracker extends Application {
 
     return {
       isHouseMode: false,
+      isEmpty: regions.length === 0,
       regions,
-      currentRegion: currentRegion ? WITCHES[currentRegion]?.name : 'None',
+      currentRegion: currentRegion ? ALL[currentRegion]?.name : 'None',
       currentRegionSlug: currentRegion,
-      witchOptions: Object.entries(WITCHES).map(([slug, data]) => ({
+      witchOptions: Object.entries(ALL).map(([slug, data]) => ({
         slug,
         name: data.name,
         selected: slug === currentRegion
@@ -387,7 +470,40 @@ export class TransgressionTracker extends Application {
       const regionSlug = ev.currentTarget.dataset.region;
       const level = parseInt(ev.currentTarget.dataset.level);
       const transgressions = TransgressionTracker.getTransgressions();
+      if (!transgressions[regionSlug]) transgressions[regionSlug] = { level: 0, loops: 0 };
       transgressions[regionSlug].level = level;
+      await TransgressionTracker.setTransgressions(transgressions);
+      this.render();
+    });
+
+    // Add region button
+    html.find('.add-region-btn').click(async () => {
+      await TransgressionTracker.openRegionDialog(null);
+    });
+
+    // Edit region button (custom regions only)
+    html.find('.edit-region-btn').click(async (ev) => {
+      ev.stopPropagation();
+      const slug = ev.currentTarget.dataset.region;
+      await TransgressionTracker.openRegionDialog(slug);
+    });
+
+    // Delete region button (custom regions only)
+    html.find('.delete-region-btn').click(async (ev) => {
+      ev.stopPropagation();
+      const slug = ev.currentTarget.dataset.region;
+      const ALL = TransgressionTracker.getAllRegions();
+      const name = ALL[slug]?.name || slug;
+      const confirmed = await Dialog.confirm({
+        title: 'Delete Region',
+        content: `<p>Delete <strong>${name}</strong>? This will also clear its transgression progress.</p>`
+      });
+      if (!confirmed) return;
+      const custom = TransgressionTracker.getCustomRegions();
+      delete custom[slug];
+      await TransgressionTracker.setCustomRegions(custom);
+      const transgressions = TransgressionTracker.getTransgressions();
+      delete transgressions[slug];
       await TransgressionTracker.setTransgressions(transgressions);
       this.render();
     });
@@ -416,6 +532,16 @@ export function registerTransgressionSettings() {
     config: false,
     type: String,
     default: ''
+  });
+
+  // Custom regions added by the GM
+  game.settings.register('darkest-system', 'customRegions', {
+    name: 'Custom Regions',
+    hint: 'GM-created regions for the transgression tracker',
+    scope: 'world',
+    config: false,
+    type: Object,
+    default: {}
   });
 
   // House Actions data (Darkest House mode)

@@ -54,10 +54,14 @@
 {{!-- ============================== --}}
 <div class="transgression-tracker">
 
+  <div class="tracker-toolbar">
+    <button type="button" class="add-region-btn"><i class="fas fa-plus"></i> Add Region</button>
+  </div>
+
   {{#if isEmpty}}
   <div class="tracker-empty-state">
-    <p><i class="fas fa-book-open"></i> No regions configured.</p>
-    <p>Install the companion content module, or add regions manually via the system settings.</p>
+    <p><i class="fas fa-map"></i> No regions configured.</p>
+    <p>Click <strong>Add Region</strong> to create one, or install the companion content module.</p>
   </div>
   {{/if}}
 
@@ -97,6 +101,14 @@
           <button type="button" class="events-toggle-btn" data-region="{{slug}}" title="Show transgression events">
             <i class="fas fa-list"></i>
           </button>
+          {{#if isCustom}}
+          <button type="button" class="edit-region-btn" data-region="{{slug}}" title="Edit region">
+            <i class="fas fa-pencil"></i>
+          </button>
+          <button type="button" class="delete-region-btn" data-region="{{slug}}" title="Delete region">
+            <i class="fas fa-trash"></i>
+          </button>
+          {{/if}}
           <button type="button" class="decrement-btn" data-region="{{slug}}" title="Decrease transgression">
             <i class="fas fa-minus"></i>
           </button>
