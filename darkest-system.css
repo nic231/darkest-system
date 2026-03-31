@@ -2290,12 +2290,15 @@
 ---------------------------------------- */
 .transgression-tracker {
   padding: 8px 6px;
-  color: var(--darkest-text);
+  color: var(--darkest-text, #e8dcc8);
+  background: var(--darkest-bg-dark, #1a1a1a);
+  min-height: 100%;
 }
 
 /* House mode tracker */
 .transgression-tracker.house-mode {
   padding: 8px 10px;
+  background: var(--darkest-bg-dark, #1a1a1a);
 }
 
 .house-tracker-header {
@@ -2894,6 +2897,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  background: var(--darkest-bg-dark, #1a1a1a);
+  min-height: 100%;
 }
 
 .npc-slots {
