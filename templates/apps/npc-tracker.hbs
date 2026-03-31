@@ -3,7 +3,7 @@
   {{#if hasSlots}}
   <div class="npc-slots">
     {{#each slots}}
-    <div class="npc-slot {{#if isActive}}active{{/if}} {{#if defeated}}defeated{{/if}}">
+    <div class="npc-slot {{#if isActive}}active{{/if}} {{#if defeated}}defeated{{/if}} {{#if lethalBlow}}lethal{{/if}}">
 
       <div class="slot-header">
         <button type="button" class="slot-select-btn {{#if isActive}}is-active{{/if}}" data-index="{{index}}" title="{{#if isActive}}Active target{{else}}Set as active target{{/if}}">
@@ -15,6 +15,9 @@
         </div>
         {{#if defeated}}
         <span class="slot-defeated-badge"><i class="fas fa-skull"></i> Defeated</span>
+        {{/if}}
+        {{#if lethalBlow}}
+        <span class="slot-lethal-badge" title="A single wound exceeded Rating + 3 — instant kill/KO at GM discretion"><i class="fas fa-bolt"></i> Lethal Blow</span>
         {{/if}}
         <div class="slot-actions">
           <button type="button" class="slot-reset-btn" data-index="{{index}}" title="Reset wound total"><i class="fas fa-undo"></i></button>

@@ -90,6 +90,7 @@ export class NpcTracker extends Application {
     if (data.slots[index]) {
       data.slots[index].woundTotal = 0;
       data.slots[index].defeated = false;
+      data.slots[index].lethalBlow = false;
     }
     await NpcTracker.setData(data);
     NpcTracker._refresh();
@@ -130,7 +131,15 @@ export class NpcTracker extends Application {
 
     const actor = game.actors.get(slot.actorId);
     if (actor) {
-      const threshold = (actor.system.rating || 3) * 3;
+      const rating = actor.system.rating || 3;
+      const threshold = rating * 3;
+
+      // Lethal blow: single wound rating >= NPC rating + 3
+      if (woundRating >= rating + 3) {
+        slot.lethalBlow = true;
+        NpcTracker._notifyLethal(actor.name, woundRating, rating);
+      }
+
       if (slot.woundTotal >= threshold && !slot.defeated) {
         slot.defeated = true;
         NpcTracker._notifyDefeated(actor.name, slot.woundTotal, threshold);
@@ -144,6 +153,13 @@ export class NpcTracker extends Application {
   static _notifyDefeated(name, total, threshold) {
     ui.notifications.warn(
       `${name} has been defeated! Total wound rating ${total} has reached the threshold of ${threshold}.`,
+      { permanent: false }
+    );
+  }
+
+  static _notifyLethal(name, woundRating, npcRating) {
+    ui.notifications.error(
+      `LETHAL BLOW! ${name} received a wound of ${woundRating} — exceeds Rating ${npcRating} + 3. Instant kill/KO at GM discretion.`,
       { permanent: false }
     );
   }
@@ -175,7 +191,8 @@ export class NpcTracker extends Application {
         pct,
         barClass,
         isActive: index === data.activeSlot,
-        defeated: slot.defeated === true
+        defeated: slot.defeated === true,
+        lethalBlow: slot.lethalBlow === true
       };
     }).filter(Boolean);
 

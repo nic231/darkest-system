@@ -2984,6 +2984,26 @@
   margin-right: 3px;
 }
 
+.slot-lethal-badge {
+  font-size: 10px;
+  color: #fff;
+  background: #c0392b;
+  font-weight: bold;
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: help;
+}
+
+.slot-lethal-badge i {
+  margin-right: 3px;
+}
+
+.npc-slot.lethal {
+  border-color: #c0392b;
+  box-shadow: 0 0 0 2px rgba(192, 57, 43, 0.4);
+}
+
 .slot-actions {
   display: flex;
   gap: 4px;
