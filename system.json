@@ -2,7 +2,7 @@
   "id": "darkest-system",
   "title": "The Darkest System",
   "description": "A rules-light horror RPG system for The Darkest Woods and The Darkest House. Features Rating-based mechanics, the Darkest Die, Boons/Banes, and a Doom system.",
-  "version": "0.1.0-alpha",
+  "version": "0.2.0-alpha",
   "compatibility": {
     "minimum": "11",
     "verified": "13"
@@ -34,6 +34,6 @@
   "secondaryTokenAttribute": null,
 "background": "systems/darkest-system/assets/background.jpg",
   "manifest": "https://raw.githubusercontent.com/nic231/darkest-system/master/system.json",
-  "download": "https://github.com/nic231/darkest-system/archive/refs/tags/v0.1.0-alpha.zip",
+  "download": "https://github.com/nic231/darkest-system/archive/refs/tags/v0.2.0-alpha.zip",
   "flags": {}
 }

@@ -237,10 +237,12 @@ export class DarkestActor extends Actor {
     if (woundRating > 0) {
       const wound = await this.addWound(woundRating, woundType, `Damage taken in combat`);
 
-      ChatMessage.create({
-        speaker: ChatMessage.getSpeaker({ actor: this }),
-        content: `<div class="darkest-wound-applied"><i class="fas fa-heart-broken"></i> <strong>${this.name}</strong> receives a <strong>${woundType}</strong> wound of Rating <strong>${woundRating}</strong>!</div>`
-      });
+      if (wound) {
+        ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ actor: this }),
+          content: `<div class="darkest-wound-applied"><i class="fas fa-heart-broken"></i> <strong>${this.name}</strong> receives a <strong>${woundType}</strong> wound of Rating <strong>${woundRating}</strong>!</div>`
+        });
+      }
     }
 
     return roll;
@@ -569,7 +571,7 @@ export class DarkestActor extends Actor {
           const updateDisplay = () => {
             const ratingMod = parseInt(modifierSelect.find('option:selected').data('modifier')) || 0;
             const effective = characterRating + ratingMod;
-            const need = (7 + effectiveDifficulty) - effective;
+            const need = (7 + highestWound) - effective;
             effectiveRatingDisplay.text(effective);
             targetNeed.text(need);
           };

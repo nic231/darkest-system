@@ -81,6 +81,15 @@ Hooks.once('init', function() {
    Game Settings
 ---------------------------------------- */
 function _registerGameSettings() {
+  game.settings.register('darkest-system', 'showDoomSkulls', {
+    name: 'DARKEST.Settings.ShowDoomSkulls',
+    hint: 'DARKEST.Settings.ShowDoomSkullsHint',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
   game.settings.register('darkest-system', 'gameMode', {
     name: 'DARKEST.Settings.GameMode',
     hint: 'DARKEST.Settings.GameModeHint',
@@ -305,6 +314,112 @@ Hooks.on('darkestSystem.transgression', async (actor, roll) => {
 Hooks.on('darkestSystem.damageDealt', async (roll) => {
   if (!game.user.isGM) return;
   await NpcTracker.applyDamage(roll.woundRating);
+});
+
+/* ----------------------------------------
+   Feature B — Scene Region Auto-Detection
+---------------------------------------- */
+Hooks.on('canvasReady', async () => {
+  if (!game.user.isGM) return;
+  const scene = game.scenes.active;
+  if (!scene) return;
+
+  const ALL = TransgressionTracker.getAllRegions();
+  if (!ALL || Object.keys(ALL).length === 0) return;
+
+  // Check scene flag first, then name match
+  const flagRegion = scene.getFlag('darkest-system', 'region');
+  let matchedSlug = flagRegion && ALL[flagRegion] ? flagRegion : null;
+
+  if (!matchedSlug) {
+    const sceneName = scene.name.toLowerCase();
+    for (const [slug, data] of Object.entries(ALL)) {
+      if (data.name && sceneName.includes(data.name.toLowerCase())) {
+        matchedSlug = slug;
+        break;
+      }
+    }
+  }
+
+  if (!matchedSlug) return;
+
+  const currentRegion = TransgressionTracker.getCurrentRegion();
+  if (currentRegion === matchedSlug) return; // already set
+
+  const regionName = ALL[matchedSlug]?.name || matchedSlug;
+  new Dialog({
+    title: 'Region Detected',
+    content: `<p>The active scene matches region <strong>${regionName}</strong>. Update the transgression tracker?</p>`,
+    buttons: {
+      accept: {
+        icon: '<i class="fas fa-check"></i>',
+        label: 'Update',
+        callback: async () => {
+          await TransgressionTracker.setCurrentRegion(matchedSlug);
+          const tracker = Object.values(ui.windows).find(w => w.constructor.name === 'TransgressionTracker');
+          if (tracker) tracker.render();
+          ui.notifications.info(`Transgression tracker set to region: ${regionName}`);
+        }
+      },
+      dismiss: {
+        icon: '<i class="fas fa-times"></i>',
+        label: 'Dismiss'
+      }
+    },
+    default: 'accept'
+  }, { width: 360 }).render(true);
+});
+
+/* ----------------------------------------
+   Feature D — Player List Doom Overlay
+---------------------------------------- */
+Hooks.on('renderPlayerList', (app, html) => {
+  html.find('li.player').each((_, li) => {
+    const userId = li.dataset.userId;
+    if (!userId) return;
+    const user = game.users.get(userId);
+    if (!user?.character) return;
+    const actor = user.character;
+    if (actor.type !== 'character') return;
+    const doomCount = actor.items.filter(i => i.type === 'doom' && !i.system.resolved).length;
+    if (doomCount <= 0) return;
+
+    const skulls = Array.from({ length: doomCount }, () =>
+      '<i class="fas fa-skull doom-pip"></i>'
+    ).join('');
+    const span = document.createElement('span');
+    span.className = 'doom-pip-list';
+    span.innerHTML = skulls;
+    span.title = `${doomCount} active doom${doomCount !== 1 ? 's' : ''}`;
+    li.querySelector('.player-name')?.after(span);
+  });
+});
+
+/* ----------------------------------------
+   Feature E — Doom Skulls on Chat Messages
+---------------------------------------- */
+Hooks.on('renderChatMessage', (message, html) => {
+  if (!game.settings.get('darkest-system', 'showDoomSkulls')) return;
+
+  // Find the actor who spoke
+  const speaker = message.speaker;
+  if (!speaker?.actor) return;
+  const actor = game.actors.get(speaker.actor);
+  if (!actor || actor.type !== 'character' || !actor.hasPlayerOwner) return;
+
+  const doomCount = actor.items.filter(i => i.type === 'doom' && !i.system.resolved).length;
+  if (doomCount <= 0) return;
+
+  const skulls = Array.from({ length: doomCount }, () =>
+    '<i class="fas fa-skull"></i>'
+  ).join('');
+  const span = document.createElement('span');
+  span.className = 'chat-doom-skulls';
+  span.innerHTML = skulls;
+  span.title = `${doomCount} active doom${doomCount !== 1 ? 's' : ''}`;
+
+  const senderEl = html[0].querySelector('.message-sender');
+  if (senderEl) senderEl.appendChild(span);
 });
 
 // Hook for when a doom is gained

@@ -94,7 +94,7 @@ export class TransgressionTracker extends Application {
       const text = existing?.transgressionEvents?.[i] || '';
       return `<div class="region-event-row">
         <label>${i + 1}.</label>
-        <input type="text" name="event_${i}" value="${text.replace(/"/g, '&quot;')}" placeholder="Event ${i + 1} description (optional)">
+        <textarea name="event_${i}" rows="2" placeholder="Event ${i + 1} description (optional)">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
       </div>`;
     }).join('');
 
@@ -431,6 +431,7 @@ export class TransgressionTracker extends Application {
       const regionSlug = ev.currentTarget.dataset.region;
       const transgressions = TransgressionTracker.getTransgressions();
       const region = transgressions[regionSlug];
+      if (!region) return;
 
       if (region.level > 0) {
         region.level--;

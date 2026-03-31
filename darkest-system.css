@@ -3769,3 +3769,43 @@
   color: #c07d00;
   padding: 3px 0 0 2px;
 }
+
+/* ----------------------------------------
+   Feature D — Player List Doom Overlay
+---------------------------------------- */
+#player-list .player {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.doom-pip-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  line-height: 1;
+}
+
+.doom-pip-list .doom-pip {
+  font-size: 9px;
+  color: #c04040;
+  opacity: 0.9;
+}
+
+/* ----------------------------------------
+   Feature E — Chat Doom Skulls
+---------------------------------------- */
+.chat-doom-skulls {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.chat-doom-skulls i {
+  font-size: 9px;
+  color: #c04040;
+  opacity: 0.85;
+}

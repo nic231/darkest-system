@@ -158,6 +158,7 @@ export class DoomTally extends Application {
     if (game.darkestSystem?.doomTally) {
       game.darkestSystem.doomTally.render();
     }
+    ui.players?.render();
   }
 }
 

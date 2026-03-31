@@ -48,33 +48,23 @@ export class DarkestActorSheet extends ActorSheet {
     // Add roll data for formulas
     context.rollData = this.actor.getRollData();
 
-    // Enrich HTML content
-    context.enrichedBiography = await TextEditor.enrichHTML(
-      context.system.biography || '',
-      { async: true, rollData: context.rollData }
-    );
-
-    context.enrichedNotes = await TextEditor.enrichHTML(
-      context.system.notes || '',
-      { async: true, rollData: context.rollData }
-    );
-
     context.isGM = game.user.isGM;
 
-    context.enrichedDescription = await TextEditor.enrichHTML(
-      context.system.description || '',
-      { async: true, rollData: context.rollData }
-    );
-
-    context.enrichedTactics = await TextEditor.enrichHTML(
-      context.system.tactics || '',
-      { async: true, rollData: context.rollData }
-    );
-
-    context.enrichedAbilities = await TextEditor.enrichHTML(
-      context.system.abilities || '',
-      { async: true, rollData: context.rollData }
-    );
+    // Enrich HTML content in parallel
+    const opts = { async: true, rollData: context.rollData };
+    [
+      context.enrichedBiography,
+      context.enrichedNotes,
+      context.enrichedDescription,
+      context.enrichedTactics,
+      context.enrichedAbilities
+    ] = await Promise.all([
+      TextEditor.enrichHTML(context.system.biography || '', opts),
+      TextEditor.enrichHTML(context.system.notes || '', opts),
+      TextEditor.enrichHTML(context.system.description || '', opts),
+      TextEditor.enrichHTML(context.system.tactics || '', opts),
+      TextEditor.enrichHTML(context.system.abilities || '', opts)
+    ]);
 
     return context;
   }
@@ -781,6 +771,7 @@ export class DarkestActorSheet extends ActorSheet {
     event.preventDefault();
     const li = event.currentTarget.closest('.item');
     const item = this.actor.items.get(li.dataset.itemId);
+    if (!item) return;
     item.sheet.render(true);
   }
 

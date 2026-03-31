@@ -139,7 +139,9 @@
       "EnableSpecialSuccess": "Enable Special Success",
       "EnableSpecialSuccessHint": "Optional rule: if you succeed and your highest single die + Rating ≥ the target, you achieve a special success (enhanced outcome or double damage).",
       "EnablePartialSuccess": "Enable Partial Success",
-      "EnablePartialSuccessHint": "Optional rule: if you fail but rolled doubles on your kept dice, you achieve a partial success (halfway to your goal)."
+      "EnablePartialSuccessHint": "Optional rule: if you fail but rolled doubles on your kept dice, you achieve a partial success (halfway to your goal).",
+      "ShowDoomSkulls": "Show Doom Skulls on Chat",
+      "ShowDoomSkullsHint": "When enabled, skull icons appear next to a player character's name in chat for each active Doom they carry."
     },
 
     "Dialog": {
