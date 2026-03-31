@@ -1729,6 +1729,38 @@
   gap: 8px;
 }
 
+.app.dialog:has(.darkest-dialog) .dialog-buttons button {
+  flex: 1;
+  padding: 7px 12px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--darkest-border);
+  background: var(--darkest-bg-medium, #2a2a2a);
+  color: var(--darkest-text, #e8dcc8);
+  transition: background 0.15s, color 0.15s;
+}
+
+.app.dialog:has(.darkest-dialog) .dialog-buttons button:hover {
+  background: var(--darkest-accent, #8b3a3a);
+  color: #fff;
+  border-color: var(--darkest-accent, #8b3a3a);
+}
+
+.app.dialog:has(.darkest-dialog) .dialog-buttons button[data-button="roll"],
+.app.dialog:has(.darkest-dialog) .dialog-buttons button[data-button="confirm"] {
+  background: var(--darkest-accent, #8b3a3a);
+  color: #fff;
+  border-color: var(--darkest-accent, #8b3a3a);
+}
+
+.app.dialog:has(.darkest-dialog) .dialog-buttons button[data-button="roll"]:hover,
+.app.dialog:has(.darkest-dialog) .dialog-buttons button[data-button="confirm"]:hover {
+  background: #a04444;
+  border-color: #a04444;
+}
+
 .darkest-dialog {
   background: var(--darkest-bg-dark);
   padding: 10px;
