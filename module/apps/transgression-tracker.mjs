@@ -229,6 +229,18 @@ export class TransgressionTracker extends Application {
 
     await this.setTransgressions(transgressions);
 
+    // Post the triggered event to GM chat
+    const regionData = ALL[regionSlug];
+    const eventIndex = region.level - 1;
+    const eventText = regionData?.transgressionEvents?.[eventIndex];
+    if (eventText) {
+      await ChatMessage.create({
+        speaker: { alias: regionData.witch || regionData.name },
+        content: `<div class="house-action-chat"><strong>${regionData.name} — Transgression ${region.level}:</strong><p>${eventText}</p></div>`,
+        whisper: game.users.filter(u => u.isGM).map(u => u.id)
+      });
+    }
+
     // Refresh tracker if open
     const tracker = Object.values(ui.windows).find(w => w instanceof TransgressionTracker);
     if (tracker) {
