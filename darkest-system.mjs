@@ -242,14 +242,44 @@ Hooks.once('ready', function() {
 });
 
 /* ----------------------------------------
-   Scene Controls - Add Transgression Tracker Button
-   Note: Disabled for Foundry v13 compatibility - API changed significantly
-   TODO: Update to use new v13 scene controls API
+   Scene Controls — GM Tools (v13 API)
 ---------------------------------------- */
-// Hooks.on('getSceneControlButtons', (controls) => {
-//   // This hook's API changed in Foundry v13 - controls and tools are no longer arrays
-//   // For now, access these apps via macro or chat commands instead
-// });
+Hooks.on('getSceneControlButtons', (controls) => {
+  if (!game.user.isGM) return;
+
+  const tokenTools = controls.tokens?.tools;
+  if (!tokenTools) return;
+
+  const toolCount = Object.keys(tokenTools).length;
+
+  tokenTools.transgressionTracker = {
+    name: 'transgressionTracker',
+    title: 'Transgression Tracker',
+    icon: 'fa-solid fa-skull',
+    order: toolCount,
+    button: true,
+    visible: true,
+    onChange: () => {
+      const existing = Object.values(ui.windows).find(w => w.constructor.name === 'TransgressionTracker');
+      if (existing) existing.bringToTop();
+      else new TransgressionTracker().render(true);
+    }
+  };
+
+  tokenTools.npcTracker = {
+    name: 'npcTracker',
+    title: 'NPC Damage Tracker',
+    icon: 'fa-solid fa-heart-crack',
+    order: toolCount + 1,
+    button: true,
+    visible: true,
+    onChange: () => {
+      const existing = Object.values(ui.windows).find(w => w.constructor.name === 'NpcTracker');
+      if (existing) existing.bringToTop();
+      else new NpcTracker().render(true);
+    }
+  };
+});
 
 /* ----------------------------------------
    Custom Hooks
