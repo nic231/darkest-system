@@ -101,11 +101,11 @@ export class TransgressionTracker extends Application {
     const content = `<div class="darkest-dialog region-edit-dialog">
       <div class="form-group">
         <label>Region Name</label>
-        <input type="text" name="regionName" value="${existing?.name || ''}" placeholder="e.g. The Lost">
+        <input type="text" name="regionName" value="${existing?.name || ''}" placeholder="e.g. The Dark Forest">
       </div>
       <div class="form-group">
         <label>Antagonist Name</label>
-        <input type="text" name="witchName" value="${existing?.witch || ''}" placeholder="e.g. The Isolating Pack">
+        <input type="text" name="witchName" value="${existing?.witch || ''}" placeholder="e.g. The Shadow Witch">
       </div>
       <div class="form-group">
         <label>Key Phrase</label>
