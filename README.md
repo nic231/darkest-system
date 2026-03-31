@@ -28,7 +28,7 @@ This system provides the mechanical framework only:
 1. In Foundry VTT, go to **Setup → Game Systems → Install System**
 2. Paste the manifest URL into the field at the bottom:
    ```
-   (GitHub manifest URL — coming soon)
+   https://raw.githubusercontent.com/nic231/darkest-system/master/system.json
    ```
 3. Click Install
 
