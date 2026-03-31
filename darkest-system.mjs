@@ -374,7 +374,8 @@ Hooks.on('canvasReady', async () => {
    Feature D — Player List Doom Overlay
 ---------------------------------------- */
 Hooks.on('renderPlayerList', (app, html) => {
-  html.find('li.player').each((_, li) => {
+  const root = html instanceof HTMLElement ? html : html[0];
+  root?.querySelectorAll('li.player').forEach(li => {
     const userId = li.dataset.userId;
     if (!userId) return;
     const user = game.users.get(userId);
@@ -394,6 +395,7 @@ Hooks.on('renderPlayerList', (app, html) => {
     li.querySelector('.player-name')?.after(span);
   });
 });
+
 
 /* ----------------------------------------
    Feature E — Doom Skulls on Chat Messages
@@ -418,7 +420,8 @@ Hooks.on('renderChatMessage', (message, html) => {
   span.innerHTML = skulls;
   span.title = `${doomCount} active doom${doomCount !== 1 ? 's' : ''}`;
 
-  const senderEl = html[0].querySelector('.message-sender');
+  const root = html instanceof HTMLElement ? html : html[0];
+  const senderEl = root?.querySelector('.message-sender');
   if (senderEl) senderEl.appendChild(span);
 });
 
