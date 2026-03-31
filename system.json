@@ -33,5 +33,7 @@
   "primaryTokenAttribute": null,
   "secondaryTokenAttribute": null,
 "background": "systems/darkest-system/assets/background.jpg",
+  "manifest": "https://raw.githubusercontent.com/nic231/darkest-system/master/system.json",
+  "download": "https://github.com/nic231/darkest-system/archive/refs/tags/v0.1.0-alpha.zip",
   "flags": {}
 }
