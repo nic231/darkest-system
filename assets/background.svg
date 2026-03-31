@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="1200" height="675">
+  <defs>
+    <radialGradient id="fog" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#4a4035" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#0d0b08" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c49a2a" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#c49a2a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="1200" height="675" fill="#0d0b08"/>
+  <rect width="1200" height="675" fill="#1e1a13" opacity="0.7"/>
+
+  <!-- Fog layers -->
+  <ellipse cx="600" cy="280" rx="700" ry="300" fill="#2e2a22" opacity="0.5"/>
+  <ellipse cx="600" cy="260" rx="500" ry="200" fill="#3a342a" opacity="0.35"/>
+  <rect x="0" y="0" width="1200" height="675" fill="url(#fog)"/>
+
+  <!-- Amber eye glow (distant, faint) -->
+  <ellipse cx="600" cy="240" rx="120" ry="80" fill="url(#glow)"/>
+  <circle cx="600" cy="240" r="5" fill="#c49a2a" opacity="0.7"/>
+  <circle cx="600" cy="240" r="2" fill="#f0d060" opacity="0.9"/>
+
+  <!-- Tree silhouettes — back row -->
+  <g fill="#0d0b08" opacity="0.85">
+    <polygon points="80,675 110,500 140,675"/>
+    <polygon points="100,675 135,470 170,675"/>
+    <polygon points="160,675 200,490 240,675"/>
+    <polygon points="220,675 265,460 310,675"/>
+    <polygon points="300,675 340,480 380,675"/>
+    <polygon points="370,675 410,500 450,675"/>
+    <polygon points="440,675 475,510 510,675"/>
+    <polygon points="500,675 535,490 570,675"/>
+    <polygon points="560,675 595,505 630,675"/>
+    <polygon points="620,675 660,490 700,675"/>
+    <polygon points="690,675 730,500 770,675"/>
+    <polygon points="760,675 800,480 840,675"/>
+    <polygon points="830,675 870,470 910,675"/>
+    <polygon points="900,675 940,490 980,675"/>
+    <polygon points="970,675 1010,510 1050,675"/>
+    <polygon points="1040,675 1075,490 1110,675"/>
+    <polygon points="1080,675 1120,470 1160,675"/>
+  </g>
+
+  <!-- Tree silhouettes — front row (taller, denser) -->
+  <g fill="#080705" opacity="1">
+    <polygon points="0,675 40,420 80,675"/>
+    <polygon points="30,675 75,390 120,675"/>
+    <polygon points="90,675 140,400 190,675"/>
+    <polygon points="160,675 215,380 270,675"/>
+    <polygon points="240,675 290,400 340,675"/>
+    <polygon points="310,675 355,420 400,675"/>
+    <polygon points="370,675 410,440 450,675"/>
+    <polygon points="420,675 460,430 500,675"/>
+    <polygon points="470,675 510,450 550,675"/>
+    <polygon points="530,675 570,440 610,675"/>
+    <polygon points="590,675 630,430 670,675"/>
+    <polygon points="650,675 695,420 740,675"/>
+    <polygon points="720,675 765,400 810,675"/>
+    <polygon points="790,675 840,380 890,675"/>
+    <polygon points="860,675 910,390 960,675"/>
+    <polygon points="930,675 975,410 1020,675"/>
+    <polygon points="990,675 1030,430 1070,675"/>
+    <polygon points="1050,675 1090,420 1130,675"/>
+    <polygon points="1110,675 1155,400 1200,675"/>
+  </g>
+
+  <!-- Bottom ground fill -->
+  <rect x="0" y="620" width="1200" height="55" fill="#080705"/>
+
+  <!-- Title text -->
+  <text x="600" y="360" font-family="Georgia, serif" font-size="52" fill="#c49a2a" opacity="0.85" text-anchor="middle" letter-spacing="6">THE DARKEST SYSTEM</text>
+  <text x="600" y="400" font-family="Georgia, serif" font-size="18" fill="#7a7268" opacity="0.7" text-anchor="middle" letter-spacing="3">A FOUNDRY VTT GAME SYSTEM</text>
+</svg>
