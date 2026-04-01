@@ -273,6 +273,18 @@ export class DarkestActorSheet extends ActorSheet {
   async _onActionRoll(event) {
     event.preventDefault();
 
+    // Shift-click: quick roll at difficulty 4 with no modifiers
+    if (event.shiftKey) {
+      return this.actor.rollAction({
+        taskRating: 4,
+        boons: 0,
+        banes: 0,
+        callUponWoods: false,
+        ratingModifier: 0,
+        modifierName: null
+      });
+    }
+
     const characterRating = this.actor.system.rating || 3;
     const woundBanes = this.actor.system.banes || 0;
 
