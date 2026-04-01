@@ -167,25 +167,33 @@ export class TransgressionTracker extends Application {
    * Get the current region based on active scene
    */
   static getCurrentRegion() {
+    // If the GM has explicitly deactivated any region, respect that.
+    const explicit = game.settings.get('darkest-system', 'currentRegion');
+    if (explicit === '__none__') return null;
+
     const ALL = TransgressionTracker.getAllRegions();
     const scene = game.scenes.active;
-    if (!scene) return null;
 
-    const regionSlug = scene.getFlag('darkest-system', 'region');
-    if (regionSlug && ALL[regionSlug]) return regionSlug;
+    if (scene) {
+      const regionSlug = scene.getFlag('darkest-system', 'region');
+      if (regionSlug && ALL[regionSlug]) return regionSlug;
 
-    const sceneName = scene.name.toLowerCase();
-    for (const [slug, data] of Object.entries(ALL)) {
-      if (sceneName.includes(data.name.toLowerCase())) return slug;
+      const sceneName = scene.name.toLowerCase();
+      for (const [slug, data] of Object.entries(ALL)) {
+        if (sceneName.includes(data.name.toLowerCase())) return slug;
+      }
     }
 
-    return game.settings.get('darkest-system', 'currentRegion') || null;
+    return explicit || null;
   }
 
   static async setCurrentRegion(regionSlug) {
     const ALL = TransgressionTracker.getAllRegions();
-    if (ALL[regionSlug] || regionSlug === null) {
+    if (ALL[regionSlug]) {
       await game.settings.set('darkest-system', 'currentRegion', regionSlug);
+    } else {
+      // null means deactivate — store sentinel so scene auto-detection is suppressed
+      await game.settings.set('darkest-system', 'currentRegion', '__none__');
     }
   }
 
@@ -459,11 +467,12 @@ export class TransgressionTracker extends Application {
       this.render();
     });
 
-    // Click region summary to set as active (not buttons, dots, or events panel)
+    // Click region summary to set as active — click again to deactivate
     html.find('.region-summary').click(async (ev) => {
       if (ev.target.closest('button') || ev.target.closest('.level-dot')) return;
       const regionSlug = ev.currentTarget.closest('.region-row').dataset.region;
-      await TransgressionTracker.setCurrentRegion(regionSlug);
+      const current = TransgressionTracker.getCurrentRegion();
+      await TransgressionTracker.setCurrentRegion(current === regionSlug ? null : regionSlug);
       this.render();
     });
 
