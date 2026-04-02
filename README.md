@@ -76,8 +76,6 @@ This system provides the **mechanical framework only**. No game content is inclu
 
 You must own the source material (**The Darkest Woods** or **The Darkest House** by Monte Cook Games) to use this system meaningfully.
 
-A companion content module (private) is used by the author for their home game. A public content module may be considered in future, subject to Monte Cook Games' fan use policy.
-
 ---
 
 ## Installation
