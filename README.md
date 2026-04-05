@@ -95,7 +95,7 @@ Search for **The Darkest System** in the Bazaar and click Install.
 
 ## Requirements
 
-- Foundry VTT v11 or later (verified on v13)
+- Foundry VTT v11 or later (verified on v14)
 - The Darkest Woods or The Darkest House (purchased from Monte Cook Games)
 
 ---
@@ -111,6 +111,10 @@ Search for **The Darkest System** in the Bazaar and click Install.
 ---
 
 ## Changelog
+
+### v0.5.0-alpha
+- Fix: ActiveEffect cycle error on v14 when adding/removing wounds or resting
+- Verified compatible with Foundry VTT v14
 
 ### v0.4.0-alpha
 - Shift-click Action Roll button for instant roll at difficulty 4 with no modifiers
