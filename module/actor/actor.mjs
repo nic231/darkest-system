@@ -6,11 +6,6 @@ import { DARKEST } from '../helpers/config.mjs';
 export class DarkestActor extends Actor {
 
   /** @override */
-  prepareData() {
-    super.prepareData();
-  }
-
-  /** @override */
   prepareBaseData() {
     // Data modifications in this step occur before processing embedded documents or derived data
   }
