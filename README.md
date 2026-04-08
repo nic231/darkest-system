@@ -141,7 +141,11 @@ Search for **The Darkest System** in the Bazaar and click Install.
 
 ## Disclaimer
 
-*The Darkest Woods and The Darkest House are published by Monte Cook Games, LLC. Monte Cook Games permits web sites and similar fan-created publications for their games, subject to the policy given at https://www.montecookgames.com/fan-use-policy/. The contents of this system are for personal, non-commercial use only. Monte Cook Games is not responsible for this system or any of its content. Use of Monte Cook Games's trademarks and copyrighted materials anywhere in this system should not be construed as a challenge to those trademarks or copyrights.*
+*The Darkest System is an unofficial fan work and is not affiliated with, endorsed by, or produced by Monte Cook Games, LLC.*
+
+*The Monte Cook Games logo, Numenera, the Cypher System, No Thank You, Evil!, Invisible Sun, The Darkest Woods, The Darkest House, and their respective logos are trademarks of Monte Cook Games, LLC in the U.S.A. and other countries. All Monte Cook Games characters and character names, and the distinctive likenesses thereof, are trademarks of Monte Cook Games, LLC. Content derived from Monte Cook Games publications is © 2013–2024 Monte Cook Games, LLC.*
+
+*Monte Cook Games permits fan-created works for their games, subject to the policy given at [https://www.montecookgames.com/fan-support/fan-use-policy/](https://www.montecookgames.com/fan-support/fan-use-policy/). The contents of this system are for personal, non-commercial use only. Monte Cook Games is not responsible for this system or any of the content that did not originate directly from Monte Cook Games. Use of Monte Cook Games's trademarks and copyrighted materials anywhere in this system should not be construed as a challenge to those trademarks or copyrights.*
 
 ---
 

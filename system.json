@@ -1,7 +1,7 @@
 {
   "id": "darkest-system",
   "title": "The Darkest System",
-  "description": "A rules-light horror RPG system for The Darkest Woods and The Darkest House. Features Rating-based mechanics, the Darkest Die, Boons/Banes, and a Doom system.",
+  "description": "An unofficial fan-made system implementing the mechanics for The Darkest Woods and The Darkest House by Monte Cook Games. Features Rating-based task resolution, the Darkest Die, Boons/Banes, Wounds, Doom, and a Transgression Tracker. No game content included — you must own the source material. Not affiliated with or endorsed by Monte Cook Games, LLC. Fan use policy: https://www.montecookgames.com/fan-support/fan-use-policy/",
   "version": "0.5.0-alpha",
   "compatibility": {
     "minimum": "11",
