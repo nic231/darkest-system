@@ -112,6 +112,13 @@ Search for **The Darkest System** in the Bazaar and click Install.
 
 ## Changelog
 
+### v0.6.0-alpha
+- Character sheet: crimson colour palette matching the app's aesthetic
+- Character sheet: General Traits free-text field on main tab
+- Character sheet: Doom pip counter in sheet header for at-a-glance tracking
+- Character sheet: Compact Modified Ratings summary on main tab (click ↗ to edit)
+- Character sheet: Compact Special Abilities summary on main tab, collapsible (click ↗ to edit)
+
 ### v0.5.0-alpha
 - Fix: ActiveEffect cycle error on v14 when adding/removing wounds or resting
 - Verified compatible with Foundry VTT v14

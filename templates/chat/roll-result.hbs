@@ -60,7 +60,7 @@
 
   {{#if callUponWoods}}
   <div class="call-upon-woods">
-    <i class="fas fa-tree"></i> {{localize "DARKEST.Roll.CallUponWoods"}} (+{{darkestDieResult}})
+    <i class="fas fa-tree"></i> {{#if isHouseMode}}Call Upon the House{{else}}Call Upon the Woods{{/if}} (+{{darkestDieResult}})
     {{#if gainsDoom}}
     <div class="doom-gained"><i class="fas fa-skull"></i> You gain a Doom!</div>
     {{/if}}
@@ -97,7 +97,7 @@
   {{#if isGM}}
   <div class="transgression-message gm-only"><i class="fas fa-exclamation-triangle"></i> {{localize "DARKEST.Roll.TransgressionWarning"}}</div>
   {{else}}
-  <div class="transgression-message player-ominous"><i class="fas fa-tree"></i> {{localize "DARKEST.Roll.WoodsStir"}}</div>
+  <div class="transgression-message player-ominous"><i class="fas fa-tree"></i> {{#if isHouseMode}}The House acts...{{else}}The Darkest Die was highest — the witch acts!{{/if}}</div>
   {{/if}}
   {{/if}}
 

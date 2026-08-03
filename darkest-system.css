@@ -16,9 +16,10 @@
   --darkest-text: #cec9c0;
   --darkest-text-muted: #7a7268;
 
-  /* Accent — the single amber eye in the artwork */
-  --darkest-accent: #8b5e1a;
-  --darkest-accent-light: #c49a2a;
+  /* Accent — crimson, matching the app sheet's section labels and borders */
+  --darkest-accent: #7a1c1c;       /* dark crimson — borders, dividers */
+  --darkest-accent-light: #b83232; /* mid crimson — section headers, h3 labels */
+  --darkest-accent-glow: #d94040;  /* bright red — hover, active, focus states */
 
   /* States */
   --darkest-success: #3d6b3d;
@@ -28,9 +29,9 @@
   /* Doom/supernatural — the unseen creature's ash tone */
   --darkest-purple: #4e3f6e;
 
-  /* Borders — umber warmth, barely visible */
-  --darkest-border: rgba(120, 100, 70, 0.35);
-  --darkest-border-strong: rgba(140, 115, 80, 0.55);
+  /* Borders — dark crimson tint, barely visible */
+  --darkest-border: rgba(140, 40, 40, 0.3);
+  --darkest-border-strong: rgba(180, 50, 50, 0.5);
 }
 
 /* ----------------------------------------
@@ -117,8 +118,8 @@
 .darkest-sheet select:focus,
 .darkest-sheet textarea:focus {
   outline: none;
-  border-color: var(--darkest-accent);
-  box-shadow: 0 0 5px rgba(124, 63, 63, 0.5);
+  border-color: var(--darkest-accent-glow);
+  box-shadow: 0 0 5px rgba(217, 64, 64, 0.45);
 }
 
 .darkest-sheet input[type="number"] {
@@ -639,6 +640,182 @@
   padding: 6px 4px;
   font-size: 12px;
   margin: 0;
+}
+
+/* ----------------------------------------
+   Header Doom Pips
+---------------------------------------- */
+.header-doom-pips {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.header-doom-pip {
+  font-size: 11px;
+  color: var(--darkest-accent-light);
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+
+.header-doom-pip:hover {
+  opacity: 1;
+  color: var(--darkest-accent-glow);
+}
+
+/* ----------------------------------------
+   General Traits Field
+---------------------------------------- */
+.traits-section {
+  margin-bottom: 10px;
+}
+
+.traits-section textarea {
+  width: 100%;
+  min-height: 52px;
+  resize: vertical;
+  font-size: 12px;
+  box-sizing: border-box;
+  color: var(--darkest-text);
+  background: var(--darkest-bg-medium);
+  border: 1px solid var(--darkest-border);
+  border-radius: 3px;
+  padding: 5px 8px;
+  font-family: inherit;
+}
+
+/* ----------------------------------------
+   Compact Summaries (Modified Ratings + Abilities)
+---------------------------------------- */
+.compact-summary-section {
+  margin-bottom: 10px;
+  background: var(--darkest-bg-medium);
+  border: 1px solid var(--darkest-border);
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.compact-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.compact-summary-header h3 {
+  margin: 0;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--darkest-accent-light);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.compact-summary-header.collapsible-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.compact-summary-header.collapsible-header:hover h3 {
+  color: var(--darkest-accent-glow);
+}
+
+.collapse-indicator i {
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+.compact-summary-header.collapsed .collapse-indicator i {
+  transform: rotate(-90deg);
+}
+
+.compact-abilities-list.collapsed {
+  display: none;
+}
+
+.tab-link {
+  color: var(--darkest-text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 2px;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+
+.tab-link:hover {
+  color: var(--darkest-accent-glow);
+}
+
+/* Compact mod rating badges */
+.compact-mods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.compact-mod-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--darkest-bg-light);
+  border: 1px solid var(--darkest-border-strong);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: var(--darkest-text);
+}
+
+.compact-mod-effective {
+  color: var(--darkest-text-muted);
+  font-size: 10px;
+}
+
+/* Compact abilities list */
+.compact-abilities-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.compact-ability-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--darkest-text);
+}
+
+.compact-ability-item i {
+  color: var(--darkest-accent-light);
+  font-size: 9px;
+  flex-shrink: 0;
+}
+
+.compact-ability-name {
+  flex: 1;
+}
+
+.compact-ability-tag {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--darkest-border);
+}
+
+.compact-ability-tag.boon {
+  color: var(--darkest-success);
+  border-color: var(--darkest-success);
+}
+
+.compact-ability-tag.uses {
+  color: var(--darkest-text-muted);
 }
 
 /* ----------------------------------------
@@ -1833,6 +2010,43 @@
 
 .doom-emphasis i {
   font-size: 10px;
+}
+
+/* Auto-result indicator (automatic success / impossible failure) */
+.darkest-dialog .auto-result-indicator {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.darkest-dialog .auto-result-indicator.auto-success {
+  background: rgba(61, 107, 61, 0.25);
+  border: 1px solid rgba(61, 107, 61, 0.6);
+  color: var(--darkest-success);
+}
+
+.darkest-dialog .auto-result-indicator.auto-success .auto-result-icon {
+  color: var(--darkest-success);
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.darkest-dialog .auto-result-indicator.auto-fail {
+  background: rgba(122, 28, 28, 0.2);
+  border: 1px solid rgba(184, 50, 50, 0.5);
+  color: var(--darkest-accent-light);
+}
+
+.darkest-dialog .auto-result-indicator.auto-fail .auto-result-icon {
+  color: var(--darkest-accent-glow);
+  margin-top: 1px;
+  flex-shrink: 0;
 }
 
 /* Special Success Indicator in Roll Dialog */

@@ -244,6 +244,14 @@ export class DarkestActorSheet extends ActorSheet {
     // Collapsible sections
     html.find('.collapsible-header').click(this._onToggleCollapse.bind(this));
 
+    // Tab-link shortcuts (compact summaries → jump to edit tab)
+    html.find('.tab-link').click((event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const tab = event.currentTarget.dataset.tab;
+      if (tab) this._tabs[0].activate(tab);
+    });
+
     // Drag events for items
     if (this.actor.isOwner) {
       let handler = ev => super._onDragStart(ev);
@@ -374,6 +382,9 @@ export class DarkestActorSheet extends ActorSheet {
         const modifierSelect = html.find('[name="ratingModifier"]');
         const boonsInput = html.find('[name="boons"]');
         const banesInput = html.find('[name="banes"]');
+        const callUponWoodsInput = html.find('[name="callUponWoods"]');
+        const isHouseMode = game.settings.get('darkest-system', 'gameMode') === 'darkest-house';
+        const callUponLabel = isHouseMode ? 'Call Upon the House' : 'Call Upon the Woods';
         const taskRatingDisplay = html.find('.task-rating-display');
         const effectiveRatingDisplay = html.find('.effective-rating-display');
         const targetNeedDisplay = html.find('.target-need');
@@ -381,18 +392,24 @@ export class DarkestActorSheet extends ActorSheet {
         const indicatorText = indicator.find('.indicator-text');
         const descriptor = html.find('.boon-bane-descriptor');
         const descriptorText = html.find('.boon-bane-text');
+        const autoResultEl = html.find('.auto-result-indicator');
+        const autoResultText = autoResultEl.find('.auto-result-text');
+        const autoResultIcon = autoResultEl.find('.auto-result-icon');
+        const rollBtn = html.closest('.dialog-buttons').find('button[data-button="roll"]');
 
         const updateDisplay = () => {
           const taskRating = parseInt(taskSelect.val()) || 4;
           const boons = parseInt(boonsInput.val()) || 0;
           const banes = parseInt(banesInput.val()) || 0;
           const netBoon = boons - banes;
+          const callUponWoods = callUponWoodsInput.is(':checked');
 
           const selectedOption = modifierSelect.find('option:selected');
           const ratingModifier = parseInt(selectedOption.data('modifier')) || 0;
           const effectiveRating = characterRating + ratingModifier;
 
           const targetNumber = 7 + taskRating;
+          const ratingDiff = taskRating - effectiveRating;
           const diceNeeded = targetNumber - effectiveRating;
 
           taskRatingDisplay.text(taskRating);
@@ -401,6 +418,45 @@ export class DarkestActorSheet extends ActorSheet {
             .removeClass('boon bane neutral')
             .addClass(netBoon > 0 ? 'boon' : netBoon < 0 ? 'bane' : 'neutral');
           targetNeedDisplay.text(Math.max(2, diceNeeded));
+
+          // Auto-success / auto-fail detection
+          // Calling Upon the Woods adds the Darkest Die (1-6) to the roll, which can
+          // overcome an otherwise impossible task — so suppress the impossible warning.
+          const isAutoSuccess = ratingDiff <= -6;
+          const isImpossible = ratingDiff >= 6 && !callUponWoods;
+
+          if (isAutoSuccess) {
+            autoResultEl.show().removeClass('auto-fail').addClass('auto-success');
+            autoResultIcon.attr('class', 'fas fa-check-circle auto-result-icon');
+            autoResultText.text('Automatic success — no roll needed (task Rating is 6+ lower than yours).');
+            rollBtn.prop('disabled', false);
+            indicator.hide();
+          } else if (isImpossible) {
+            autoResultEl.show().removeClass('auto-success').addClass('auto-fail');
+            autoResultIcon.attr('class', 'fas fa-times-circle auto-result-icon');
+            autoResultText.text(`Impossible — automatic failure (task Rating is 6+ higher than yours). Check "${callUponLabel}" to attempt anyway.`);
+            rollBtn.prop('disabled', true);
+            indicator.hide();
+          } else {
+            autoResultEl.hide();
+            rollBtn.prop('disabled', false);
+
+            // Special Success indicator
+            const specialEnabled = game.settings.get('darkest-system', 'enableSpecialSuccess');
+            if (!specialEnabled) {
+              indicator.hide();
+            } else {
+              const isPossible = targetNumber < 6 + effectiveRating;
+              indicator.show();
+              if (isPossible) {
+                indicator.addClass('possible').removeClass('not-possible');
+                indicatorText.text('Special Success possible!');
+              } else {
+                indicator.removeClass('possible').addClass('not-possible');
+                indicatorText.text('Special Success NOT possible');
+              }
+            }
+          }
 
           // Action roll: any net boon/bane = 3d6, keep best/worst 2. Stacking has no effect.
           if (netBoon > 0) {
@@ -414,27 +470,13 @@ export class DarkestActorSheet extends ActorSheet {
           } else {
             descriptor.hide();
           }
-
-          const specialEnabled = game.settings.get('darkest-system', 'enableSpecialSuccess');
-          if (!specialEnabled) {
-            indicator.hide();
-          } else {
-            const isPossible = targetNumber < 6 + effectiveRating;
-            indicator.show();
-            if (isPossible) {
-              indicator.addClass('possible').removeClass('not-possible');
-              indicatorText.text('Special Success possible!');
-            } else {
-              indicator.removeClass('possible').addClass('not-possible');
-              indicatorText.text('Special Success NOT possible');
-            }
-          }
         };
 
         taskSelect.on('change', updateDisplay);
         modifierSelect.on('change', updateDisplay);
         boonsInput.on('change', updateDisplay);
         banesInput.on('change', updateDisplay);
+        callUponWoodsInput.on('change', updateDisplay);
         updateDisplay();
 
         html.find('.dialog-equip-header').on('click', () => {

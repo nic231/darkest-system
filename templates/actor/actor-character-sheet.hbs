@@ -21,6 +21,15 @@
         <span class="rating-value">{{system.rating}}</span>
       </div>
 
+      {{!-- Doom Pip Counter --}}
+      {{#if unresolvedDooms.length}}
+      <div class="header-doom-pips" title="{{unresolvedDooms.length}} active Doom{{#if (gt unresolvedDooms.length 1)}}s{{/if}}">
+        {{#each unresolvedDooms}}
+        <i class="fas fa-skull header-doom-pip"></i>
+        {{/each}}
+      </div>
+      {{/if}}
+
       {{!-- Banes from Wounds --}}
       {{#if totalBanes}}
       <div class="banes-indicator">
@@ -73,6 +82,49 @@
           <i class="fas fa-heart-broken"></i> {{localize "DARKEST.Roll.TakeDamage"}}
         </button>
       </div>
+
+      {{!-- General Traits --}}
+      <section class="traits-section">
+        <h3>General Traits</h3>
+        <textarea name="system.traits" placeholder="Describe this character's traits, background, and notable qualities...">{{system.traits}}</textarea>
+      </section>
+
+      {{!-- Compact Modified Ratings Summary --}}
+      {{#if customModifications.length}}
+      <section class="compact-summary-section">
+        <div class="compact-summary-header">
+          <h3>Modified Ratings</h3>
+          <a class="tab-link" data-tab="abilities" title="Edit in Abilities tab"><i class="fas fa-external-link-alt"></i></a>
+        </div>
+        <div class="compact-mods">
+          {{#each customModifications}}
+          <span class="compact-mod-badge" title="{{name}}">
+            {{name}} {{#if (gt value 0)}}+{{/if}}{{value}} <span class="compact-mod-effective">(→{{effectiveValue}})</span>
+          </span>
+          {{/each}}
+        </div>
+      </section>
+      {{/if}}
+
+      {{!-- Compact Special Abilities Summary --}}
+      {{#if abilities.length}}
+      <section class="compact-summary-section compact-abilities-section">
+        <div class="compact-summary-header collapsible-header" data-target="abilities-summary-body">
+          <h3>Special Abilities <span class="collapse-indicator"><i class="fas fa-chevron-down"></i></span></h3>
+          <a class="tab-link" data-tab="abilities" title="Edit in Abilities tab"><i class="fas fa-external-link-alt"></i></a>
+        </div>
+        <ul class="compact-abilities-list">
+          {{#each abilities}}
+          <li class="compact-ability-item">
+            <i class="fas fa-star-of-david"></i>
+            <span class="compact-ability-name">{{name}}</span>
+            {{#if system.grantsBoon}}<span class="compact-ability-tag boon">Boon</span>{{/if}}
+            {{#unless system.unlimited}}<span class="compact-ability-tag uses">{{system.usesRemaining}}/{{system.usesPerDay}}</span>{{/unless}}
+          </li>
+          {{/each}}
+        </ul>
+      </section>
+      {{/if}}
 
       {{!-- Armor --}}
       <section class="armor-section">

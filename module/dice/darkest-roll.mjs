@@ -107,13 +107,13 @@ export class DarkestRoll extends Roll {
       this.darkestDieResult = this.darkestDieRoll.total;
 
       // Find the highest of the KEPT dice (not discarded boon/bane dice).
-      // Per rules: transgression triggers if Darkest Die is higher than either of the
-      // two dice you actually USE — discarded dice do not count.
+      // Per rules: transgression triggers if Darkest Die is the highest of all 3 dice —
+      // i.e. it must be higher than both kept dice. Discarded boon/bane dice do not count.
       const allDiceResults = this.dice[0]?.results || [];
       const keptResults = allDiceResults.filter(r => !r.discarded).map(r => r.result);
       this.highestRegularDie = keptResults.length > 0 ? Math.max(...keptResults) : 0;
 
-      // Check for transgression (Darkest Die is highest among kept dice)
+      // Check for transgression (Darkest Die is highest of all 3 dice)
       this.isTransgression = this.darkestDieResult > this.highestRegularDie;
 
       // Calculate final total
@@ -225,7 +225,9 @@ export class DarkestRoll extends Roll {
       darkestDieRoll: this.darkestDieRoll,
       // GM flag for conditional display
       isGM: game.user.isGM,
-      isPlayerTakingDamage: this.isPlayerTakingDamage ?? false
+      isPlayerTakingDamage: this.isPlayerTakingDamage ?? false,
+      // Game mode — affects "Woods" vs "House" labels in chat
+      isHouseMode: game.settings.get('darkest-system', 'gameMode') === 'darkest-house'
     };
 
     const content = await renderTemplate(
