@@ -1199,10 +1199,49 @@
   background: var(--darkest-bg-medium);
   border: 1px solid var(--darkest-border);
   border-radius: 3px;
+  position: relative;
 }
 
 .editor-container .editor {
   height: 100%;
+}
+
+/* The pencil icon that swaps the enriched-HTML preview into a live editable
+   ProseMirror instance. Foundry ships this with no default styling, so on a
+   dark theme it can be nearly invisible -- make it an unmistakable button. */
+.editor-container .editor-edit {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: var(--darkest-accent);
+  color: var(--darkest-text);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.editor-container .editor-edit:hover {
+  background: var(--darkest-accent-glow);
+  opacity: 1;
+}
+
+.editor-container .editor-content {
+  min-height: 130px;
+  padding: 6px 8px;
+  color: var(--darkest-text);
+}
+
+.editor-container .editor-content:empty::before {
+  content: "Click the pencil icon to edit this description.";
+  color: var(--darkest-text-muted);
+  font-style: italic;
+  font-size: 12px;
 }
 
 /* ----------------------------------------
