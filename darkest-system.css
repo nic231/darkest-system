@@ -1200,10 +1200,15 @@
   border: 1px solid var(--darkest-border);
   border-radius: 3px;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .editor-container .editor {
-  height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 150px;
 }
 
 /* The pencil icon that swaps the enriched-HTML preview into a live editable
@@ -1231,12 +1236,40 @@
   opacity: 1;
 }
 
+/* Once editing starts, ProseMirror renders its own toolbar (.editor-menu)
+   above the actual typing area (.editor-content). Both live inside the same
+   .editor-container that was previously only sized for the read-only
+   preview, so without an explicit height here the typing area collapsed to
+   almost nothing beneath the toolbar. Give the whole stack real room and let
+   the content area claim whatever's left. */
+.editor-container .editor-menu {
+  flex: 0 0 auto;
+  background: var(--darkest-bg-dark);
+  border-bottom: 1px solid var(--darkest-border);
+  border-radius: 3px 3px 0 0;
+}
+
+/* ProseMirror wraps its own typing area in a second, inner .editor-container
+   (a sibling of .menu-container) -- give that one room to fill the rest of
+   the box rather than collapsing to its content's natural (near-zero) size. */
+.editor-container .editor .editor-container {
+  flex: 1 1 auto;
+  min-height: 0;
+  border: none;
+  background: transparent;
+}
+
 .editor-container .editor-content {
+  flex: 1 1 auto;
   min-height: 130px;
   padding: 6px 8px;
   color: var(--darkest-text);
+  overflow-y: auto;
 }
 
+/* Read-only preview state (before the pencil is clicked): .editor-content
+   here is the enriched-HTML preview div, not yet the live ProseMirror
+   instance, so :empty correctly means "no description written yet." */
 .editor-container .editor-content:empty::before {
   content: "Click the pencil icon to edit this description.";
   color: var(--darkest-text-muted);
