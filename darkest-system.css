@@ -160,6 +160,8 @@
 .darkest-sheet .form-group.stacked {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  width: 100%;
 }
 
 .darkest-sheet .hint {
@@ -1196,19 +1198,25 @@
 ---------------------------------------- */
 .editor-container {
   min-height: 150px;
+  width: 100%;
   background: var(--darkest-bg-medium);
   border: 1px solid var(--darkest-border);
   border-radius: 3px;
   position: relative;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  box-sizing: border-box;
 }
 
 .editor-container .editor {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   flex: 1 1 auto;
   min-height: 150px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* The pencil icon that swaps the enriched-HTML preview into a live editable
@@ -1242,8 +1250,15 @@
    preview, so without an explicit height here the typing area collapsed to
    almost nothing beneath the toolbar. Give the whole stack real room and let
    the content area claim whatever's left. */
+.editor-container .menu-container {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .editor-container .editor-menu {
   flex: 0 0 auto;
+  width: 100%;
+  box-sizing: border-box;
   background: var(--darkest-bg-dark);
   border-bottom: 1px solid var(--darkest-border);
   border-radius: 3px 3px 0 0;
@@ -1251,10 +1266,19 @@
 
 /* ProseMirror wraps its own typing area in a second, inner .editor-container
    (a sibling of .menu-container) -- give that one room to fill the rest of
-   the box rather than collapsing to its content's natural (near-zero) size. */
+   the box rather than collapsing to its content's natural (near-zero) size.
+   Measured on a live sheet: without an explicit width, this box (and the
+   .editor-content inside it) rendered at 0px wide despite having real
+   height -- a flex column's children don't stretch to the cross-axis size
+   unless something in the chain says so, and nothing did. */
 .editor-container .editor .editor-container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   flex: 1 1 auto;
   min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
   border: none;
   background: transparent;
 }
@@ -1262,6 +1286,8 @@
 .editor-container .editor-content {
   flex: 1 1 auto;
   min-height: 130px;
+  width: 100%;
+  box-sizing: border-box;
   padding: 6px 8px;
   color: var(--darkest-text);
   overflow-y: auto;
