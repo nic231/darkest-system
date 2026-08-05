@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1-alpha (2026-08-05)
+
+- Fix: item sheets (Ability, Equipment, Wound, Doom) had their Description editor stuck in read-only mode — the enriched HTML rendered but couldn't be clicked into and edited. Caused by a missing `await` on the base sheet data call, so Foundry never knew the sheet was editable.
+
 ## 0.7.0-alpha (2026-08-05)
 
 - Character sheet: Special Abilities section on the Abilities tab (below Skills/Talents) — create, edit, and delete Ability items directly, instead of cramming powers into the general Traits field

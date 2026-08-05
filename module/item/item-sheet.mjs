@@ -33,7 +33,7 @@ export class DarkestItemSheet extends ItemSheet {
 
   /** @override */
   async getData() {
-    const context = super.getData();
+    const context = await super.getData();
 
     // Use a safe clone of the item data
     const itemData = this.document.toObject(false);
