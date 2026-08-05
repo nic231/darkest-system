@@ -21,6 +21,17 @@ export class DarkestItemSheet extends ItemSheet {
   }
 
   /** @override */
+  constructor(...args) {
+    super(...args);
+    // Equipment stacks quantity/armor/damage/combat-note ABOVE its description
+    // editor with no tabs to split them across, so the default 400px height
+    // scrolls the description out of view before a player notices it's there.
+    if (this.item.type === 'equipment') {
+      this.options.height = 560;
+    }
+  }
+
+  /** @override */
   async getData() {
     const context = super.getData();
 

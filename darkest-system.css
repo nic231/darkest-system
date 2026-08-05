@@ -1159,6 +1159,33 @@
   font-weight: 600;
 }
 
+/* ----------------------------------------
+   Special Abilities
+---------------------------------------- */
+.ability-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ability-name {
+  font-weight: 600;
+}
+
+.ability-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  background: var(--darkest-bg-dark);
+  color: var(--darkest-text-muted);
+}
+
+.ability-tag.boon {
+  color: var(--darkest-success);
+}
+
 .armor-type {
   font-size: 11px;
   color: var(--darkest-success);

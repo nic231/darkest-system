@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0-alpha (2026-08-05)
+
+- Character sheet: Special Abilities section on the Abilities tab (below Skills/Talents) — create, edit, and delete Ability items directly, instead of cramming powers into the general Traits field
+- Item sheet: equipment sheet opens taller so the Description editor isn't scrolled out of view behind quantity/armor/damage/combat-note fields
+
 ## 0.1.0-alpha (2026-03-30)
 
 Initial public alpha release.

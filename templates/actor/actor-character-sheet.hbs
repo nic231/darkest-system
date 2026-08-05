@@ -312,6 +312,37 @@
         </div>
       </section>
 
+      {{!-- Special Abilities --}}
+      <section class="abilities-section">
+        <div class="section-header">
+          <h3>{{localize "DARKEST.Ability.Plural"}}</h3>
+          <button type="button" class="item-create" data-type="ability" title="{{localize 'DARKEST.Ability.New'}}">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
+
+        <ol class="item-list abilities-list">
+          {{#each abilities}}
+          <li class="item ability-item" data-item-id="{{_id}}">
+            <img src="{{img}}" class="item-img" />
+            <div class="ability-info">
+              <span class="ability-name">{{name}}</span>
+              {{#if system.grantsBoon}}<span class="ability-tag boon">Boon</span>{{/if}}
+              {{#unless system.unlimited}}<span class="ability-tag uses">{{system.usesRemaining}}/{{system.usesPerDay}} uses</span>{{/unless}}
+            </div>
+            <div class="item-controls">
+              <a class="item-edit" title="Edit"><i class="fas fa-edit"></i></a>
+              <a class="item-delete" title="Delete"><i class="fas fa-trash"></i></a>
+            </div>
+          </li>
+          {{/each}}
+        </ol>
+
+        {{#unless abilities.length}}
+        <p class="empty-list">No special abilities yet — click + to add one. Use the Description field on its sheet for the full write-up.</p>
+        {{/unless}}
+      </section>
+
     </div>
 
     {{!-- Equipment Tab --}}
