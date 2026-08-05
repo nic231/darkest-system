@@ -23,12 +23,13 @@ export class DarkestItemSheet extends ItemSheet {
   /** @override */
   constructor(...args) {
     super(...args);
-    // Equipment stacks quantity/armor/damage/combat-note ABOVE its description
-    // editor with no tabs to split them across, so the default 400px height
-    // scrolls the description out of view before a player notices it's there.
-    if (this.item.type === 'equipment') {
-      this.options.height = 560;
-    }
+    // Every item type's description editor needs real room: the live
+    // ProseMirror editor renders its own toolbar ABOVE the typing area, and
+    // that whole stack has to fit inside whatever's left after the header,
+    // tab nav (ability/wound/doom), and any fields stacked above the editor
+    // (equipment). The shared 400px default leaves too little for either --
+    // the editor's flex sizing can only grow as far as the window allows it.
+    this.options.height = this.item.type === 'equipment' ? 560 : 520;
   }
 
   /** @override */
