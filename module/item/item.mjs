@@ -46,6 +46,12 @@ export class DarkestItem extends Item {
         systemData.usesPerDay
       );
     }
+
+    // Derived, not a stored flag: usesPerDay is the single source of truth
+    // for whether an ability has limited uses (useAbility()/refreshUses()
+    // already key off it directly). Sheets check system.unlimited to decide
+    // whether to show a "N/M uses" tag.
+    systemData.unlimited = !(systemData.usesPerDay > 0);
   }
 
   /**

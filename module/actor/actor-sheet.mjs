@@ -52,19 +52,33 @@ export class DarkestActorSheet extends ActorSheet {
 
     // Enrich HTML content in parallel
     const opts = { async: true, rollData: context.rollData };
-    [
-      context.enrichedBiography,
-      context.enrichedNotes,
-      context.enrichedDescription,
-      context.enrichedTactics,
-      context.enrichedAbilities
+    const [
+      enrichedBiography,
+      enrichedNotes,
+      enrichedDescription,
+      enrichedTactics,
+      enrichedAbilities,
+      enrichedAbilityDescriptions
     ] = await Promise.all([
       TextEditor.enrichHTML(context.system.biography || '', opts),
       TextEditor.enrichHTML(context.system.notes || '', opts),
       TextEditor.enrichHTML(context.system.description || '', opts),
       TextEditor.enrichHTML(context.system.tactics || '', opts),
-      TextEditor.enrichHTML(context.system.abilities || '', opts)
+      TextEditor.enrichHTML(context.system.abilities || '', opts),
+      Promise.all((context.abilities || []).map(a => TextEditor.enrichHTML(a.system.description || '', opts)))
     ]);
+
+    context.enrichedBiography = enrichedBiography;
+    context.enrichedNotes = enrichedNotes;
+    context.enrichedDescription = enrichedDescription;
+    context.enrichedTactics = enrichedTactics;
+    context.enrichedAbilities = enrichedAbilities;
+
+    // Attach each ability's enriched description onto the ability itself so
+    // the Main-tab compact summary can show rendered HTML, not raw markup.
+    (context.abilities || []).forEach((a, i) => {
+      a.enrichedDescription = enrichedAbilityDescriptions[i];
+    });
 
     return context;
   }

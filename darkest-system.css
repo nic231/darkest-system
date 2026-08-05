@@ -788,10 +788,22 @@
 
 .compact-ability-item {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
   font-size: 12px;
   color: var(--darkest-text);
+  padding: 4px 0;
+}
+
+.compact-ability-item + .compact-ability-item {
+  border-top: 1px solid var(--darkest-border);
+  padding-top: 8px;
+}
+
+.compact-ability-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .compact-ability-item i {
@@ -802,6 +814,7 @@
 
 .compact-ability-name {
   flex: 1;
+  font-weight: 600;
 }
 
 .compact-ability-tag {
@@ -809,6 +822,7 @@
   padding: 1px 5px;
   border-radius: 2px;
   border: 1px solid var(--darkest-border);
+  flex-shrink: 0;
 }
 
 .compact-ability-tag.boon {
@@ -818,6 +832,21 @@
 
 .compact-ability-tag.uses {
   color: var(--darkest-text-muted);
+}
+
+.compact-ability-description {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--darkest-text-muted);
+  padding-left: 15px;
+}
+
+.compact-ability-description p:first-child {
+  margin-top: 0;
+}
+
+.compact-ability-description p:last-child {
+  margin-bottom: 0;
 }
 
 /* ----------------------------------------

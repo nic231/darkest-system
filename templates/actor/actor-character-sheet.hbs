@@ -116,10 +116,15 @@
         <ul class="compact-abilities-list">
           {{#each abilities}}
           <li class="compact-ability-item">
-            <i class="fas fa-star-of-david"></i>
-            <span class="compact-ability-name">{{name}}</span>
-            {{#if system.grantsBoon}}<span class="compact-ability-tag boon">Boon</span>{{/if}}
-            {{#unless system.unlimited}}<span class="compact-ability-tag uses">{{system.usesRemaining}}/{{system.usesPerDay}}</span>{{/unless}}
+            <div class="compact-ability-header">
+              <i class="fas fa-star-of-david"></i>
+              <span class="compact-ability-name">{{name}}</span>
+              {{#if system.grantsBoon}}<span class="compact-ability-tag boon">Boon</span>{{/if}}
+              {{#unless system.unlimited}}<span class="compact-ability-tag uses">{{system.usesRemaining}}/{{system.usesPerDay}} uses</span>{{/unless}}
+            </div>
+            {{#if enrichedDescription}}
+            <div class="compact-ability-description">{{{enrichedDescription}}}</div>
+            {{/if}}
           </li>
           {{/each}}
         </ul>
