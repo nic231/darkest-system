@@ -246,6 +246,12 @@ Hooks.once('ready', function() {
           if (actor) actor.addDoom(data.description, data.source);
         }
         break;
+
+      case 'applyNpcDamage':
+        if (game.user.isGM) {
+          NpcTracker.applyDamage(data.woundRating);
+        }
+        break;
     }
   });
 });
@@ -310,10 +316,21 @@ Hooks.on('darkestSystem.transgression', async (actor, roll) => {
   }
 });
 
-// Hook for when a Deal Damage roll produces a wound — auto-apply to active NPC in tracker
+// Hook for when a Deal Damage roll produces a wound — auto-apply to active NPC in tracker.
+// The NPC tracker's data lives in a world-scoped setting, and players usually
+// can't write those directly, so this delegates to the GM's client over the
+// socket -- same player-to-GM pattern as applyWound/applyDoom below. Applying
+// directly here would silently do nothing on a player's own client and never
+// reach the GM's tracker at all.
 Hooks.on('darkestSystem.damageDealt', async (roll) => {
-  if (!game.user.isGM) return;
-  await NpcTracker.applyDamage(roll.woundRating);
+  if (game.user.isGM) {
+    await NpcTracker.applyDamage(roll.woundRating);
+  } else {
+    game.socket.emit('system.darkest-system', {
+      type: 'applyNpcDamage',
+      woundRating: roll.woundRating,
+    });
+  }
 });
 
 /* ----------------------------------------

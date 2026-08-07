@@ -94,11 +94,7 @@
   {{/if}}
 
   {{#if isTransgression}}
-  {{#if isGM}}
-  <div class="transgression-message gm-only"><i class="fas fa-exclamation-triangle"></i> {{localize "DARKEST.Roll.TransgressionWarning"}}</div>
-  {{else}}
   <div class="transgression-message player-ominous"><i class="fas fa-tree"></i> {{#if isHouseMode}}The House acts...{{else}}The Darkest Die was highest — the witch acts!{{/if}}</div>
-  {{/if}}
   {{/if}}
 
   {{else}}
@@ -162,24 +158,5 @@
     {{/if}}
   </div>
 
-  {{#if isGM}}
-  {{#if isWound}}
-  {{#if targetRating}}
-  {{#unless isPlayerTakingDamage}}
-  <div class="npc-damage-info gm-only">
-    <div class="npc-damage-row"><i class="fas fa-skull"></i><span>NPC defeat threshold: <strong>{{multiply targetRating 3}}</strong> total wound rating (Rating {{targetRating}} × 3)</span></div>
-    <div class="npc-damage-row wound-dealt-row"><i class="fas fa-heart-broken"></i><span>This wound: <strong>{{woundRating}}</strong> — auto-applied to active NPC in tracker</span></div>
-  </div>
-  {{/unless}}
-  {{/if}}
-  {{/if}}
-  {{#if isInstantKill}}
-  <div class="instant-kill-warning">
-    <i class="fas fa-skull-crossbones"></i> <strong>LETHAL BLOW!</strong>
-    <p>Wound Rating {{woundRating}} is 3+ higher than target Rating {{targetRating}}.</p>
-    <p>Target is instantly killed or knocked unconscious!</p>
-  </div>
-  {{/if}}
-  {{/if}}
   {{/unless}}
 </div>

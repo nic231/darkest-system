@@ -98,9 +98,10 @@
         </div>
         <div class="compact-mods">
           {{#each customModifications}}
-          <span class="compact-mod-badge" title="{{name}}">
+          <button type="button" class="compact-mod-badge roll-with-modifier" data-modifier-name="{{name}}"
+            title="Roll an Action with {{name}}">
             {{name}} {{#if (gt value 0)}}+{{/if}}{{value}} <span class="compact-mod-effective">(→{{effectiveValue}})</span>
-          </span>
+          </button>
           {{/each}}
         </div>
       </section>

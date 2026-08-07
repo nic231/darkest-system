@@ -271,6 +271,16 @@ export class NpcTracker extends Application {
       return;
     }
 
+    // The tracker only ever looks up NPCs via game.actors.get() (the World
+    // collection), so a compendium-only actor dropped directly from a pack
+    // tab must be imported into the World first -- otherwise it saves into
+    // the tracker's slot data with an id nothing can resolve, and getData()
+    // silently drops the slot from the rendered list every time.
+    if (!game.actors.has(actor.id)) {
+      const [imported] = await Actor.createDocuments([actor.toObject()]);
+      actor = imported;
+    }
+
     await NpcTracker.addNpc(actor.id);
   }
 }

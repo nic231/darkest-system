@@ -238,6 +238,47 @@ export class DarkestRoll extends Roll {
     messageData.content = content;
     messageData.sound = CONFIG.sounds.dice;
 
+    // Tactical GM-only information (NPC defeat threshold, lethal-blow
+    // warning, transgression detail) must never be part of the SHARED
+    // message content. A ChatMessage's content is static HTML rendered once
+    // by the sender's client and broadcast as-is -- there is no per-viewer
+    // re-rendering, so an {{#if isGM}} block inside that shared message
+    // renders using whoever CREATED the message's permissions and is then
+    // shown verbatim to every viewer, GM or not. The only real fix is a
+    // separate message restricted with Foundry's own `whisper` field.
+    const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
+    if (gmIds.length) {
+      let gmContent = '';
+
+      if (this.isDamageRoll && this.isWound && this.targetRating && !this.isPlayerTakingDamage) {
+        const threshold = this.targetRating * 3;
+        gmContent += `<div class="darkest-roll damage-roll">
+          <div class="npc-damage-info gm-only">
+            <div class="npc-damage-row"><i class="fas fa-skull"></i><span>NPC defeat threshold: <strong>${threshold}</strong> total wound rating (Rating ${this.targetRating} × 3)</span></div>
+            <div class="npc-damage-row wound-dealt-row"><i class="fas fa-heart-broken"></i><span>This wound: <strong>${this.woundRating}</strong> — auto-applied to active NPC in tracker</span></div>
+          </div>`;
+        if (this.isInstantKill) {
+          gmContent += `<div class="instant-kill-warning">
+            <i class="fas fa-skull-crossbones"></i> <strong>LETHAL BLOW!</strong>
+            <p>Wound Rating ${this.woundRating} is 3+ higher than target Rating ${this.targetRating}.</p>
+            <p>Target is instantly killed or knocked unconscious!</p>
+          </div>`;
+        }
+        gmContent += `</div>`;
+      } else if (this.isTransgression && !this.isDamageRoll) {
+        const warning = game.i18n.localize('DARKEST.Roll.TransgressionWarning');
+        gmContent = `<div class="transgression-message gm-only"><i class="fas fa-exclamation-triangle"></i> ${warning}</div>`;
+      }
+
+      if (gmContent) {
+        ChatMessage.create({
+          content: gmContent,
+          whisper: gmIds,
+          speaker: messageData.speaker,
+        });
+      }
+    }
+
     // Fire transgression hook if applicable (GM only processes this)
     if (this.isTransgression && !this.isDamageRoll) {
       // Get the actor from the speaker if available

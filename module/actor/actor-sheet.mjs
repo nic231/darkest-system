@@ -238,6 +238,15 @@ export class DarkestActorSheet extends ActorSheet {
     html.find('.roll-deal-damage').click(this._onDealDamageRoll.bind(this));
     html.find('.roll-take-damage').click(this._onTakeDamageRoll.bind(this));
 
+    // Modified Ratings badges: open the Action Roll dialog with that skill
+    // pre-selected. No shift-click quick-roll here (unlike the main Action
+    // Roll button) -- a badge click always means "roll with this skill."
+    html.find('.roll-with-modifier').click((ev) => {
+      ev.preventDefault();
+      const modifierName = ev.currentTarget.dataset.modifierName || null;
+      this._showActionRollDialog(modifierName);
+    });
+
     // Item controls
     html.find('.item-create').click(this._onItemCreate.bind(this));
     html.find('.item-edit').click(this._onItemEdit.bind(this));
@@ -344,6 +353,17 @@ export class DarkestActorSheet extends ActorSheet {
       });
     }
 
+    // The plain Action Roll button always starts at Base Rating -- no memory
+    // of the last-used skill. (Modified Ratings badges have their own click
+    // handler that pre-selects a specific skill instead; see .roll-with-modifier.)
+    return this._showActionRollDialog(null);
+  }
+
+  /**
+   * Show the Action Roll dialog, optionally pre-selecting a named skill/talent
+   * (from a Modified Ratings badge) instead of defaulting to Base Rating.
+   */
+  async _showActionRollDialog(preselectModifierName = null) {
     const characterRating = this.actor.system.rating || 3;
     const woundBanes = this.actor.system.banes || 0;
 
@@ -358,9 +378,6 @@ export class DarkestActorSheet extends ActorSheet {
 
     const equipment = this.actor.items.filter(i => i.type === 'equipment');
 
-    // Recall last used skill modifier
-    const lastMod = (await game.user.getFlag('darkest-system', 'lastActionModifier')) || {};
-
     // Show dialog to configure the roll
     const dialogContent = await renderTemplate(
       'systems/darkest-system/templates/dialog/roll-dialog.hbs',
@@ -373,7 +390,7 @@ export class DarkestActorSheet extends ActorSheet {
         characterRating: characterRating,
         ratingModifiers: ratingModifiers,
         equipment: equipment,
-        lastModifierName: lastMod.name || '',
+        lastModifierName: preselectModifierName || '',
         isHouseMode: game.settings.get('darkest-system', 'gameMode') === 'darkest-house'
       }
     );
@@ -397,9 +414,6 @@ export class DarkestActorSheet extends ActorSheet {
             const ratingModifier = parseInt(selectedOption.data('modifier')) || 0;
             const modifierName = modifierSelect.val() || null;
 
-            // Remember last used modifier for next time
-            await game.user.setFlag('darkest-system', 'lastActionModifier', { name: modifierName || '' });
-
             await this.actor.rollAction({
               taskRating,
               boons,
@@ -422,10 +436,10 @@ export class DarkestActorSheet extends ActorSheet {
       render: (html) => {
         this._setupCounterButtons(html, woundBanes);
 
-        // Restore last used modifier selection
-        if (lastMod.name) {
+        // Pre-select the requested modifier (from a badge click), if any
+        if (preselectModifierName) {
           html.find('[name="ratingModifier"] option').filter(function() {
-            return $(this).val() === lastMod.name;
+            return $(this).val() === preselectModifierName;
           }).prop('selected', true);
         }
 
@@ -556,7 +570,10 @@ export class DarkestActorSheet extends ActorSheet {
     }));
 
     const equipment = this.actor.items.filter(i => i.type === 'equipment');
-    const damageEquipment = equipment.filter(i => (i.system.damageRatingBonus || 0) > 0);
+    const lastWeaponId = this.actor.getFlag('darkest-system', 'lastDamageWeaponId') || null;
+    const damageEquipment = equipment
+      .filter(i => (i.system.damageRatingBonus || 0) > 0)
+      .map(i => ({ id: i.id, name: i.name, system: i.system, selected: i.id === lastWeaponId }));
     const otherEquipment = equipment.filter(i => !(i.system.damageRatingBonus || 0));
 
     const dialogContent = await renderTemplate(
@@ -590,11 +607,21 @@ export class DarkestActorSheet extends ActorSheet {
             const ratingModifier = parseInt(selectedOption.data('modifier')) || 0;
             const modifierName = modifierSelect.val() || null;
 
-            const effectiveAttackRating = characterRating + ratingModifier + ratingAdj;
+            const checkedWeapon = html.find('[name="damageEquip"]:checked').first();
+            const weaponBonus = checkedWeapon.length ? (parseInt(checkedWeapon.val()) || 0) : 0;
+            const weaponName = checkedWeapon.length ? checkedWeapon.data('name') : null;
+            const weaponId = checkedWeapon.length ? checkedWeapon.data('item-id') : null;
+
+            // Remember the chosen weapon so it's pre-selected next time this
+            // dialog opens. Cleared (unset) if no weapon is checked this time.
+            await this.actor.setFlag('darkest-system', 'lastDamageWeaponId', weaponId || null);
+
+            const effectiveAttackRating = characterRating + ratingModifier + ratingAdj + weaponBonus;
 
             const flavorParts = [];
             if (modifierName) flavorParts.push(modifierName);
             if (ratingAdj !== 0) flavorParts.push(`situational (${ratingAdj > 0 ? '+' : ''}${ratingAdj})`);
+            if (weaponName) flavorParts.push(weaponName);
             const flavor = flavorParts.length
               ? `${this.actor.name} deals damage (${flavorParts.join('; ')})`
               : `${this.actor.name} deals damage`;
@@ -626,15 +653,19 @@ export class DarkestActorSheet extends ActorSheet {
         const skillModDisplay = html.find('.skill-mod-display');
         const skillModValue = html.find('.skill-mod-value');
 
+        const weaponCheckboxes = html.find('[name="damageEquip"]');
+
         const updateAttackRating = () => {
           const selectedOption = modifierSelect.find('option:selected');
           const ratingModifier = parseInt(selectedOption.data('modifier')) || 0;
           const ratingAdj = parseInt(html.find('[name="ratingAdj"]').val()) || 0;
+          const checkedWeapon = weaponCheckboxes.filter(':checked').first();
+          const weaponBonus = checkedWeapon.length ? (parseInt(checkedWeapon.val()) || 0) : 0;
           const base = characterRating + ratingModifier;
           attackRatingDisplay.text(base);
-          const effective = base + ratingAdj;
+          const effective = base + ratingAdj + weaponBonus;
           effectiveAttackDisplay.text(effective);
-          effectiveAttackDisplay.toggleClass('adj-positive', ratingAdj > 0).toggleClass('adj-negative', ratingAdj < 0);
+          effectiveAttackDisplay.toggleClass('adj-positive', (ratingAdj + weaponBonus) > 0).toggleClass('adj-negative', (ratingAdj + weaponBonus) < 0);
           if (ratingModifier !== 0) {
             skillModValue.text((ratingModifier > 0 ? '+' : '') + ratingModifier);
             skillModValue.css('color', ratingModifier > 0 ? 'var(--darkest-success, #4caf50)' : 'var(--darkest-danger, #e57373)');
@@ -646,6 +677,17 @@ export class DarkestActorSheet extends ActorSheet {
 
         modifierSelect.on('change', updateAttackRating);
         html.find('[name="ratingAdj"]').on('change', updateAttackRating);
+
+        // Weapon bonus is a single choice per attack, not stackable -- checking
+        // one clears any other, same as a radio group but keeping the existing
+        // checkbox markup/styling.
+        weaponCheckboxes.on('change', (ev) => {
+          if (ev.currentTarget.checked) {
+            weaponCheckboxes.not(ev.currentTarget).prop('checked', false);
+          }
+          updateAttackRating();
+        });
+
         updateAttackRating();
 
         html.find('.dialog-equip-header').on('click', () => {
