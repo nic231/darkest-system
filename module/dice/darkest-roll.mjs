@@ -256,9 +256,11 @@ export class DarkestRoll extends Roll {
         texture: 'none',
         material: 'plastic'
       };
-      // Dice So Nice's own animation for the main dice typically runs
-      // ~1.5-2s before settling; a short head start isn't enough separation
-      // to reliably read as "rolls after" rather than "rolls alongside."
+      // Wait for the main dice to finish physically settling before the
+      // Darkest Die is even thrown -- overlapping the two animations let
+      // them visually collide mid-roll, which (while it never actually
+      // changes either result -- DsN just animates a predetermined outcome)
+      // looks to a player like the collision could have changed the number.
       setTimeout(() => {
         game.dice3d.showForRoll(
           this.darkestDieRoll,
@@ -270,7 +272,7 @@ export class DarkestRoll extends Roll {
           messageData.speaker ?? null,
           { ghost: false, secret: false }
         );
-      }, 1200);
+      }, 900);
     }
 
     // Tactical GM-only information (NPC defeat threshold, lethal-blow
@@ -306,9 +308,14 @@ export class DarkestRoll extends Roll {
         }
         gmContent += `</div>`;
 
+        // GM-configurable via Settings > Enable GM-Only Whispers. When off,
+        // this same content is sent to everyone instead of just the GM --
+        // lets the GM directly confirm the whisper feature actually works
+        // as GM-only, without relying on multi-tab/multi-browser testing.
+        const whisperEnabled = game.settings.get('darkest-system', 'enableGmWhispers');
         ChatMessage.create({
           content: gmContent,
-          whisper: gmIds,
+          whisper: whisperEnabled ? gmIds : [],
           speaker: messageData.speaker,
         });
       }

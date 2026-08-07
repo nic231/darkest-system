@@ -125,6 +125,20 @@ function _registerGameSettings() {
     type: Boolean,
     default: true
   });
+
+  // Lets the GM verify (or disable) the GM-only whispered damage info
+  // separately from what players see. With this off, everyone sees only
+  // the public roll card -- useful for confirming the whisper really is
+  // GM-only, since testing across two tabs of the same browser session
+  // does not reliably reflect real per-user visibility.
+  game.settings.register('darkest-system', 'enableGmWhispers', {
+    name: 'DARKEST.Settings.EnableGmWhispers',
+    hint: 'DARKEST.Settings.EnableGmWhispersHint',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: true
+  });
 }
 
 /* ----------------------------------------

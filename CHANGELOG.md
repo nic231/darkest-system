@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.7-alpha (2026-08-07)
+
+- Darkest Die animation delay reduced from 1200ms to 900ms, and now waits for the main dice to fully settle before throwing -- the two animations were overlapping and visually colliding (never affecting either result, but looking to players like it could).
+- Added a GM-configurable "Enable GM-Only Whispers" system setting (Settings > Configure Settings > System Settings, on by default). Turning it off sends the NPC defeat-threshold/lethal-blow info to everyone instead of whispering it to the GM only -- lets the GM directly verify the whisper is working as GM-only without needing multi-tab/multi-browser test setups.
+
 ## 0.11.6-alpha (2026-08-07)
 
 - Fix: dialogs (Action Roll, Deal/Take Damage, New/Heal Wound, Resist Unconsciousness/Catatonia, Death Check, Rest) still stacked up a new copy on every click. The previous fix matched on `ui.windows` by a custom `id` option, but `ui.windows` is actually keyed by Foundry's own internal `appId`, not the id passed to the constructor -- so the lookup never found the old dialog. Each dialog category's instance is now tracked directly and properly awaited-closed before a new one opens, the pattern Foundry core itself uses for cached single-instance apps.
