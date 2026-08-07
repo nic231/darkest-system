@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.6-alpha (2026-08-07)
+
+- Fix: dialogs (Action Roll, Deal/Take Damage, New/Heal Wound, Resist Unconsciousness/Catatonia, Death Check, Rest) still stacked up a new copy on every click. The previous fix matched on `ui.windows` by a custom `id` option, but `ui.windows` is actually keyed by Foundry's own internal `appId`, not the id passed to the constructor -- so the lookup never found the old dialog. Each dialog category's instance is now tracked directly and properly awaited-closed before a new one opens, the pattern Foundry core itself uses for cached single-instance apps.
+- Fix: the player-facing transgression message ("The Darkest Die was highest — the witch acts!") named the exact mechanic that triggered it, which is meant to stay a GM-side detail. Players now see a vaguer, more ominous line ("The Woods stir..." / "The House stirs..." in House mode) with no mechanical explanation attached.
+- The Darkest Die's Dice So Nice animation delay increased from 400ms to 1200ms -- the previous delay wasn't enough separation from the main dice roll's own ~1.5-2s animation, so it was still finishing at roughly the same time instead of visibly last.
+
 ## 0.11.5-alpha (2026-08-07)
 
 - The Darkest Die's Dice So Nice animation now starts on a short delay after the main action dice, so it reliably finishes last instead of racing (or finishing before) them.

@@ -256,6 +256,9 @@ export class DarkestRoll extends Roll {
         texture: 'none',
         material: 'plastic'
       };
+      // Dice So Nice's own animation for the main dice typically runs
+      // ~1.5-2s before settling; a short head start isn't enough separation
+      // to reliably read as "rolls after" rather than "rolls alongside."
       setTimeout(() => {
         game.dice3d.showForRoll(
           this.darkestDieRoll,
@@ -267,7 +270,7 @@ export class DarkestRoll extends Roll {
           messageData.speaker ?? null,
           { ghost: false, secret: false }
         );
-      }, 400);
+      }, 1200);
     }
 
     // Tactical GM-only information (NPC defeat threshold, lethal-blow

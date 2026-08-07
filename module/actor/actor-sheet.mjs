@@ -28,14 +28,21 @@ export class DarkestActorSheet extends ActorSheet {
 
   /**
    * Roll dialogs (Action Roll, Deal Damage, Take Damage, etc.) are plain
-   * `new Dialog()` calls with no stored reference, so nothing stops the same
-   * button -- or a different roll button -- from piling up multiple copies
-   * on screen. Give each dialog category a stable id and close any existing
-   * window with that id before opening a new one.
+   * `new Dialog()` calls -- nothing stops the same button, or a different
+   * roll button, from piling up multiple copies on screen. `ui.windows` is
+   * keyed by an internal auto-incrementing `appId`, NOT by the `id` option
+   * passed to the constructor, so matching on `options.id` there never
+   * actually finds the previous dialog. Track each dialog category's
+   * instance directly on the sheet instead, and close it (awaiting the
+   * close animation) before opening a new one -- the pattern Foundry core
+   * itself uses for cached single-instance apps like Actor#sheet.
    */
-  _closeExistingDialog(id) {
-    const existing = Object.values(ui.windows).find(w => w.options?.id === id);
-    if (existing) existing.close();
+  async _closeTrackedDialog(key) {
+    const existing = this[key];
+    if (existing?.rendered) {
+      await existing.close();
+    }
+    this[key] = null;
   }
 
   /** @override */
@@ -424,9 +431,8 @@ export class DarkestActorSheet extends ActorSheet {
       }
     );
 
-    this._closeExistingDialog(`darkest-action-roll-${this.actor.id}`);
-    new Dialog({
-      id: `darkest-action-roll-${this.actor.id}`,
+    await this._closeTrackedDialog('_actionRollDialog');
+    this._actionRollDialog = new Dialog({
       title: game.i18n.localize('DARKEST.Dialog.RollTitle'),
       content: dialogContent,
       buttons: {
@@ -579,8 +585,10 @@ export class DarkestActorSheet extends ActorSheet {
           html.find('.dialog-equip-header').toggleClass('collapsed');
           html.find('.dialog-equip-list').toggleClass('collapsed');
         });
-      }
-    }, { width: 400, height: 'auto' }).render(true);
+      },
+      close: () => { this._actionRollDialog = null; }
+    }, { width: 400, height: 'auto' });
+    this._actionRollDialog.render(true);
   }
 
   /**
@@ -620,9 +628,8 @@ export class DarkestActorSheet extends ActorSheet {
       }
     );
 
-    this._closeExistingDialog(`darkest-deal-damage-${this.actor.id}`);
-    new Dialog({
-      id: `darkest-deal-damage-${this.actor.id}`,
+    await this._closeTrackedDialog('_dealDamageDialog');
+    this._dealDamageDialog = new Dialog({
       title: game.i18n.localize('DARKEST.Roll.DealDamage'),
       content: dialogContent,
       buttons: {
@@ -727,8 +734,10 @@ export class DarkestActorSheet extends ActorSheet {
           html.find('.dialog-equip-header').toggleClass('collapsed');
           html.find('.dialog-equip-list').toggleClass('collapsed');
         });
-      }
-    }, { width: 400, height: 'auto' }).render(true);
+      },
+      close: () => { this._dealDamageDialog = null; }
+    }, { width: 400, height: 'auto' });
+    this._dealDamageDialog.render(true);
   }
 
   /**
@@ -766,9 +775,8 @@ export class DarkestActorSheet extends ActorSheet {
       }
     );
 
-    this._closeExistingDialog(`darkest-take-damage-${this.actor.id}`);
-    new Dialog({
-      id: `darkest-take-damage-${this.actor.id}`,
+    await this._closeTrackedDialog('_takeDamageDialog');
+    this._takeDamageDialog = new Dialog({
       title: game.i18n.localize('DARKEST.Roll.TakeDamage'),
       content: dialogContent,
       buttons: {
@@ -859,8 +867,10 @@ export class DarkestActorSheet extends ActorSheet {
           html.find('.dialog-equip-header').toggleClass('collapsed');
           html.find('.dialog-equip-list').toggleClass('collapsed');
         });
-      }
-    }, { width: 400, height: 'auto' }).render(true);
+      },
+      close: () => { this._takeDamageDialog = null; }
+    }, { width: 400, height: 'auto' });
+    this._takeDamageDialog.render(true);
   }
 
   /**
@@ -915,10 +925,9 @@ export class DarkestActorSheet extends ActorSheet {
         </div>
       </form>`;
 
+    await this._closeTrackedDialog('_newWoundDialog');
     return new Promise((resolve) => {
-      this._closeExistingDialog(`darkest-new-wound-${this.actor.id}`);
-      new Dialog({
-        id: `darkest-new-wound-${this.actor.id}`,
+      this._newWoundDialog = new Dialog({
         title: 'New Wound',
         content,
         buttons: {
@@ -943,8 +952,10 @@ export class DarkestActorSheet extends ActorSheet {
             callback: () => resolve(false)
           }
         },
-        default: 'create'
-      }).render(true);
+        default: 'create',
+        close: () => { this._newWoundDialog = null; }
+      });
+      this._newWoundDialog.render(true);
     });
   }
 
@@ -1132,9 +1143,8 @@ export class DarkestActorSheet extends ActorSheet {
 
     const actor = this.actor;
 
-    this._closeExistingDialog(`darkest-heal-wound-${this.actor.id}`);
-    new Dialog({
-      id: `darkest-heal-wound-${this.actor.id}`,
+    await this._closeTrackedDialog('_healWoundDialog');
+    this._healWoundDialog = new Dialog({
       title: 'Heal Wound',
       content,
       buttons: {},
@@ -1168,10 +1178,12 @@ export class DarkestActorSheet extends ActorSheet {
             </div>`
           });
           // Close dialog after selection
-          Object.values(ui.windows).find(w => w._element?.[0]?.querySelector('.heal-choice-dialog'))?.close();
+          this._healWoundDialog?.close();
         });
-      }
-    }, { width: 360 }).render(true);
+      },
+      close: () => { this._healWoundDialog = null; }
+    }, { width: 360 });
+    this._healWoundDialog.render(true);
   }
 
   /**

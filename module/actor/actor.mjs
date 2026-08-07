@@ -338,13 +338,10 @@ export class DarkestActor extends Actor {
       { checkLabel, woundRating, characterRating, woundBanes, diceNeeded, ratingModifiers, equipment }
     );
 
-    const dialogId = `darkest-resist-${this.id}`;
-    const existingResist = Object.values(ui.windows).find(w => w.options?.id === dialogId);
-    if (existingResist) existingResist.close();
+    if (this._resistDialog?.rendered) await this._resistDialog.close();
 
     return new Promise((resolve) => {
-      new Dialog({
-        id: dialogId,
+      this._resistDialog = new Dialog({
         title: checkLabel,
         content: dialogContent,
         buttons: {
@@ -425,8 +422,10 @@ export class DarkestActor extends Actor {
             html.find('.dialog-equip-header').toggleClass('collapsed');
             html.find('.dialog-equip-list').toggleClass('collapsed');
           });
-        }
-      }, { width: 380, height: 'auto' }).render(true);
+        },
+        close: () => { this._resistDialog = null; }
+      }, { width: 380, height: 'auto' });
+      this._resistDialog.render(true);
     });
   }
 
@@ -471,13 +470,10 @@ export class DarkestActor extends Actor {
       { checkLabel, woundRating: highestWound, characterRating: effectiveRatingWithDooms, woundBanes, diceNeeded, ratingModifiers, equipment }
     );
 
-    const dialogId = `darkest-death-check-${this.id}`;
-    const existingDeathCheck = Object.values(ui.windows).find(w => w.options?.id === dialogId);
-    if (existingDeathCheck) existingDeathCheck.close();
+    if (this._deathCheckDialog?.rendered) await this._deathCheckDialog.close();
 
     return new Promise((resolve) => {
-      new Dialog({
-        id: dialogId,
+      this._deathCheckDialog = new Dialog({
         title: checkLabel,
         content: dialogContent,
         buttons: {
@@ -591,8 +587,10 @@ export class DarkestActor extends Actor {
             html.find('.dialog-equip-header').toggleClass('collapsed');
             html.find('.dialog-equip-list').toggleClass('collapsed');
           });
-        }
-      }, { width: 380, height: 'auto' }).render(true);
+        },
+        close: () => { this._deathCheckDialog = null; }
+      }, { width: 380, height: 'auto' });
+      this._deathCheckDialog.render(true);
     });
   }
 
@@ -778,13 +776,10 @@ export class DarkestActor extends Actor {
         ${mentalSection}
       </form>`;
 
-    const restDialogId = `darkest-rest-${this.id}`;
-    const existingRest = Object.values(ui.windows).find(w => w.options?.id === restDialogId);
-    if (existingRest) existingRest.close();
+    if (this._restDialog?.rendered) await this._restDialog.close();
 
     return new Promise((resolve) => {
-      new Dialog({
-        id: restDialogId,
+      this._restDialog = new Dialog({
         title: `${this.name} — Rest`,
         content: dialogContent,
         buttons: {
@@ -916,8 +911,10 @@ export class DarkestActor extends Actor {
             else if (btn.classList.contains('decrement')) value = Math.max(value - 1, min);
             input.val(value);
           });
-        }
-      }).render(true);
+        },
+        close: () => { this._restDialog = null; }
+      });
+      this._restDialog.render(true);
     });
   }
 }

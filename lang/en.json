@@ -27,11 +27,11 @@
       "PartialSuccess": "Partial Success",
       "PartialSuccessDesc": "Not a complete failure - you achieve partial results, or it takes longer than expected.",
       "Transgression": "TRANSGRESSION!",
-      "TransgressionWarning": "The Darkest Die was highest - the witch acts!",
       "CallUponWoods": "Call Upon the Woods",
       "CallUponWoodsWarning": "Adding the Darkest Die grants +{bonus} but triggers a transgression and you gain a Doom!",
       "DarkestDie": "Darkest Die",
-      "WoodsStir": "The Woods Stir..."
+      "WoodsStir": "The Woods stir...",
+      "HouseStir": "The House stirs..."
     },
 
     "Wound": {
