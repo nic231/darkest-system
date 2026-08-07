@@ -1,14 +1,9 @@
-<div class="darkest-roll {{#if isDamageRoll}}damage-roll{{else}}action-roll{{/if}} {{#if isSuccess}}success{{else}}failure{{/if}} {{#if isGM}}{{#if isTransgression}}transgression{{/if}}{{/if}}">
+<div class="darkest-roll {{#if isDamageRoll}}damage-roll{{else}}action-roll{{/if}} {{#if isSuccess}}success{{else}}failure{{/if}} {{#if isTransgression}}transgression{{/if}}">
 
   {{#unless isDamageRoll}}
   {{!-- Action Roll --}}
   <div class="roll-header">
     <h3 class="roll-title">{{localize "DARKEST.Roll.Action"}}</h3>
-    {{#if isGM}}
-    {{#if isTransgression}}
-    <div class="transgression-warning"><i class="fas fa-eye"></i> {{localize "DARKEST.Roll.Transgression"}}</div>
-    {{/if}}
-    {{/if}}
   </div>
 
   <div class="roll-details">
@@ -43,7 +38,7 @@
       {{#if modifierName}}<span class="modifier-tag"><i class="fas fa-tag"></i> {{modifierName}}</span>{{/if}}
       {{#if callUponWoods}}
       <span class="dice-op">+</span>
-      <span class="die d6 darkest {{#if isGM}}{{#if isTransgression}}highest{{/if}}{{/if}}" title="Darkest Die">{{darkestDieResult}}</span>
+      <span class="die d6 darkest {{#if isTransgression}}highest{{/if}}" title="Darkest Die">{{darkestDieResult}}</span>
       {{/if}}
       <span class="dice-op">=</span>
       <span class="dice-total">{{total}}</span>
@@ -53,7 +48,7 @@
     {{#unless callUponWoods}}
     <div class="darkest-die-container">
       <span class="darkest-die-label">{{localize "DARKEST.Roll.DarkestDie"}}:</span>
-      <span class="die d6 darkest {{#if isGM}}{{#if isTransgression}}highest{{/if}}{{/if}}">{{darkestDieResult}}</span>
+      <span class="die d6 darkest {{#if isTransgression}}highest{{/if}}">{{darkestDieResult}}</span>
     </div>
     {{/unless}}
   </div>

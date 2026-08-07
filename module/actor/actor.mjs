@@ -40,8 +40,10 @@ export class DarkestActor extends Actor {
     const mentalWounds = wounds.filter(w => w.system.type === 'mental');
 
     // Note: auto-clearing unconscious/catatonic when wounds heal is handled by
-    // the updateActor hook in darkest-system.mjs to avoid calling update() inside
-    // prepareDerivedData (which is synchronous and causes recursive update cycles).
+    // the updateItem hook in darkest-system.mjs (fires when a wound's healed
+    // flag changes) to avoid calling update() inside prepareDerivedData
+    // (which is synchronous and causes recursive update cycles). Players/GMs
+    // can also clear either flag directly by clicking its banner on the sheet.
     systemData.highestPhysicalWound = physicalWounds.reduce((max, w) => Math.max(max, w.system.rating), 0);
     systemData.highestMentalWound = mentalWounds.reduce((max, w) => Math.max(max, w.system.rating), 0);
 

@@ -26,7 +26,11 @@ export class TransgressionTracker extends Application {
       width: 660,
       height: 'auto',
       resizable: true,
-      minimizable: true
+      minimizable: true,
+      // Every increment/decrement/reset/toggle click calls this.render(),
+      // which otherwise resets scroll to the top -- annoying with several
+      // regions expanded. Same fix as DarkestActorSheet's scrollY.
+      scrollY: ['.window-content']
     });
   }
 

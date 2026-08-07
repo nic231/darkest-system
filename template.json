@@ -65,7 +65,6 @@
     "equipment": {
       "templates": ["base"],
       "quantity": 1,
-      "armorBonus": 0,
       "armorType": "none",
       "grantsBoon": false,
       "grantsBane": false,

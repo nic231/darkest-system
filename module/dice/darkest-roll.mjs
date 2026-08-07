@@ -223,8 +223,6 @@ export class DarkestRoll extends Roll {
       modifierName: this.modifierName,
       dice: this.dice,
       darkestDieRoll: this.darkestDieRoll,
-      // GM flag for conditional display
-      isGM: game.user.isGM,
       isPlayerTakingDamage: this.isPlayerTakingDamage ?? false,
       // Game mode — affects "Woods" vs "House" labels in chat
       isHouseMode: game.settings.get('darkest-system', 'gameMode') === 'darkest-house'

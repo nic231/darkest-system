@@ -427,6 +427,22 @@
   color: white;
 }
 
+.status-indicator.clear-status {
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.status-indicator.clear-status:hover {
+  opacity: 0.75;
+}
+
+.status-indicator.clear-status:hover::after {
+  content: "\2715";
+  margin-left: 4px;
+  font-size: 9px;
+  opacity: 0.8;
+}
+
 /* ----------------------------------------
    Sheet Tabs
 ---------------------------------------- */

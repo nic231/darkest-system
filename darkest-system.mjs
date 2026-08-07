@@ -334,6 +334,38 @@ Hooks.on('darkestSystem.damageDealt', async (roll) => {
 });
 
 /* ----------------------------------------
+   Auto-clear unconscious/catatonic when the relevant wound type is fully
+   healed. rollResistUnconscious()/rollDeathCheck() only ever set these flags
+   true; nothing cleared them, so a character stayed flagged forever even
+   after healing. Can't do this inside Actor#prepareDerivedData() (synchronous,
+   and calling update() there causes recursive update cycles) -- an
+   updateItem hook, firing after a wound is actually marked healed, is the
+   correct place.
+---------------------------------------- */
+Hooks.on('updateItem', async (item, changes, options, userId) => {
+  if (item.type !== 'wound') return;
+  if (!foundry.utils.hasProperty(changes, 'system.healed')) return;
+
+  const actor = item.parent;
+  if (!actor || actor.documentName !== 'Actor') return;
+
+  // Only one client should issue the follow-up update; the GM (if present)
+  // is the natural owner, otherwise let whoever made this change do it.
+  if (game.users.some(u => u.isGM && u.active) && !game.user.isGM) return;
+
+  const hasPhysicalWound = actor.items.some(i => i.type === 'wound' && i.system.type === 'physical' && !i.system.healed);
+  const hasMentalWound = actor.items.some(i => i.type === 'wound' && i.system.type === 'mental' && !i.system.healed);
+
+  const updateData = {};
+  if (actor.system.unconscious && !hasPhysicalWound) updateData['system.unconscious'] = false;
+  if (actor.system.catatonic && !hasMentalWound) updateData['system.catatonic'] = false;
+
+  if (Object.keys(updateData).length) {
+    await actor.update(updateData);
+  }
+});
+
+/* ----------------------------------------
    Feature B — Scene Region Auto-Detection
 ---------------------------------------- */
 Hooks.on('canvasReady', async () => {

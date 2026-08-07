@@ -16,7 +16,11 @@ export class DoomTally extends Application {
       height: 'auto',
       resizable: false,
       minimizable: true,
-      popOut: true
+      popOut: true,
+      // Every adjustment click calls this.render(), which otherwise resets
+      // scroll to the top with several players listed. Same fix as
+      // DarkestActorSheet's scrollY.
+      scrollY: ['.window-content']
     });
   }
 

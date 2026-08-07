@@ -24,7 +24,11 @@ export class NpcTracker extends Application {
       height: 'auto',
       resizable: true,
       minimizable: true,
-      dragDrop: [{ dropSelector: '.npc-tracker' }]
+      dragDrop: [{ dropSelector: '.npc-tracker' }],
+      // Every damage +/-, reset, select, or remove click calls this.render(),
+      // which otherwise resets scroll to the top. Same fix as
+      // DarkestActorSheet's scrollY.
+      scrollY: ['.window-content']
     });
   }
 

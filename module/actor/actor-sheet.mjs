@@ -226,6 +226,16 @@ export class DarkestActorSheet extends ActorSheet {
     // Ability use-pip click handler (Main-tab summary and Abilities tab both)
     html.find('.ability-use-pip').click(this._onAbilityUseClick.bind(this));
 
+    // Click the Unconscious/Catatonic banner to clear it manually (e.g. the
+    // character wakes on their own, gets magical aid, or the GM just calls
+    // it -- healing the relevant wound type also clears this automatically).
+    html.find('.clear-status').click(async (ev) => {
+      const status = ev.currentTarget.dataset.status;
+      if (status === 'unconscious' || status === 'catatonic') {
+        await this.actor.update({ [`system.${status}`]: false });
+      }
+    });
+
     // Full-size image popup — click the portrait directly
     html.find('.profile-img.clickable').click(() => {
       const src = this.actor.img;

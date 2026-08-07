@@ -39,14 +39,14 @@
       {{/if}}
 
       {{#if system.unconscious}}
-      <div class="status-indicator unconscious">
+      <div class="status-indicator unconscious clear-status" data-status="unconscious" title="Click to clear">
         <i class="fas fa-dizzy"></i>
         <span>{{localize "DARKEST.Status.Unconscious"}}</span>
       </div>
       {{/if}}
 
       {{#if system.catatonic}}
-      <div class="status-indicator catatonic">
+      <div class="status-indicator catatonic clear-status" data-status="catatonic" title="Click to clear">
         <i class="fas fa-brain"></i>
         <span>{{localize "DARKEST.Status.Catatonic"}}</span>
       </div>
