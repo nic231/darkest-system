@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.11.1-alpha (2026-08-07)
+
+- Fix: the button bar (Roll/Cancel) on Take Damage, Heal Wound, Make a Roll, and other dialogs was being crushed down to ~17px tall and clipped at the bottom of the window. `.dialog-content` had `overflow: visible` with no `min-height: 0`, so as a flex child it refused to shrink below its own full content height when the window hit its `max-height: 90vh` cap — the browser satisfied the cap by crushing the button bar instead, since that was the only sibling still able to shrink. `.window-content` is now an explicit flex column, `.dialog-content` scrolls internally and is the flexible element that shrinks first, and the button bar is pinned to its natural size so it can no longer be squeezed.
+
 ## 0.11.0-alpha (2026-08-07)
 
 Full-codebase sweep for the same bug patterns already found and fixed this cycle.

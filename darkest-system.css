@@ -2102,18 +2102,22 @@
 
 .app.dialog:has(.darkest-dialog) .window-content {
   height: auto !important;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding-bottom: 0;
 }
 
 .app.dialog:has(.darkest-dialog) .dialog-content {
   height: auto !important;
-  overflow: visible;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   padding-bottom: 4px;
 }
 
 .app.dialog:has(.darkest-dialog) .dialog-buttons {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   padding: 8px 10px;
   background: var(--darkest-bg-dark);
   border-top: 1px solid var(--darkest-border);
