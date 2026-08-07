@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.8-alpha (2026-08-07)
+
+- Fix: the chat card revealing a roll's outcome (success/failure, total) posted before the Darkest Die had actually finished its Dice So Nice animation, so players could see the result before the purple die stopped rolling. `showForRoll()` for the Darkest Die is now properly awaited before the chat message is created, and the pre-roll delay is trimmed from 900ms to 500ms.
+- The GM-only whispers toggle (Settings > Enable GM-Only Whispers) now also covers transgressions -- previously only NPC damage info was gated by it. A GM-only whisper with the real trigger detail (Darkest Die value vs. kept dice, or "Calling Upon the Woods") and doom-gained info is restored, separate from the vague public "Woods stir..." line players see.
+
 ## 0.11.7-alpha (2026-08-07)
 
 - Darkest Die animation delay reduced from 1200ms to 900ms, and now waits for the main dice to fully settle before throwing -- the two animations were overlapping and visually colliding (never affecting either result, but looking to players like it could).

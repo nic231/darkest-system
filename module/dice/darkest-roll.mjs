@@ -243,6 +243,13 @@ export class DarkestRoll extends Roll {
     // Darkest Die explicitly, in purple, on a short delay so it starts
     // after the main dice are already rolling and reliably finishes last
     // instead of racing (or finishing before) them.
+    //
+    // The chat card reveals the final outcome (success/failure, total) as
+    // soon as it posts, so it must not post until the Darkest Die has
+    // actually finished animating -- otherwise players see the result
+    // before the purple die stops rolling, spoiling it. showForRoll()
+    // returns a Promise that resolves when its animation completes; await
+    // it before continuing to the ChatMessage.create() calls below.
     if (!this.isDamageRoll && this.darkestDieRoll && game.dice3d) {
       const whisperTargets = Array.isArray(messageData.whisper) && messageData.whisper.length
         ? messageData.whisper
@@ -261,64 +268,80 @@ export class DarkestRoll extends Roll {
       // them visually collide mid-roll, which (while it never actually
       // changes either result -- DsN just animates a predetermined outcome)
       // looks to a player like the collision could have changed the number.
-      setTimeout(() => {
-        game.dice3d.showForRoll(
-          this.darkestDieRoll,
-          game.user,
-          true,
-          whisperTargets,
-          false,
-          null,
-          messageData.speaker ?? null,
-          { ghost: false, secret: false }
-        );
-      }, 900);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await game.dice3d.showForRoll(
+        this.darkestDieRoll,
+        game.user,
+        true,
+        whisperTargets,
+        false,
+        null,
+        messageData.speaker ?? null,
+        { ghost: false, secret: false }
+      );
     }
 
     // Tactical GM-only information (NPC defeat threshold, lethal-blow
-    // warning) must never be part of the SHARED message content. A
-    // ChatMessage's content is static HTML rendered once by the sender's
-    // client and broadcast as-is -- there is no per-viewer re-rendering, so
-    // an {{#if isGM}} block inside that shared message renders using
-    // whoever CREATED the message's permissions and is then shown verbatim
-    // to every viewer, GM or not. The only real fix is a separate message
-    // restricted with Foundry's own `whisper` field.
-    //
-    // Transgressions do NOT get a whisper: the public "ominous" line in
-    // roll-result.hbs is the only notice, for everyone including the GM --
-    // there's no secret mechanical detail attached to a transgression roll
-    // itself (region tracking is done manually via the Transgression
-    // Tracker app), so a second GM-only copy of the same sentence was pure
-    // redundant noise.
-    if (this.isDamageRoll && this.isWound && this.targetRating && !this.isPlayerTakingDamage) {
-      const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
-      if (gmIds.length) {
-        const threshold = this.targetRating * 3;
-        let gmContent = `<div class="darkest-roll damage-roll">
-          <div class="npc-damage-info gm-only">
-            <div class="npc-damage-row"><i class="fas fa-skull"></i><span>NPC defeat threshold: <strong>${threshold}</strong> total wound rating (Rating ${this.targetRating} × 3)</span></div>
-            <div class="npc-damage-row wound-dealt-row"><i class="fas fa-heart-broken"></i><span>This wound: <strong>${this.woundRating}</strong> — auto-applied to active NPC in tracker</span></div>
-          </div>`;
-        if (this.isInstantKill) {
-          gmContent += `<div class="instant-kill-warning">
-            <i class="fas fa-skull-crossbones"></i> <strong>LETHAL BLOW!</strong>
-            <p>Wound Rating ${this.woundRating} is 3+ higher than target Rating ${this.targetRating}.</p>
-            <p>Target is instantly killed or knocked unconscious!</p>
-          </div>`;
-        }
-        gmContent += `</div>`;
+    // warning, transgression trigger detail) must never be part of the
+    // SHARED message content. A ChatMessage's content is static HTML
+    // rendered once by the sender's client and broadcast as-is -- there is
+    // no per-viewer re-rendering, so an {{#if isGM}} block inside that
+    // shared message renders using whoever CREATED the message's
+    // permissions and is then shown verbatim to every viewer, GM or not.
+    // The only real fix is a separate message restricted with Foundry's
+    // own `whisper` field. Both cases below are gated by the same
+    // Settings > Enable GM-Only Whispers toggle -- when off, the content
+    // goes to everyone instead of just the GM, letting the GM directly
+    // confirm the whisper is really GM-only without multi-tab testing.
+    const whisperEnabled = game.settings.get('darkest-system', 'enableGmWhispers');
+    const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
 
-        // GM-configurable via Settings > Enable GM-Only Whispers. When off,
-        // this same content is sent to everyone instead of just the GM --
-        // lets the GM directly confirm the whisper feature actually works
-        // as GM-only, without relying on multi-tab/multi-browser testing.
-        const whisperEnabled = game.settings.get('darkest-system', 'enableGmWhispers');
-        ChatMessage.create({
-          content: gmContent,
-          whisper: whisperEnabled ? gmIds : [],
-          speaker: messageData.speaker,
-        });
+    if (this.isDamageRoll && this.isWound && this.targetRating && !this.isPlayerTakingDamage && gmIds.length) {
+      const threshold = this.targetRating * 3;
+      let gmContent = `<div class="darkest-roll damage-roll">
+        <div class="npc-damage-info gm-only">
+          <div class="npc-damage-row"><i class="fas fa-skull"></i><span>NPC defeat threshold: <strong>${threshold}</strong> total wound rating (Rating ${this.targetRating} × 3)</span></div>
+          <div class="npc-damage-row wound-dealt-row"><i class="fas fa-heart-broken"></i><span>This wound: <strong>${this.woundRating}</strong> — auto-applied to active NPC in tracker</span></div>
+        </div>`;
+      if (this.isInstantKill) {
+        gmContent += `<div class="instant-kill-warning">
+          <i class="fas fa-skull-crossbones"></i> <strong>LETHAL BLOW!</strong>
+          <p>Wound Rating ${this.woundRating} is 3+ higher than target Rating ${this.targetRating}.</p>
+          <p>Target is instantly killed or knocked unconscious!</p>
+        </div>`;
       }
+      gmContent += `</div>`;
+
+      ChatMessage.create({
+        content: gmContent,
+        whisper: whisperEnabled ? gmIds : [],
+        speaker: messageData.speaker,
+      });
+    }
+
+    // Transgressions: players only ever see the vague public "Woods stir..."
+    // line in roll-result.hbs. The GM additionally gets the real mechanical
+    // trigger detail whispered separately.
+    if (this.isTransgression && !this.isDamageRoll && gmIds.length) {
+      const dieLine = this.callUponWoods
+        ? `<span>Triggered by <strong>Calling Upon the Woods</strong> (always a transgression)</span>`
+        : `<span>Darkest Die <strong>${this.darkestDieResult}</strong> was highest of all 3 dice (kept dice highest: <strong>${this.highestRegularDie}</strong>)</span>`;
+      const actorName = game.actors.get(messageData.speaker?.actor)?.name || messageData.speaker?.alias || 'Character';
+      const doomLine = this.gainsDoom
+        ? `<div class="npc-damage-row"><i class="fas fa-skull"></i><span>${actorName} gains <strong>1 Doom</strong></span></div>`
+        : '';
+      const gmContent = `<div class="darkest-roll action-roll transgression">
+        <div class="npc-damage-info gm-only">
+          <div class="npc-damage-row"><i class="fas fa-tree"></i>${dieLine}</div>
+          ${doomLine}
+        </div>
+      </div>`;
+
+      ChatMessage.create({
+        content: gmContent,
+        whisper: whisperEnabled ? gmIds : [],
+        speaker: messageData.speaker,
+      });
     }
 
     // Fire transgression hook if applicable (GM only processes this)
