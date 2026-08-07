@@ -236,6 +236,35 @@ export class DarkestRoll extends Roll {
     messageData.content = content;
     messageData.sound = CONFIG.sounds.dice;
 
+    // The Darkest Die is rolled as a separate Roll instance (see evaluate()),
+    // so Dice So Nice's automatic chat-message hook never sees it -- only
+    // the main 2d6/3d6 Roll gets attached to the message it animates. Show
+    // it explicitly, in purple, so it doesn't just silently skip animating.
+    if (!this.isDamageRoll && this.darkestDieRoll && game.dice3d) {
+      const whisperTargets = Array.isArray(messageData.whisper) && messageData.whisper.length
+        ? messageData.whisper
+        : null;
+      this.darkestDieRoll.options.appearance = {
+        colorset: 'custom',
+        labelColor: '#ffffff',
+        diceColor: '#6a2fa0',
+        outlineColor: '#3a1a5c',
+        edgeColor: '#8b3ad4',
+        texture: 'none',
+        material: 'plastic'
+      };
+      game.dice3d.showForRoll(
+        this.darkestDieRoll,
+        game.user,
+        true,
+        whisperTargets,
+        false,
+        null,
+        messageData.speaker ?? null,
+        { ghost: false, secret: false }
+      );
+    }
+
     // Tactical GM-only information (NPC defeat threshold, lethal-blow
     // warning) must never be part of the SHARED message content. A
     // ChatMessage's content is static HTML rendered once by the sender's
