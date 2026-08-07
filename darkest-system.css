@@ -763,6 +763,8 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  width: auto;
+  flex: 0 0 auto;
   background: var(--darkest-bg-light);
   border: 1px solid var(--darkest-border-strong);
   border-radius: 3px;
@@ -772,6 +774,8 @@
   font-family: inherit;
   cursor: pointer;
   margin: 0;
+  line-height: normal;
+  text-align: left;
   transition: all 0.15s;
 }
 

@@ -12,7 +12,12 @@ export class DarkestActorSheet extends ActorSheet {
       width: 560,
       height: 680,
       resizable: true,
-      tabs: [{ navSelector: '.sheet-tabs', contentSelector: '.sheet-body', initial: 'main' }]
+      tabs: [{ navSelector: '.sheet-tabs', contentSelector: '.sheet-body', initial: 'main' }],
+      // Any update() call (use-pips, rating dots, item edits, etc.) triggers a
+      // full re-render, and Foundry doesn't preserve scroll position unless
+      // told to -- without this, every click on a long Main-tab page jumps
+      // back to the top.
+      scrollY: ['.sheet-body']
     });
   }
 
