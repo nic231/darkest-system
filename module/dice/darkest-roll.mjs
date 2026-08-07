@@ -238,8 +238,11 @@ export class DarkestRoll extends Roll {
 
     // The Darkest Die is rolled as a separate Roll instance (see evaluate()),
     // so Dice So Nice's automatic chat-message hook never sees it -- only
-    // the main 2d6/3d6 Roll gets attached to the message it animates. Show
-    // it explicitly, in purple, so it doesn't just silently skip animating.
+    // the main 2d6/3d6 Roll gets attached to the message it animates (that
+    // animation is kicked off below, by super.toMessage()). Show the
+    // Darkest Die explicitly, in purple, on a short delay so it starts
+    // after the main dice are already rolling and reliably finishes last
+    // instead of racing (or finishing before) them.
     if (!this.isDamageRoll && this.darkestDieRoll && game.dice3d) {
       const whisperTargets = Array.isArray(messageData.whisper) && messageData.whisper.length
         ? messageData.whisper
@@ -253,16 +256,18 @@ export class DarkestRoll extends Roll {
         texture: 'none',
         material: 'plastic'
       };
-      game.dice3d.showForRoll(
-        this.darkestDieRoll,
-        game.user,
-        true,
-        whisperTargets,
-        false,
-        null,
-        messageData.speaker ?? null,
-        { ghost: false, secret: false }
-      );
+      setTimeout(() => {
+        game.dice3d.showForRoll(
+          this.darkestDieRoll,
+          game.user,
+          true,
+          whisperTargets,
+          false,
+          null,
+          messageData.speaker ?? null,
+          { ghost: false, secret: false }
+        );
+      }, 400);
     }
 
     // Tactical GM-only information (NPC defeat threshold, lethal-blow
