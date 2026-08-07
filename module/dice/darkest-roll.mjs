@@ -236,24 +236,29 @@ export class DarkestRoll extends Roll {
     messageData.content = content;
     messageData.sound = CONFIG.sounds.dice;
 
-    // The Darkest Die is rolled as a separate Roll instance (see evaluate()),
-    // so Dice So Nice's automatic chat-message hook never sees it -- only
-    // the main 2d6/3d6 Roll gets attached to the message it animates (that
-    // animation is kicked off below, by super.toMessage()). Show the
-    // Darkest Die explicitly, in purple, on a short delay so it starts
-    // after the main dice are already rolling and reliably finishes last
-    // instead of racing (or finishing before) them.
-    //
-    // The chat card reveals the final outcome (success/failure, total) as
-    // soon as it posts, so it must not post until the Darkest Die has
-    // actually finished animating -- otherwise players see the result
-    // before the purple die stops rolling, spoiling it. showForRoll()
-    // returns a Promise that resolves when its animation completes; await
-    // it before continuing to the ChatMessage.create() calls below.
+    // The chat message content already shows the final outcome, so it can't
+    // be created until BOTH dice animations have actually finished playing
+    // -- but we also want the main dice to visibly roll before the Darkest
+    // Die, not alongside/after it. Dice So Nice's only automatic animation
+    // trigger is the ChatMessage itself being created, which would reveal
+    // the result immediately -- too early. So: suppress DsN's automatic
+    // animation for this message (flags['dice-so-nice'].skip), then
+    // manually animate the main roll and the Darkest Die ourselves, in
+    // order, awaiting each, before creating the message at all.
     if (!this.isDamageRoll && this.darkestDieRoll && game.dice3d) {
+      foundry.utils.setProperty(messageData, 'flags.dice-so-nice.skip', true);
       const whisperTargets = Array.isArray(messageData.whisper) && messageData.whisper.length
         ? messageData.whisper
         : null;
+      await game.dice3d.showForRoll(
+        this,
+        game.user,
+        true,
+        whisperTargets,
+        false,
+        null,
+        messageData.speaker ?? null
+      );
       this.darkestDieRoll.options.appearance = {
         colorset: 'custom',
         labelColor: '#ffffff',
@@ -263,12 +268,6 @@ export class DarkestRoll extends Roll {
         texture: 'none',
         material: 'plastic'
       };
-      // Wait for the main dice to finish physically settling before the
-      // Darkest Die is even thrown -- overlapping the two animations let
-      // them visually collide mid-roll, which (while it never actually
-      // changes either result -- DsN just animates a predetermined outcome)
-      // looks to a player like the collision could have changed the number.
-      await new Promise(resolve => setTimeout(resolve, 500));
       await game.dice3d.showForRoll(
         this.darkestDieRoll,
         game.user,
