@@ -179,7 +179,7 @@
           </button>
           {{/if}}
           {{#if canDeathCheck}}
-          <button type="button" class="death-check {{#if deathCheckUrgent}}urgent{{/if}}"
+          <button type="button" class="death-check urgent"
             title="Roll vs Highest Wound Rating minus Dooms">
             {{#if (eq system.highestWoundType 'mental')}}<i class="fas fa-brain"></i> Catatonia Check{{else}}<i class="fas fa-heartbeat"></i> Death Check{{/if}}
           </button>

@@ -237,20 +237,25 @@ export class DarkestRoll extends Roll {
     messageData.sound = CONFIG.sounds.dice;
 
     // Tactical GM-only information (NPC defeat threshold, lethal-blow
-    // warning, transgression detail) must never be part of the SHARED
-    // message content. A ChatMessage's content is static HTML rendered once
-    // by the sender's client and broadcast as-is -- there is no per-viewer
-    // re-rendering, so an {{#if isGM}} block inside that shared message
-    // renders using whoever CREATED the message's permissions and is then
-    // shown verbatim to every viewer, GM or not. The only real fix is a
-    // separate message restricted with Foundry's own `whisper` field.
-    const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
-    if (gmIds.length) {
-      let gmContent = '';
-
-      if (this.isDamageRoll && this.isWound && this.targetRating && !this.isPlayerTakingDamage) {
+    // warning) must never be part of the SHARED message content. A
+    // ChatMessage's content is static HTML rendered once by the sender's
+    // client and broadcast as-is -- there is no per-viewer re-rendering, so
+    // an {{#if isGM}} block inside that shared message renders using
+    // whoever CREATED the message's permissions and is then shown verbatim
+    // to every viewer, GM or not. The only real fix is a separate message
+    // restricted with Foundry's own `whisper` field.
+    //
+    // Transgressions do NOT get a whisper: the public "ominous" line in
+    // roll-result.hbs is the only notice, for everyone including the GM --
+    // there's no secret mechanical detail attached to a transgression roll
+    // itself (region tracking is done manually via the Transgression
+    // Tracker app), so a second GM-only copy of the same sentence was pure
+    // redundant noise.
+    if (this.isDamageRoll && this.isWound && this.targetRating && !this.isPlayerTakingDamage) {
+      const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
+      if (gmIds.length) {
         const threshold = this.targetRating * 3;
-        gmContent += `<div class="darkest-roll damage-roll">
+        let gmContent = `<div class="darkest-roll damage-roll">
           <div class="npc-damage-info gm-only">
             <div class="npc-damage-row"><i class="fas fa-skull"></i><span>NPC defeat threshold: <strong>${threshold}</strong> total wound rating (Rating ${this.targetRating} × 3)</span></div>
             <div class="npc-damage-row wound-dealt-row"><i class="fas fa-heart-broken"></i><span>This wound: <strong>${this.woundRating}</strong> — auto-applied to active NPC in tracker</span></div>
@@ -263,12 +268,7 @@ export class DarkestRoll extends Roll {
           </div>`;
         }
         gmContent += `</div>`;
-      } else if (this.isTransgression && !this.isDamageRoll) {
-        const warning = game.i18n.localize('DARKEST.Roll.TransgressionWarning');
-        gmContent = `<div class="transgression-message gm-only"><i class="fas fa-exclamation-triangle"></i> ${warning}</div>`;
-      }
 
-      if (gmContent) {
         ChatMessage.create({
           content: gmContent,
           whisper: gmIds,

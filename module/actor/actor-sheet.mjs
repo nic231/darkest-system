@@ -116,10 +116,12 @@ export class DarkestActorSheet extends ActorSheet {
     context.totalMentalWounds = wounds.filter(w => w.system.type === 'mental').length;
     context.canResistUnconscious = context.totalPhysicalWounds > 1 || context.totalMentalWounds > 1;
 
-    // Death/catatonia check only relevant when unconscious/catatonic and has wounds
+    // Death/catatonia check only required when unconscious/catatonic AND the
+    // highest wound's Rating exceeds the character's own Rating (per the rules
+    // text: "a wound rated higher than the character must... roll against the
+    // wound with the highest Rating").
     const isUnconscious = context.system.unconscious || context.system.catatonic || false;
-    context.canDeathCheck = isUnconscious && context.highestWoundRating > 0;
-    context.deathCheckUrgent = isUnconscious && context.highestWoundRating > (context.system.rating || 3);
+    context.canDeathCheck = isUnconscious && context.highestWoundRating > (context.system.rating || 3);
 
     // Effective armor
     context.effectiveArmor = this.actor.system.effectiveArmor || { physical: 0, mental: 0 };
