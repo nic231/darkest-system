@@ -281,74 +281,70 @@ export class DarkestRoll extends Roll {
     }
 
     // Tactical GM-only information (NPC defeat threshold, lethal-blow
-    // warning, transgression trigger detail) must never be part of the
-    // SHARED message content. A ChatMessage's content is static HTML
-    // rendered once by the sender's client and broadcast as-is -- there is
-    // no per-viewer re-rendering, so an {{#if isGM}} block inside that
-    // shared message renders using whoever CREATED the message's
-    // permissions and is then shown verbatim to every viewer, GM or not.
-    // The only real fix is a separate message restricted with Foundry's
-    // own `whisper` field. Both cases below are gated by the same
-    // Settings > Enable GM-Only Whispers toggle -- when off, the content
-    // goes to everyone instead of just the GM, letting the GM directly
-    // confirm the whisper is really GM-only without multi-tab testing.
-    const whisperEnabled = game.settings.get('darkest-system', 'enableGmWhispers');
-    const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
+    // warning) must never be part of the SHARED message content. A
+    // ChatMessage's content is static HTML rendered once by the sender's
+    // client and broadcast as-is -- there is no per-viewer re-rendering, so
+    // an {{#if isGM}} block inside that shared message renders using
+    // whoever CREATED the message's permissions and is then shown verbatim
+    // to every viewer, GM or not. The only real fix is a separate message
+    // restricted with Foundry's own `whisper` field.
+    //
+    // A whispered ChatMessage is ALSO always visible to its own author, no
+    // matter who's in the `whisper` list -- most rolls are made by players,
+    // so creating the message directly on this client would let the roller
+    // see their own "GM-only" whisper. Delegate to a GM client via the
+    // system.darkest-system socket (postGmWhisper case, same pattern used
+    // for applyWound/applyDoom/applyNpcDamage) so a GM actually authors it.
+    //
+    // Transgressions do NOT get a roll-level GM whisper here -- the actual
+    // useful GM-only info (the witch's next scripted action) is whispered
+    // by TransgressionTracker.incrementTransgression() once it knows the
+    // resulting level, which this roll doesn't. See darkestSystem.transgression
+    // hook below and the tiered PUBLIC message in roll-result.hbs.
+    if (this.isDamageRoll && this.isWound && this.targetRating && !this.isPlayerTakingDamage) {
+      const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
+      if (gmIds.length) {
+        const threshold = this.targetRating * 3;
+        let gmContent = `<div class="darkest-roll damage-roll">
+          <div class="npc-damage-info gm-only">
+            <div class="npc-damage-row"><i class="fas fa-skull"></i><span>NPC defeat threshold: <strong>${threshold}</strong> total wound rating (Rating ${this.targetRating} × 3)</span></div>
+            <div class="npc-damage-row wound-dealt-row"><i class="fas fa-heart-broken"></i><span>This wound: <strong>${this.woundRating}</strong> — auto-applied to active NPC in tracker</span></div>
+          </div>`;
+        if (this.isInstantKill) {
+          gmContent += `<div class="instant-kill-warning">
+            <i class="fas fa-skull-crossbones"></i> <strong>LETHAL BLOW!</strong>
+            <p>Wound Rating ${this.woundRating} is 3+ higher than target Rating ${this.targetRating}.</p>
+            <p>Target is instantly killed or knocked unconscious!</p>
+          </div>`;
+        }
+        gmContent += `</div>`;
 
-    if (this.isDamageRoll && this.isWound && this.targetRating && !this.isPlayerTakingDamage && gmIds.length) {
-      const threshold = this.targetRating * 3;
-      let gmContent = `<div class="darkest-roll damage-roll">
-        <div class="npc-damage-info gm-only">
-          <div class="npc-damage-row"><i class="fas fa-skull"></i><span>NPC defeat threshold: <strong>${threshold}</strong> total wound rating (Rating ${this.targetRating} × 3)</span></div>
-          <div class="npc-damage-row wound-dealt-row"><i class="fas fa-heart-broken"></i><span>This wound: <strong>${this.woundRating}</strong> — auto-applied to active NPC in tracker</span></div>
-        </div>`;
-      if (this.isInstantKill) {
-        gmContent += `<div class="instant-kill-warning">
-          <i class="fas fa-skull-crossbones"></i> <strong>LETHAL BLOW!</strong>
-          <p>Wound Rating ${this.woundRating} is 3+ higher than target Rating ${this.targetRating}.</p>
-          <p>Target is instantly killed or knocked unconscious!</p>
-        </div>`;
+        if (game.user.isGM) {
+          ChatMessage.create({ content: gmContent, whisper: gmIds, speaker: messageData.speaker });
+        } else {
+          game.socket.emit('system.darkest-system', {
+            type: 'postGmWhisper',
+            content: gmContent,
+            speaker: messageData.speaker,
+          });
+        }
       }
-      gmContent += `</div>`;
-
-      ChatMessage.create({
-        content: gmContent,
-        whisper: whisperEnabled ? gmIds : [],
-        speaker: messageData.speaker,
-      });
     }
 
-    // Transgressions: players only ever see the vague public "Woods stir..."
-    // line in roll-result.hbs. The GM additionally gets the real mechanical
-    // trigger detail whispered separately.
-    if (this.isTransgression && !this.isDamageRoll && gmIds.length) {
-      const dieLine = this.callUponWoods
-        ? `<span>Triggered by <strong>Calling Upon the Woods</strong> (always a transgression)</span>`
-        : `<span>Darkest Die <strong>${this.darkestDieResult}</strong> was highest of all 3 dice (kept dice highest: <strong>${this.highestRegularDie}</strong>)</span>`;
-      const actorName = game.actors.get(messageData.speaker?.actor)?.name || messageData.speaker?.alias || 'Character';
-      const doomLine = this.gainsDoom
-        ? `<div class="npc-damage-row"><i class="fas fa-skull"></i><span>${actorName} gains <strong>1 Doom</strong></span></div>`
-        : '';
-      const gmContent = `<div class="darkest-roll action-roll transgression">
-        <div class="npc-damage-info gm-only">
-          <div class="npc-damage-row"><i class="fas fa-tree"></i>${dieLine}</div>
-          ${doomLine}
-        </div>
-      </div>`;
-
-      ChatMessage.create({
-        content: gmContent,
-        whisper: whisperEnabled ? gmIds : [],
-        speaker: messageData.speaker,
-      });
-    }
-
-    // Fire transgression hook if applicable (GM only processes this)
+    // Fire transgression hook if applicable (GM only processes this).
+    // Hooks.call() only fires locally on the client that calls it -- most
+    // rolls are made by players, so their client firing this hook would
+    // never reach the GM's client at all. Delegate over the socket when
+    // this isn't already a GM's own client (same pattern as
+    // applyWound/applyDoom/applyNpcDamage).
     if (this.isTransgression && !this.isDamageRoll) {
-      // Get the actor from the speaker if available
       const speaker = messageData.speaker || ChatMessage.getSpeaker();
       const actor = game.actors.get(speaker.actor);
-      Hooks.call('darkestSystem.transgression', actor, this);
+      if (game.user.isGM) {
+        Hooks.callAll('darkestSystem.transgression', actor, this);
+      } else {
+        game.socket.emit('system.darkest-system', { type: 'triggerTransgression' });
+      }
     }
 
     // Fire doom gained hook if applicable

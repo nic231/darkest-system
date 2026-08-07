@@ -30,8 +30,12 @@
       "CallUponWoods": "Call Upon the Woods",
       "CallUponWoodsWarning": "Adding the Darkest Die grants +{bonus} but triggers a transgression and you gain a Doom!",
       "DarkestDie": "Darkest Die",
-      "WoodsStir": "The Woods stir...",
-      "HouseStir": "The House stirs..."
+      "WoodsStirTier1": "The Woods stir...",
+      "WoodsStirTier2": "The Woods are waking. You are no longer unnoticed.",
+      "WoodsStirTier3": "The Woods see you. Something terrible is coming...",
+      "HouseStirTier1": "The House creaks...",
+      "HouseStirTier2": "The House grows restless. Its hatred is stirring.",
+      "HouseStirTier3": "The House hates you. Something terrible is coming..."
     },
 
     "Wound": {
@@ -141,9 +145,7 @@
       "EnablePartialSuccess": "Enable Partial Success",
       "EnablePartialSuccessHint": "Optional rule: if you fail but rolled doubles on your kept dice, you achieve a partial success (halfway to your goal).",
       "ShowDoomSkulls": "Show Doom Skulls on Chat",
-      "ShowDoomSkullsHint": "When enabled, skull icons appear next to a player character's name in chat for each active Doom they carry.",
-      "EnableGmWhispers": "Enable GM-Only Whispers",
-      "EnableGmWhispersHint": "When enabled, damage rolls send the GM a separate whispered message with NPC defeat threshold and lethal-blow info that players never see. Turn this off to send that info to everyone instead -- useful for confirming the whisper is really GM-only."
+      "ShowDoomSkullsHint": "When enabled, skull icons appear next to a player character's name in chat for each active Doom they carry."
     },
 
     "Dialog": {

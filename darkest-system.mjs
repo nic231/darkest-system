@@ -125,20 +125,6 @@ function _registerGameSettings() {
     type: Boolean,
     default: true
   });
-
-  // Lets the GM verify (or disable) the GM-only whispered damage info
-  // separately from what players see. With this off, everyone sees only
-  // the public roll card -- useful for confirming the whisper really is
-  // GM-only, since testing across two tabs of the same browser session
-  // does not reliably reflect real per-user visibility.
-  game.settings.register('darkest-system', 'enableGmWhispers', {
-    name: 'DARKEST.Settings.EnableGmWhispers',
-    hint: 'DARKEST.Settings.EnableGmWhispersHint',
-    scope: 'world',
-    config: true,
-    type: Boolean,
-    default: true
-  });
 }
 
 /* ----------------------------------------
@@ -264,6 +250,31 @@ Hooks.once('ready', function() {
       case 'applyNpcDamage':
         if (game.user.isGM) {
           NpcTracker.applyDamage(data.woundRating);
+        }
+        break;
+
+      case 'postGmWhisper':
+        // A whispered ChatMessage is always visible to its own author, no
+        // matter who's listed in `whisper` -- so if a PLAYER's client
+        // creates a message whispered to the GM, that player still sees it
+        // themselves. The message must actually be authored by a GM client
+        // for the whisper to exclude the player as intended.
+        if (game.user.isGM) {
+          ChatMessage.create({
+            content: data.content,
+            whisper: game.users.filter(u => u.isGM).map(u => u.id),
+            speaker: data.speaker
+          });
+        }
+        break;
+
+      case 'triggerTransgression':
+        // Hooks.call() only fires locally on the client that calls it --
+        // when a PLAYER rolls a transgression, darkestSystem.transgression
+        // fires only on their own browser, so the GM's client never sees it
+        // and incrementTransgression() never runs. Delegate to a GM client.
+        if (game.user.isGM) {
+          Hooks.callAll('darkestSystem.transgression');
         }
         break;
     }

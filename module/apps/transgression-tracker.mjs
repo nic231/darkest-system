@@ -202,6 +202,18 @@ export class TransgressionTracker extends Application {
   }
 
   /**
+   * Public-facing ominous message shown to everyone (including the GM),
+   * tiered by the region/house's current level (1-10). Deliberately vague
+   * -- the GM-only detail (the witch's actual next scripted action) is
+   * whispered separately, where the level is known.
+   */
+  static _publicStirMessage(level, isHouseMode) {
+    const key = level >= 10 ? 'Tier3' : level >= 5 ? 'Tier2' : 'Tier1';
+    const localizeKey = `DARKEST.Roll.${isHouseMode ? 'House' : 'Woods'}Stir${key}`;
+    return game.i18n.localize(localizeKey);
+  }
+
+  /**
    * Increment transgression for a region (Darkest Woods) or advance the house
    * action counter (Darkest House).
    */
@@ -241,6 +253,13 @@ export class TransgressionTracker extends Application {
 
     await this.setTransgressions(transgressions);
 
+    // Public ominous message, tiered by the new level -- everyone sees this,
+    // GM included; it never names the witch's actual action.
+    const isHouseMode = this.getGameMode() === 'darkest-house';
+    await ChatMessage.create({
+      content: `<div class="transgression-message player-ominous"><i class="fas fa-tree"></i> ${TransgressionTracker._publicStirMessage(region.level, isHouseMode)}</div>`
+    });
+
     // Post the triggered event to GM chat
     const regionData = ALL[regionSlug];
     const eventIndex = region.level - 1;
@@ -276,6 +295,12 @@ export class TransgressionTracker extends Application {
     }
 
     await this.setHouseActions(data);
+
+    // Public ominous message, tiered by the new level -- everyone sees this,
+    // GM included; it never names the house's actual scripted action.
+    await ChatMessage.create({
+      content: `<div class="transgression-message player-ominous"><i class="fas fa-tree"></i> ${TransgressionTracker._publicStirMessage(data.level, true)}</div>`
+    });
 
     // Post the triggered action to chat (GM only)
     const actionText = HOUSE_ACTIONS[data.level - 1];

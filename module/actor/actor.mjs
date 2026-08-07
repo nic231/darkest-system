@@ -617,9 +617,12 @@ export class DarkestActor extends Actor {
       content: `<div class="darkest-doom-spent"><i class="fas fa-skull"></i> <strong>${this.name} spends a Doom!</strong><p class="doom-consequence">The character's doom count decreases, but something terrible will happen...</p></div>`
     });
 
-    // Whisper to GM about what they can do
-    ChatMessage.create({
-      content: `<div class="darkest-doom-spent-gm"><i class="fas fa-skull"></i> <strong>${this.name} has spent a Doom!</strong>
+    // Whisper to GM about what they can do. A whispered ChatMessage is
+    // always visible to its own author regardless of the `whisper` list --
+    // so if this player's own client created it, the player would still
+    // see it. Delegate to a GM client via socket so a GM actually authors
+    // the message (same pattern used for applyWound/applyDoom/applyNpcDamage).
+    const gmWhisperContent = `<div class="darkest-doom-spent-gm"><i class="fas fa-skull"></i> <strong>${this.name} has spent a Doom!</strong>
         <p>You may now inflict something terrible upon them:</p>
         <ul>
           <li>A horrific vision (inflict a mental wound)</li>
@@ -629,9 +632,21 @@ export class DarkestActor extends Actor {
           <li>Or anything significant and bad for the character</li>
         </ul>
         <p><em>You don't need to use this immediately - you may accumulate spent Dooms.</em></p>
-      </div>`,
-      whisper: game.users.filter(u => u.isGM).map(u => u.id)
-    });
+      </div>`;
+    const speaker = ChatMessage.getSpeaker({ actor: this });
+    if (game.user.isGM) {
+      ChatMessage.create({
+        content: gmWhisperContent,
+        whisper: game.users.filter(u => u.isGM).map(u => u.id),
+        speaker
+      });
+    } else {
+      game.socket.emit('system.darkest-system', {
+        type: 'postGmWhisper',
+        content: gmWhisperContent,
+        speaker
+      });
+    }
 
     ui.notifications.info(`${this.name} has spent a Doom. Await the GM's terrible response...`);
     return true;

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.0-alpha (2026-08-07)
+
+- Fix: a whispered ChatMessage is always visible to its own author, no matter who's in the `whisper` list -- so when a PLAYER spent a Doom, dealt damage, or triggered a transgression, the "GM-only" whisper was created on their own client and they saw it too. Doom-spend consequences, NPC damage thresholds/lethal-blow warnings, and transgression tracking now delegate to a GM client over the existing player-to-GM socket (same pattern as wounds/dooms/NPC damage) so a GM actually authors the message.
+- Fix: **transgression tracking silently never worked for player-rolled transgressions at all.** `Hooks.call()` only fires locally on the client that calls it -- a player's transgression roll fired the tracking hook only on their own browser, which the GM's client never saw, so `incrementTransgression()` never ran unless the GM personally made the roll. Now delegated over the same socket.
+- Removed the "Enable GM-Only Whispers" debug toggle added last version -- it was only ever a workaround for the author-visibility bug above, which is now actually fixed.
+- Transgressions now show a public, tiered ominous message to everyone (replacing the old flat "The Woods stir..." line): tier 1 (levels 1-4) is unchanged, tier 2 (5-9) is new ("The Woods are waking...", "The House grows restless..."), tier 3 (10) is new ("The Woods see you...", "The House hates you..."). The specific witch/house action for that level is still GM-only, whispered separately as before.
+
 ## 0.11.9-alpha (2026-08-07)
 
 - Fix: the previous fix for dice-animation ordering had it backwards -- the Darkest Die was rolling first, then the main dice. Root cause: only the main dice's chat message triggers Dice So Nice's automatic animation, and that same message also reveals the final result the instant it's created, so simply reordering code around `super.toMessage()` couldn't get both "main dice roll first" and "no spoiler before the Darkest Die finishes" at once. Now explicitly animates the main dice, then the Darkest Die, both fully awaited, with Dice So Nice's automatic animation suppressed for that message (`flags['dice-so-nice'].skip`) so the main dice don't play twice -- only after both finish does the chat message (with the visible result) get created.
