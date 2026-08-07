@@ -338,8 +338,13 @@ export class DarkestActor extends Actor {
       { checkLabel, woundRating, characterRating, woundBanes, diceNeeded, ratingModifiers, equipment }
     );
 
+    const dialogId = `darkest-resist-${this.id}`;
+    const existingResist = Object.values(ui.windows).find(w => w.options?.id === dialogId);
+    if (existingResist) existingResist.close();
+
     return new Promise((resolve) => {
       new Dialog({
+        id: dialogId,
         title: checkLabel,
         content: dialogContent,
         buttons: {
@@ -466,8 +471,13 @@ export class DarkestActor extends Actor {
       { checkLabel, woundRating: highestWound, characterRating: effectiveRatingWithDooms, woundBanes, diceNeeded, ratingModifiers, equipment }
     );
 
+    const dialogId = `darkest-death-check-${this.id}`;
+    const existingDeathCheck = Object.values(ui.windows).find(w => w.options?.id === dialogId);
+    if (existingDeathCheck) existingDeathCheck.close();
+
     return new Promise((resolve) => {
       new Dialog({
+        id: dialogId,
         title: checkLabel,
         content: dialogContent,
         buttons: {
@@ -768,8 +778,13 @@ export class DarkestActor extends Actor {
         ${mentalSection}
       </form>`;
 
+    const restDialogId = `darkest-rest-${this.id}`;
+    const existingRest = Object.values(ui.windows).find(w => w.options?.id === restDialogId);
+    if (existingRest) existingRest.close();
+
     return new Promise((resolve) => {
       new Dialog({
+        id: restDialogId,
         title: `${this.name} — Rest`,
         content: dialogContent,
         buttons: {

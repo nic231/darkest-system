@@ -26,6 +26,18 @@ export class DarkestActorSheet extends ActorSheet {
     return `systems/darkest-system/templates/actor/actor-${this.actor.type}-sheet.hbs`;
   }
 
+  /**
+   * Roll dialogs (Action Roll, Deal Damage, Take Damage, etc.) are plain
+   * `new Dialog()` calls with no stored reference, so nothing stops the same
+   * button -- or a different roll button -- from piling up multiple copies
+   * on screen. Give each dialog category a stable id and close any existing
+   * window with that id before opening a new one.
+   */
+  _closeExistingDialog(id) {
+    const existing = Object.values(ui.windows).find(w => w.options?.id === id);
+    if (existing) existing.close();
+  }
+
   /** @override */
   async getData() {
     const context = await super.getData();
@@ -412,7 +424,9 @@ export class DarkestActorSheet extends ActorSheet {
       }
     );
 
+    this._closeExistingDialog(`darkest-action-roll-${this.actor.id}`);
     new Dialog({
+      id: `darkest-action-roll-${this.actor.id}`,
       title: game.i18n.localize('DARKEST.Dialog.RollTitle'),
       content: dialogContent,
       buttons: {
@@ -606,7 +620,9 @@ export class DarkestActorSheet extends ActorSheet {
       }
     );
 
+    this._closeExistingDialog(`darkest-deal-damage-${this.actor.id}`);
     new Dialog({
+      id: `darkest-deal-damage-${this.actor.id}`,
       title: game.i18n.localize('DARKEST.Roll.DealDamage'),
       content: dialogContent,
       buttons: {
@@ -750,7 +766,9 @@ export class DarkestActorSheet extends ActorSheet {
       }
     );
 
+    this._closeExistingDialog(`darkest-take-damage-${this.actor.id}`);
     new Dialog({
+      id: `darkest-take-damage-${this.actor.id}`,
       title: game.i18n.localize('DARKEST.Roll.TakeDamage'),
       content: dialogContent,
       buttons: {
@@ -898,7 +916,9 @@ export class DarkestActorSheet extends ActorSheet {
       </form>`;
 
     return new Promise((resolve) => {
+      this._closeExistingDialog(`darkest-new-wound-${this.actor.id}`);
       new Dialog({
+        id: `darkest-new-wound-${this.actor.id}`,
         title: 'New Wound',
         content,
         buttons: {
@@ -1112,7 +1132,9 @@ export class DarkestActorSheet extends ActorSheet {
 
     const actor = this.actor;
 
+    this._closeExistingDialog(`darkest-heal-wound-${this.actor.id}`);
     new Dialog({
+      id: `darkest-heal-wound-${this.actor.id}`,
       title: 'Heal Wound',
       content,
       buttons: {},

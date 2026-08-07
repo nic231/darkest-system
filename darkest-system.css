@@ -2098,6 +2098,11 @@
 .app.dialog:has(.darkest-dialog) {
   height: auto !important;
   max-height: 90vh;
+  /* Foundry's core theme-light styling puts a light background on the app
+     root; our content is dark regardless of the user's chosen UI theme, so
+     without this the light background shows through any transparent gap
+     (window-content has none of its own background) as a pale strip. */
+  background: var(--darkest-bg-dark);
 }
 
 .app.dialog:has(.darkest-dialog) .window-content {
@@ -2106,6 +2111,7 @@
   flex-direction: column;
   overflow: hidden;
   padding-bottom: 0;
+  background: var(--darkest-bg-dark);
 }
 
 .app.dialog:has(.darkest-dialog) .dialog-content {
