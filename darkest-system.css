@@ -1153,32 +1153,6 @@
 }
 
 /* ----------------------------------------
-   Abilities
----------------------------------------- */
-.ability-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.ability-name {
-  font-weight: 600;
-}
-
-.ability-type {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--darkest-text-muted);
-}
-
-.ability-type .uses {
-  padding: 2px 6px;
-  background: var(--darkest-bg-dark);
-  border-radius: 3px;
-}
-
-/* ----------------------------------------
    Equipment
 ---------------------------------------- */
 .equipment-info {
@@ -1193,6 +1167,18 @@
 /* ----------------------------------------
    Special Abilities
 ---------------------------------------- */
+.item-list .item.ability-item {
+  align-items: flex-start;
+}
+
+.ability-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
 .ability-info {
   display: flex;
   align-items: center;
@@ -1215,6 +1201,49 @@
 
 .ability-tag.boon {
   color: var(--darkest-success);
+}
+
+.ability-description {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--darkest-text-muted);
+}
+
+.ability-description p:first-child {
+  margin-top: 0;
+}
+
+.ability-description p:last-child {
+  margin-bottom: 0;
+}
+
+/* Clickable use-pip track, same visual language as the Rating dots */
+.ability-use-pips {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.ability-use-pip {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--darkest-accent);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ability-use-pip.filled {
+  background: var(--darkest-accent);
+}
+
+.ability-use-pip.empty {
+  background: transparent;
+}
+
+.ability-use-pip:hover {
+  transform: scale(1.2);
+  border-color: var(--darkest-accent-light);
 }
 
 .armor-type {

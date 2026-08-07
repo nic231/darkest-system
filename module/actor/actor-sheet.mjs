@@ -176,6 +176,19 @@ export class DarkestActorSheet extends ActorSheet {
     // Sort wounds by rating (highest first)
     wounds.sort((a, b) => (b.system.rating || 0) - (a.system.rating || 0));
 
+    // Build a clickable pip track for limited-use abilities, same visual
+    // language as the Rating dots. Unlimited abilities (usesPerDay === 0)
+    // get no pips -- there's nothing to track.
+    for (const a of abilities) {
+      if (a.system.usesPerDay > 0) {
+        const remaining = a.system.usesRemaining ?? a.system.usesPerDay;
+        a.usePips = [];
+        for (let i = 1; i <= a.system.usesPerDay; i++) {
+          a.usePips.push({ value: i, filled: i <= remaining });
+        }
+      }
+    }
+
     // Assign to context
     context.wounds = wounds;
     context.dooms = dooms;
@@ -204,6 +217,9 @@ export class DarkestActorSheet extends ActorSheet {
 
     // Rating dots click handler
     html.find('.rating-dot').click(this._onRatingClick.bind(this));
+
+    // Ability use-pip click handler (Main-tab summary and Abilities tab both)
+    html.find('.ability-use-pip').click(this._onAbilityUseClick.bind(this));
 
     // Full-size image popup — click the portrait directly
     html.find('.profile-img.clickable').click(() => {
@@ -287,6 +303,27 @@ export class DarkestActorSheet extends ActorSheet {
     const field = element.dataset.field || 'system.rating';
 
     await this.actor.update({ [field]: value });
+  }
+
+  /**
+   * Handle clicking a use-pip on an ability to set its uses remaining.
+   * Clicking the pip that's already the current remaining value clears it
+   * to zero, same toggle-off convenience as clicking a filled Rating dot
+   * a second time would be expected to do.
+   */
+  async _onAbilityUseClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const element = event.currentTarget;
+    const itemId = element.closest('[data-item-id]')?.dataset.itemId;
+    const item = this.actor.items.get(itemId);
+    if (!item) return;
+
+    const clickedValue = parseInt(element.dataset.value);
+    const current = item.system.usesRemaining ?? item.system.usesPerDay;
+    const newValue = clickedValue === current ? clickedValue - 1 : clickedValue;
+
+    await item.update({ 'system.usesRemaining': Math.max(0, newValue) });
   }
 
   /**

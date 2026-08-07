@@ -115,12 +115,18 @@
         </div>
         <ul class="compact-abilities-list">
           {{#each abilities}}
-          <li class="compact-ability-item">
+          <li class="compact-ability-item" data-item-id="{{_id}}">
             <div class="compact-ability-header">
               <i class="fas fa-star-of-david"></i>
               <span class="compact-ability-name">{{name}}</span>
               {{#if system.grantsBoon}}<span class="compact-ability-tag boon">Boon</span>{{/if}}
-              {{#unless system.unlimited}}<span class="compact-ability-tag uses">{{system.usesRemaining}}/{{system.usesPerDay}} uses</span>{{/unless}}
+              {{#if usePips}}
+              <span class="ability-use-pips" title="{{system.usesRemaining}}/{{system.usesPerDay}} uses — click a pip to set uses remaining">
+                {{#each usePips}}
+                <span class="ability-use-pip {{#if filled}}filled{{else}}empty{{/if}}" data-value="{{value}}"></span>
+                {{/each}}
+              </span>
+              {{/if}}
             </div>
             {{#if enrichedDescription}}
             <div class="compact-ability-description">{{{enrichedDescription}}}</div>
@@ -330,10 +336,21 @@
           {{#each abilities}}
           <li class="item ability-item" data-item-id="{{_id}}">
             <img src="{{img}}" class="item-img" />
-            <div class="ability-info">
-              <span class="ability-name">{{name}}</span>
-              {{#if system.grantsBoon}}<span class="ability-tag boon">Boon</span>{{/if}}
-              {{#unless system.unlimited}}<span class="ability-tag uses">{{system.usesRemaining}}/{{system.usesPerDay}} uses</span>{{/unless}}
+            <div class="ability-main">
+              <div class="ability-info">
+                <span class="ability-name">{{name}}</span>
+                {{#if system.grantsBoon}}<span class="ability-tag boon">Boon</span>{{/if}}
+                {{#if usePips}}
+                <span class="ability-use-pips" title="{{system.usesRemaining}}/{{system.usesPerDay}} uses — click a pip to set uses remaining">
+                  {{#each usePips}}
+                  <span class="ability-use-pip {{#if filled}}filled{{else}}empty{{/if}}" data-value="{{value}}"></span>
+                  {{/each}}
+                </span>
+                {{/if}}
+              </div>
+              {{#if enrichedDescription}}
+              <div class="ability-description">{{{enrichedDescription}}}</div>
+              {{/if}}
             </div>
             <div class="item-controls">
               <a class="item-edit" title="Edit"><i class="fas fa-edit"></i></a>
