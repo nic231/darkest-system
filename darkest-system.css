@@ -4535,6 +4535,22 @@
   color: var(--darkest-text-muted, #7a7268);
 }
 
+.travel-now-light {
+  margin-top: 6px;
+  font-size: 11px;
+  font-style: italic;
+  text-align: center;
+  color: #d8a05a;
+  opacity: 0.9;
+}
+
+.travel-chat-light {
+  margin-top: 4px;
+  font-size: 12px;
+  font-style: italic;
+  color: #b06a4a;
+}
+
 .travel-group {
   display: flex;
   flex-direction: column;

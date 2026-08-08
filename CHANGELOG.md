@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.1-alpha (2026-08-08)
+
+**The woods eat the daylight.** Per the book: the first day and night pass normally, but after that "the days begin to grow drastically shorter, with dusk and dawn growing longer until finally they merge," settling at "about ten hours of dusk and fourteen hours of night."
+
+- The clock now models this. Day 1 runs a normal cycle (~10h of true daylight); daylight then collapses over the following five days until, from **day 6 onward, there is no daylight at all** — just 10h of dusk bleeding into 14h of night, permanently. The book doesn't say how long the transition takes, so five days is a deliberate choice: fast enough for players to feel it inside a typical arc, slow enough to be a dawning realisation rather than a switch.
+- The dial shows it: hovering reports how much true daylight is left in the current day, and once the sun is gone for good the day counter reads "Day N · sunless".
+- Day rollovers now say so in-world — "The daylight is shorter again — barely 6 hours of true light remain", and the first sunless day announces "Dawn does not come. Dusk and night have merged — the sun will not rise again."
+- The travel tool's clock panel shows the remaining daylight for the current day.
+- Note the displayed time is cycle position, not solar time — 00:00 is daybreak. In woods that end up with no sun, a solar clock would be meaningless.
+
 ## 0.13.0-alpha (2026-08-08)
 
 **New: Travel & Time tracking.**

@@ -3,6 +3,15 @@
   <div class="travel-now">
     <div class="travel-now-time">{{#if isFixedRegion}}{{phaseLabel}}{{else}}{{time}}{{/if}}</div>
     <div class="travel-now-day">Day {{day}}{{#unless isFixedRegion}} · {{phaseLabel}}{{/unless}}</div>
+    <div class="travel-now-light">
+      {{#if isFixedRegion}}
+        The sun never rises here.
+      {{else if merged}}
+        Dusk and night have merged — no true daylight remains.
+      {{else}}
+        ~{{daylightHours}}h of true daylight in this day.
+      {{/if}}
+    </div>
   </div>
 
   {{#if hasRoutes}}

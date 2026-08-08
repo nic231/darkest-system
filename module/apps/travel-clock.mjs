@@ -97,13 +97,70 @@ export class TravelClock {
     return `${m}m`;
   }
 
-  /** Coarse phase of day, used for the dial icon and chat flavour. */
-  static phaseOf(minutes) {
+  /**
+   * The light dies as the woods take hold. Per the book:
+   *
+   *   "The characters' first day and night in the woods pass normally...
+   *    After that first day, however, the days begin to grow drastically
+   *    shorter, with dusk and dawn growing longer until finally they
+   *    merge. Eventually, it becomes standard that a 'day' consists of
+   *    about ten hours of dusk and fourteen hours of night."
+   *
+   * So day 1 is a normal 24h cycle, and the end state has NO true daylight
+   * at all -- just 10h of dusk and 14h of night. We interpolate between
+   * the two across DAYLIGHT_DECAY_DAYS: true daylight shrinks toward zero
+   * while dusk expands to swallow it, and night grows to 14h.
+   *
+   * Even "normal" daylight here is only half-light -- the canopy is thick
+   * and nights are pitch black -- but that's flavour for the GM to
+   * narrate, not something the clock needs to model.
+   */
+  static DAYLIGHT_DECAY_DAYS = 5;
+
+  /**
+   * Phase boundaries for a given day number, as hours from the START of
+   * the cycle (which is dawn, not midnight -- in woods that eventually
+   * lose the sun entirely, a solar clock is meaningless, so the displayed
+   * time is really "position in the current cycle" and 00:00 is daybreak).
+   * Returns the START hour of each phase.
+   */
+  static dayStructure(day) {
+    // Progress from 0 (day 1, normal) to 1 (fully merged dusk/night).
+    const t = Math.min(1, Math.max(0, (day - 1) / TravelClock.DAYLIGHT_DECAY_DAYS));
+
+    const lerp = (from, to) => from + (to - from) * t;
+
+    // Day 1: 2h dawn, 10h day, 3h dusk, 9h night (a normal-ish cycle).
+    // End state: no dawn, no day, 10h dusk, 14h night.
+    const dawnLength = lerp(2, 0);
+    const dayLength = lerp(10, 0);
+    const duskLength = lerp(3, 10);
+
+    // Night fills whatever is left, landing on 14h at the end state.
+    const nightStart = dawnLength + dayLength + duskLength;
+
+    return {
+      dawnStart: 0,
+      dayStart: dawnLength,
+      duskStart: dawnLength + dayLength,
+      nightStart,
+      // Exposed for the tool/dial so the GM can see the woods closing in.
+      daylightHours: Math.round(dayLength * 10) / 10,
+      merged: dayLength <= 0.05 && dawnLength <= 0.05,
+    };
+  }
+
+  /** Coarse phase of day, for the dial icon and chat flavour. */
+  static phaseOf(minutes, day = 1) {
     const h = minutes / 60;
-    if (h < 5) return 'night';
-    if (h < 8) return 'dawn';
-    if (h < 17) return 'day';
-    if (h < 20) return 'dusk';
+    const s = TravelClock.dayStructure(day);
+
+    // Night wraps past midnight, so anything before dawn ends is night
+    // once the cycle has collapsed far enough that dawn no longer exists.
+    if (h >= s.nightStart) return 'night';
+    if (h >= s.duskStart) return 'dusk';
+    if (h >= s.dayStart) return 'day';
+    if (s.dayStart > 0) return 'dawn';
     return 'night';
   }
 
@@ -130,8 +187,9 @@ export class TravelClock {
     const clock = TravelClock.getClock();
     const region = TravelClock.currentRegion();
     const fixed = region ? FIXED_TIME_REGIONS[region] : null;
-    const phase = fixed ? fixed.phase : TravelClock.phaseOf(clock.minutes);
+    const phase = fixed ? fixed.phase : TravelClock.phaseOf(clock.minutes, clock.day);
     const meta = TravelClock.PHASE_META[phase];
+    const structure = TravelClock.dayStructure(clock.day);
     return {
       day: clock.day,
       time: TravelClock.formatTime(clock.minutes),
@@ -140,6 +198,8 @@ export class TravelClock {
       icon: meta.icon,
       cls: meta.cls,
       fixed: !!fixed,
+      daylightHours: structure.daylightHours,
+      merged: structure.merged,
     };
   }
 
@@ -185,14 +245,21 @@ export function renderDial() {
   }
 
   el.className = `darkest-travel-dial ${state.cls}${game.user.isGM ? ' gm-clickable' : ''}`;
-  el.title = game.user.isGM
-    ? 'Click to open the Travel & Time tool'
-    : `${state.phaseLabel} — Day ${state.day}`;
+
+  // The shrinking daylight is the point -- surface it on hover so players
+  // can feel the woods closing in without the GM having to say it.
+  const lightNote = state.fixed
+    ? 'The sun never rises here.'
+    : state.merged
+      ? 'The sun no longer rises.'
+      : `About ${state.daylightHours}h of true daylight left in the day.`;
+  el.title = `${state.phaseLabel} — Day ${state.day}\n${lightNote}${game.user.isGM ? '\n\nClick to open the Travel & Time tool' : ''}`;
+
   el.innerHTML = `
     <i class="fas ${state.icon} dial-icon"></i>
     <div class="dial-readout">
       <span class="dial-time">${state.fixed ? state.phaseLabel : state.time}</span>
-      <span class="dial-day">Day ${state.day}</span>
+      <span class="dial-day">Day ${state.day}${state.merged && !state.fixed ? ' · sunless' : ''}</span>
     </div>`;
 }
 
@@ -240,6 +307,8 @@ export class TravelTool extends Application {
       time: TravelClock.formatTime(clock.minutes),
       phaseLabel: state.phaseLabel,
       isFixedRegion: state.fixed,
+      daylightHours: state.daylightHours,
+      merged: state.merged,
       hereName: hereSlug ? (TRAVEL_ROUTES.find(r => r.fromSlug === hereSlug)?.fromTitle ?? null) : null,
       hereRoutes: here,
       otherRoutes: elsewhere,
@@ -352,10 +421,29 @@ export class TravelTool extends Application {
       // A day boundary is where the book's daily effects live (Winter's
       // Mercy exposure, 24h rest locks, per-day ability uses). Flag it
       // for the GM rather than applying anything automatically.
+      //
+      // It's also where the woods eat the daylight, so say so in-world --
+      // the party should notice the light failing without being told the
+      // mechanic outright.
+      const before = TravelClock.dayStructure(result.day - result.daysPassed);
+      const now = TravelClock.dayStructure(result.day);
+
+      let lightLine = '';
+      if (now.merged && !before.merged) {
+        lightLine = `<div class="travel-chat-light">
+          Dawn does not come. Dusk and night have merged -- the sun will not rise again.
+        </div>`;
+      } else if (now.daylightHours < before.daylightHours) {
+        lightLine = `<div class="travel-chat-light">
+          The daylight is shorter again -- barely ${now.daylightHours} hours of true light remain.
+        </div>`;
+      }
+
       content += `<div class="travel-chat-newday">
-        <i class="fas fa-sun"></i> A new day dawns.
+        <i class="fas ${now.merged ? 'fa-moon' : 'fa-sun'}"></i>
+        ${now.merged ? 'Another lightless day begins.' : 'A new day dawns.'}
         <span class="travel-chat-hint">Check exposure, rest locks, and daily ability uses.</span>
-      </div>`;
+      </div>${lightLine}`;
     }
     content += `</div>`;
 
