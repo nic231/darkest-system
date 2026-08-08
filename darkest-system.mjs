@@ -269,6 +269,15 @@ Hooks.once('ready', function() {
         }
         break;
 
+      case 'notifyDoomGained':
+        // The Doom item itself was already created on the player's own
+        // client (they own their actor) -- this only carries the GM-facing
+        // notification, which a local-only Hooks.call could never deliver.
+        if (game.user.isGM) {
+          ui.notifications.info(`${data.actorName} gained a Doom from calling upon the woods!`);
+        }
+        break;
+
       case 'triggerTransgression':
         // Hooks.call() only fires locally on the client that calls it --
         // when a PLAYER rolls a transgression, darkestSystem.transgression
@@ -350,6 +359,32 @@ Hooks.on('getSceneControlButtons', (controls) => {
       const existing = Object.values(ui.windows).find(w => w.constructor.name === 'GmWhisperTool');
       if (existing) existing.bringToTop();
       else new GmWhisperTool().render(true);
+    }
+  };
+});
+
+/* ----------------------------------------
+   Scene Controls — Doom Tally (everyone)
+---------------------------------------- */
+// The Doom Tally is deliberately visible to players (it shows the party's
+// shared, mounting Doom count -- the rules want that dread to be public and
+// palpable), so it gets its own hook rather than living in the GM-only block
+// above. GM-only adjustment buttons are gated inside the app's own template.
+Hooks.on('getSceneControlButtons', (controls) => {
+  const tokenTools = controls.tokens?.tools;
+  if (!tokenTools) return;
+
+  tokenTools.doomTally = {
+    name: 'doomTally',
+    title: 'Doom Tally',
+    icon: 'fa-solid fa-skull-crossbones',
+    order: Object.keys(tokenTools).length,
+    button: true,
+    visible: true,
+    onChange: () => {
+      const existing = Object.values(ui.windows).find(w => w.constructor.name === 'DoomTally');
+      if (existing) existing.bringToTop();
+      else new DoomTally().render(true);
     }
   };
 });

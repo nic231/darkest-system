@@ -215,7 +215,10 @@ export class DarkestActor extends Actor {
       options.banes || 0,
       {
         woundType: woundType,
-        targetRating: ownDefense
+        // Instant-kill compares a wound against the target's BASE Rating,
+        // not their defended rating (base + armor + situational mods) --
+        // passing ownDefense here would inflate the threshold.
+        targetRating: systemData.rating
       },
       {
         defenseAdjName: options.defenseAdjName || ''

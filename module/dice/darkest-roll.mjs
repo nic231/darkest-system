@@ -347,11 +347,21 @@ export class DarkestRoll extends Roll {
       }
     }
 
-    // Fire doom gained hook if applicable
+    // Fire doom gained hook if applicable. Same local-only Hooks.call
+    // caveat as the transgression hook above: the listener both creates
+    // the Doom item AND notifies the GM. A player firing this locally
+    // creates the Doom fine (they own their own actor), but the GM would
+    // never see the notification, so delegate that half over the socket.
     if (this.gainsDoom) {
       const speaker = messageData.speaker || ChatMessage.getSpeaker();
       const actor = game.actors.get(speaker.actor);
-      Hooks.call('darkestSystem.doomGained', actor, this);
+      Hooks.callAll('darkestSystem.doomGained', actor, this);
+      if (!game.user.isGM && actor) {
+        game.socket.emit('system.darkest-system', {
+          type: 'notifyDoomGained',
+          actorName: actor.name,
+        });
+      }
     }
 
     return super.toMessage(messageData, options);

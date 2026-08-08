@@ -377,12 +377,16 @@ export class DarkestActorSheet extends ActorSheet {
   async _onActionRoll(event) {
     event.preventDefault();
 
-    // Shift-click: quick roll at difficulty 4 with no modifiers
+    // Shift-click: quick roll at difficulty 4 with no manually-added modifiers.
+    // Wound Banes are NOT a manual modifier -- being wounded always costs a
+    // Bane per the rules, and the full dialog pre-populates it from
+    // system.banes. The quick roll has to apply it too, or shift-clicking
+    // silently rolls a clean 2d6 for a wounded character.
     if (event.shiftKey) {
       return this.actor.rollAction({
         taskRating: 4,
         boons: 0,
-        banes: 0,
+        banes: this.actor.system.banes || 0,
         callUponWoods: false,
         ratingModifier: 0,
         modifierName: null

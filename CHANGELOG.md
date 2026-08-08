@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.4-alpha (2026-08-08)
+
+Full codebase audit pass -- three real bugs fixed, one missing UI entry point added.
+
+- Fix: **shift-click quick Action Roll ignored wound Banes.** The quick-roll shortcut hardcoded `banes: 0`, so a wounded character shift-clicking rolled a clean 2d6 instead of the required 3d6-keep-lowest-2. The full dialog was always correct; only the shortcut was wrong.
+- Fix: the `darkestSystem.doomGained` hook fired via local-only `Hooks.call()`, so when a *player* called upon the woods the GM never got the "gained a Doom" notification (the Doom item itself was created correctly). Now delegates the notification over the same player-to-GM socket every other cross-client event uses.
+- Fix: `rollTakeDamage` passed the character's *defended* rating (base + armor + situational modifiers) as the instant-kill comparison target instead of their base Rating, inflating the threshold. Currently latent -- that value isn't surfaced for take-damage rolls -- but it was wrong data waiting on a future feature.
+- Added: **the Doom Tally had no way to open it.** It was fully implemented and wired up but had no scene-control button and no macro, so it was only reachable from the browser console. It now has its own token-layer button, visible to players as well as the GM (the party's shared Doom count is meant to be public), with the GM-only adjustment controls still gated inside the app.
+
 ## 0.12.3-alpha (2026-08-08)
 
 - Transgression escalation now has real stakes tied to the rules: tier 1 (levels 1-4) "The woods stir and whisper", tier 2 (5-9) "The woods are waking. The wind seems to carry distant voices, but you can't make out what they say", tier 3 (level 10) "The woods awaken. You hear it clearly now: '[region's key phrase]'. Something terrible is coming..." -- per the rulebook, each witch's key phrase is meant to leak as a whisper/dream message and encodes a clue about escaping the woods. Falls back to generic wording if no region/key phrase is configured. House mode keeps its existing flat tier wording (no witches/key phrases there).
