@@ -403,14 +403,22 @@ export function renderDial() {
 
   el.className = `darkest-travel-dial ${state.cls}${game.user.isGM ? ' gm-clickable' : ''}`;
 
-  // The shrinking daylight is the point -- surface it on hover so players
-  // can feel the woods closing in without the GM having to say it.
-  const lightNote = state.fixed
-    ? 'The sun never rises here.'
-    : state.merged
-      ? 'The sun no longer rises.'
-      : `About ${state.daylightHours}h of true daylight left in the day.`;
-  el.title = `${state.phaseLabel} — Day ${state.day}\n${lightNote}${game.user.isGM ? '\n\nClick to open the Travel & Time tool' : ''}`;
+  // Players get the phase and day only. The exact daylight remaining is
+  // GM information -- the characters have no way to measure it, and
+  // noticing the light failing is a realisation the players should reach
+  // themselves. Once the sun has stopped rising entirely that IS plainly
+  // observable, so both sides get told.
+  let lightNote;
+  if (state.fixed) lightNote = 'The sun never rises here.';
+  else if (state.merged) lightNote = 'The sun no longer rises.';
+  else if (game.user.isGM) lightNote = `GM: about ${state.daylightHours}h of true daylight left.`;
+  else lightNote = null;
+
+  el.title = [
+    `${state.phaseLabel} — Day ${state.day}`,
+    lightNote,
+    game.user.isGM ? '\nClick to open the Travel & Time tool' : null,
+  ].filter(Boolean).join('\n');
 
   el.innerHTML = `
     <i class="fas ${state.icon} dial-icon"></i>
@@ -687,37 +695,49 @@ export class TravelTool extends Application {
       ${flavourLine ? `<div class="travel-chat-flavour">${flavourLine}</div>` : ''}
       <div class="travel-chat-body">${timeLine}</div>`;
 
+    const now = TravelClock.dayStructure(result.day);
+
     if (result.daysPassed > 0) {
-      // A day boundary is where the book's daily effects live (Winter's
-      // Mercy exposure, 24h rest locks, per-day ability uses). Flag it
-      // for the GM rather than applying anything automatically.
-      //
-      // It's also where the woods eat the daylight, so say so in-world --
-      // the party should notice the light failing without being told the
-      // mechanic outright.
-      const before = TravelClock.dayStructure(result.day - result.daysPassed);
-      const now = TravelClock.dayStructure(result.day);
-
-      let lightLine = '';
-      if (now.merged && !before.merged) {
-        lightLine = `<div class="travel-chat-light">
-          Dawn does not come. Dusk and night have merged -- the sun will not rise again.
-        </div>`;
-      } else if (now.daylightHours < before.daylightHours) {
-        lightLine = `<div class="travel-chat-light">
-          The daylight is shorter again -- barely ${now.daylightHours} hours of true light remain.
-        </div>`;
-      }
-
+      // Public side says only that a day turned. The shrinking daylight
+      // is deliberately NOT announced: the characters have no way to
+      // measure it (on day 2 there's nothing to compare against), and
+      // noticing the light failing is exactly the realisation the players
+      // should reach on their own.
       content += `<div class="travel-chat-newday">
         <i class="fas ${now.merged ? 'fa-moon' : 'fa-sun'}"></i>
         ${now.merged ? 'Another lightless day begins.' : 'A new day dawns.'}
-        <span class="travel-chat-hint">Check exposure, rest locks, and daily ability uses.</span>
-      </div>${lightLine}`;
+      </div>`;
     }
     content += `</div>`;
 
     await ChatMessage.create({ content });
+
+    // The GM's side of a day boundary: the book's daily effects to check,
+    // and how far the light has actually fallen. Whispered, because both
+    // are GM bookkeeping rather than anything the party can perceive.
+    if (result.daysPassed > 0) {
+      const before = TravelClock.dayStructure(result.day - result.daysPassed);
+      let lightNote;
+      if (now.merged && !before.merged) {
+        lightNote = 'The sun no longer rises. Dusk and night have fully merged.';
+      } else if (now.merged) {
+        lightNote = 'Still sunless — 10h dusk, 14h night.';
+      } else {
+        lightNote = `Daylight is down to about ${now.daylightHours}h.`;
+      }
+
+      const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
+      if (gmIds.length) {
+        await ChatMessage.create({
+          content: `<div class="travel-chat">
+            <div class="travel-chat-head"><i class="fas fa-hourglass-half"></i> Day ${result.day} begins.</div>
+            <div class="travel-chat-light">${lightNote}</div>
+            <div class="travel-chat-hint">Check exposure, rest locks, and daily ability uses.</div>
+          </div>`,
+          whisper: gmIds,
+        });
+      }
+    }
 
     // Move the party to where they actually walked to.
     if (opts.route) {

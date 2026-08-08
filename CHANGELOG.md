@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.7-alpha (2026-08-09)
+
+- The shrinking daylight is no longer announced to players. Saying "barely 8 hours of true light remain" gave the characters a measurement they can't possibly have — on day 2 there's nothing to compare against — and pre-empted the realisation the players should reach themselves. Public messages now say only that a new day has begun.
+- The GM still gets the detail, whispered: how far the light has fallen, plus the reminder to check exposure, rest locks, and daily ability uses. That reminder was previously in the public message too, where players could read the GM's bookkeeping.
+- The dial's hover text follows the same split — players see the phase and day, the GM also sees the remaining daylight. Once the sun stops rising entirely both sides are told, since by then it's plainly observable.
+
 ## 0.13.6-alpha (2026-08-09)
 
 - Fix: **mid-afternoon was reading as night.** The day cycle was anchored at hour 0 = dawn, which crushed dawn/day/dusk into the morning and left night covering the entire afternoon and evening — on Day 1, night began at 15:00. The lit part of the day is now centred on midday and eaten from both ends as the days shorten, so the clock reads the way people expect: Day 1 has dawn ~04:30, daylight until ~16:30, dusk to ~19:30, night after; by Day 6 it's dusk 07:00–17:00 and night the rest, still matching the book's 10h/14h end state. Night correctly wraps through midnight.
