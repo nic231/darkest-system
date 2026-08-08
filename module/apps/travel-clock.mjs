@@ -44,6 +44,129 @@ const FIXED_TIME_REGIONS = {
   'the-road': { phase: 'night', label: 'Endless Night' },
 };
 
+/**
+ * Region-specific travel flavour, added at random to the public travel
+ * message. Purely atmospheric -- these never reveal a destination, a
+ * mechanic, or a plot beat, so they're safe to show players every time.
+ *
+ * Drawn from each region's stated conditions: The Lost is temperate and
+ * rainy with no wind, The Dismal is a humid swamp, Ravages is an endless
+ * fire, The Keepers is cold pine mountains, The Flood is constant rain,
+ * Winter's Mercy is lethal cold, The Backwoods is the most dangerous
+ * place in the woods, and The Road is a paved road under permanent night.
+ */
+const REGION_FLAVOUR = {
+  'the-lost': [
+    'The trees stand close and patient, and nothing moves in them.',
+    'Rain comes and goes without wind to carry it.',
+    'The half-light never quite changes, and the way back stops being obvious.',
+    'Somewhere behind, a branch settles. Nobody turns around.',
+    'The birdsong stops for a while, then starts again somewhere it should not be.',
+  ],
+  'the-dismal': [
+    'The ground gives underfoot, and the air tastes of stagnant water.',
+    'Something disturbs the water nearby and does not surface.',
+    'Insects hang in curtains over the wet ground.',
+    'The stink of rot thickens, then thins, then thickens again.',
+    'Wet branches knock together overhead like something counting.',
+  ],
+  'the-ravages-of-flame': [
+    'Ash falls steadily, settling in hair and collars.',
+    'The heat never eases. Breathing is work.',
+    'Somewhere off the path, timber cracks and gives way.',
+    'The smoke thins just enough to show more burning ahead.',
+    'Embers drift past, still glowing, going the wrong way against the air.',
+  ],
+  'the-keepers': [
+    'The pines close overhead and the cold settles into everything.',
+    'Loose stone shifts underfoot on the climb.',
+    'The air is thin and sharp, and sound carries too far.',
+    'Something watches from higher up the slope and does not follow.',
+    'Mist pools in the hollows below, hiding the ground already crossed.',
+  ],
+  'the-flood': [
+    'The rain does not stop. It has not stopped for a long time.',
+    'Water runs over the path ankle-deep, then knee-deep, then shallow again.',
+    'Everything is soaked through and stays that way.',
+    'Something floats past in the brown water, turning slowly.',
+    'The sound of running water comes from every direction at once.',
+  ],
+  'winters-mercy': [
+    'The cold gets into the joints and stays there.',
+    'Fresh snow hides whatever the ground is really doing.',
+    'Breath freezes in the air and hangs a moment too long.',
+    'Tracks appear alongside the party, then stop without turning aside.',
+    'The white glare gives way to blue shadow, and the temperature drops again.',
+  ],
+  'the-backwoods': [
+    'The undergrowth thickens until the way ahead has to be forced.',
+    'Nothing here has been walked in a very long time.',
+    'The trees lean wrong, and the quiet has weight to it.',
+    'Something large moved through here recently. The damage is fresh.',
+    'The deeper the party goes, the less the woods pretend.',
+  ],
+  'the-road': [
+    'The faded yellow stripe runs on ahead into the dark.',
+    'The asphalt is cracked but level, and the walking is easy.',
+    'No headlights. No sound of engines. The road is theirs alone.',
+    'The dark past the shoulder is complete, and stays that way.',
+    'Stars show through a gap overhead, in no constellation anyone knows.',
+  ],
+};
+
+/** A random atmospheric line for a region, or null if we have none. */
+function regionFlavour(regionSlug) {
+  const lines = REGION_FLAVOUR[regionSlug];
+  if (!lines?.length) return null;
+  return lines[Math.floor(Math.random() * lines.length)];
+}
+
+/**
+ * Turn an exit label into a description of the journey that names no
+ * destination.
+ *
+ * Route labels in the book are already written from the party's own point
+ * of view -- "Trail to the North", "Track to the South", "Back Down the
+ * Road" -- which is exactly what a lost group would know. Naming the
+ * destination in public chat would spoil it (the players don't know
+ * they're walking to Baba Yaga's Hut until they arrive), so the GM's
+ * dropdown keeps the real name and the chat gets this instead.
+ *
+ * ~91% of routes match the Trail/Track/Road/Path + direction pattern.
+ * Anything unusual ("Cave Opening", "Stairs", "Mordecai's Door") is
+ * distinctive enough to read well verbatim.
+ */
+function describeJourney(label) {
+  if (!label) return 'The party travels on';
+
+  // "Trail to the North" / "Trail Northwest" -> "follows the trail north"
+  const directed = label.match(
+    /^(?:(Flooded|Steep|Narrow|Winding|Overgrown)\s+)?(Trail|Track|Road|Path|Way|Stairs?|Tunnel|Bridge)\s+(?:(?:to|toward)\s+the\s+)?(North|South|East|West|Northeast|Northwest|Southeast|Southwest)$/i
+  );
+  if (directed) {
+    const [, adj, kind, dir] = directed;
+    const surface = `${adj ? adj.toLowerCase() + ' ' : ''}${kind.toLowerCase()}`;
+    return `The party follows the ${surface} ${dir.toLowerCase()}`;
+  }
+
+  // The Road's stock directions read naturally as-is.
+  if (/^Farther Up the Road$/i.test(label)) return 'The party continues up the road';
+  if (/^Back Down the Road$/i.test(label)) return 'The party heads back down the road';
+  if (/^The Road Back$/i.test(label)) return 'The party heads back down the road';
+  if (/^The Road on the (Left|Right)$/i.test(label)) {
+    return `The party takes the road on the ${RegExp.$1.toLowerCase()}`;
+  }
+
+  // A label that already names a route ("Secret Path of the Grackle",
+  // "Stairs Down") slots in after "takes the". Anything else is a phrase
+  // rather than a noun ("Exiting the Woods", "Woodfolk Symbol") and would
+  // read as nonsense there, so fall back to something always grammatical.
+  if (/\b(trail|track|road|path|way|stairs?|tunnel|bridge|pier|door|opening|gate|steps)\b/i.test(label)) {
+    return `The party takes the ${label.replace(/^The\s+/i, '').toLowerCase()}`;
+  }
+  return 'The party presses on';
+}
+
 export class TravelClock {
 
   // ── Clock state ───────────────────────────────────────────────────────
@@ -221,6 +344,18 @@ export class TravelClock {
 ---------------------------------------- */
 
 /**
+ * Sit the dial directly above the player list. The list grows upward as
+ * players connect, so a fixed offset works at an empty table and gets
+ * covered at a full one -- measure the real element instead.
+ */
+function positionDial(el) {
+  const players = document.getElementById('players');
+  if (!players) return;
+  const gap = 10;
+  el.style.bottom = `${players.offsetHeight + gap}px`;
+}
+
+/**
  * Render (or update) the always-visible dial. Kept as a plain DOM node
  * docked to the UI rather than an Application, so it doesn't occupy a
  * window slot or need opening -- it's ambient, like a clock on the wall.
@@ -261,6 +396,8 @@ export function renderDial() {
       <span class="dial-time">${state.fixed ? state.phaseLabel : state.time}</span>
       <span class="dial-day">Day ${state.day}${state.merged && !state.fixed ? ' · sunless' : ''}</span>
     </div>`;
+
+  positionDial(el);
 }
 
 /* ----------------------------------------
@@ -348,10 +485,17 @@ export class TravelTool extends Application {
     html.find('[name="km"], [name="hours"], [name="pace"]').on('change keyup', () => this._updatePreview(html));
 
     html.find('.travel-go').click(() => this._travel(html));
+    // Passing time deliberately gets NO regional flavour -- the GM
+    // narrates waiting themselves. Only travel is dressed automatically.
     html.find('.time-skip').click((ev) => {
       const mins = parseInt(ev.currentTarget.dataset.minutes) || 0;
-      this._passTime(mins, `Time passes.`);
+      const label = mins >= 480 ? 'The party rests.'
+        : mins >= 60 ? 'The party waits.'
+        : 'The party lingers a while.';
+      this._passTime(mins, label);
     });
+
+    html.find('.clock-reset').click(() => this._promptReset());
 
     this._updatePreview(html);
   }
@@ -398,19 +542,107 @@ export class TravelTool extends Application {
     const pace = html.find('[name="pace"]').val() || 'normal';
     const routeKey = html.find('[name="route"]').val();
     const route = TRAVEL_ROUTES.find(r => `${r.fromSlug}::${r.label}` === routeKey);
-    const journey = route
-      ? `${route.fromTitle} → ${route.toTitle || 'the unknown'}`
-      : 'The party travels';
 
-    await this._passTime(minutes, `${journey} at ${PACE_LABEL[pace].toLowerCase()} pace.`);
+    // Public text never names the destination -- the party doesn't know
+    // where they're going until they get there. See describeJourney().
+    const journey = route ? describeJourney(route.label) : 'The party travels';
+    const paceNote = pace === 'normal' ? '' : ` at a ${PACE_LABEL[pace].toLowerCase()} pace`;
+
+    await this._passTime(minutes, `${journey}${paceNote}.`, {
+      region: TravelClock.currentRegion(),
+      route,
+    });
   }
 
-  async _passTime(minutes, flavour) {
+  /**
+   * Set the day and time directly. Sessions don't always start where the
+   * last one ended -- a flashback, a time skip between arcs, or simply
+   * fixing a misclick all need the clock moved by hand rather than
+   * advanced.
+   */
+  async _promptReset() {
+    const clock = TravelClock.getClock();
+    const h = String(Math.floor(clock.minutes / 60)).padStart(2, '0');
+    const m = String(clock.minutes % 60).padStart(2, '0');
+
+    const content = `<form class="darkest-dialog">
+      <div class="form-group">
+        <label>Day</label>
+        <input type="number" name="day" min="1" step="1" value="${clock.day}" />
+      </div>
+      <div class="form-group">
+        <label>Time</label>
+        <input type="time" name="time" value="${h}:${m}" />
+      </div>
+      <p class="hint">Sets the clock directly. No time is counted as having passed.</p>
+    </form>`;
+
+    if (this._resetDialog?.rendered) await this._resetDialog.close();
+
+    this._resetDialog = new Dialog({
+      title: 'Set Day &amp; Time',
+      content,
+      buttons: {
+        set: {
+          icon: '<i class="fas fa-check"></i>',
+          label: 'Set',
+          callback: async (html) => {
+            const day = Math.max(1, parseInt(html.find('[name="day"]').val()) || 1);
+            const [hh, mm] = (html.find('[name="time"]').val() || '08:00').split(':').map(Number);
+            const minutes = ((hh || 0) * 60 + (mm || 0)) % 1440;
+
+            await TravelClock.setClock({ day, minutes });
+            TravelClock.broadcastUpdate();
+            TravelClock.refresh();
+            this.render();
+
+            await ChatMessage.create({
+              content: `<div class="travel-chat">
+                <div class="travel-chat-head"><i class="fas fa-hourglass-half"></i> The clock is set.</div>
+                <div class="travel-chat-body">
+                  It is <strong>${TravelClock.formatTime(minutes)}</strong> on <strong>Day ${day}</strong>.
+                </div>
+              </div>`
+            });
+          }
+        },
+        cancel: { icon: '<i class="fas fa-times"></i>', label: 'Cancel' }
+      },
+      default: 'set',
+      close: () => { this._resetDialog = null; }
+    }, { width: 300 });
+    this._resetDialog.render(true);
+  }
+
+  /**
+   * Switch to the destination's scene after travelling, if one exists and
+   * has been imported into the world. Compendium scenes aren't activatable
+   * until imported, so a missing scene is normal, not an error -- the GM
+   * may simply not have imported that region yet.
+   */
+  async _activateDestinationScene(route) {
+    if (!route?.toSlug) return null;
+
+    const scene = game.scenes.find(s =>
+      s.getFlag('darkest-woods', 'locationSlug') === route.toSlug
+    );
+    if (!scene) return null;
+
+    await scene.activate();
+    return scene;
+  }
+
+  async _passTime(minutes, flavour, opts = {}) {
+    // Capture the region BEFORE any scene change, so the flavour describes
+    // the ground actually crossed rather than wherever the party ends up.
+    const flavourLine = opts.region ? regionFlavour(opts.region) : null;
+
     const result = await TravelClock.advance(minutes);
     const state = TravelClock.displayState();
 
     let content = `<div class="travel-chat">
       <div class="travel-chat-head"><i class="fas fa-hourglass-half"></i> ${flavour}</div>
+      ${flavourLine ? `<div class="travel-chat-flavour">${flavourLine}</div>` : ''}
       <div class="travel-chat-body">
         <strong>${TravelClock.formatDuration(minutes)}</strong> passes.
         It is now <strong>${state.fixed ? state.phaseLabel : state.time}</strong>
@@ -448,6 +680,19 @@ export class TravelTool extends Application {
     content += `</div>`;
 
     await ChatMessage.create({ content });
+
+    // Move the party to where they actually walked to.
+    if (opts.route) {
+      const scene = await this._activateDestinationScene(opts.route);
+      if (scene) {
+        ui.notifications.info(`Now viewing: ${scene.name}`);
+      } else if (opts.route.toSlug) {
+        ui.notifications.warn(
+          `No scene imported for ${opts.route.toTitle || 'that destination'} -- import its region to travel there automatically.`
+        );
+      }
+    }
+
     TravelClock.refresh();
     this.render();
   }
@@ -473,6 +718,9 @@ export function registerTravelClockSettings() {
 export function registerTravelClockHooks() {
   Hooks.on('canvasReady', () => renderDial());
   Hooks.on('ready', () => renderDial());
+  // The player list changes height as people connect/disconnect, and the
+  // dial sits directly on top of it -- re-measure whenever it redraws.
+  Hooks.on('renderPlayerList', () => renderDial());
 
   game.socket.on('system.darkest-system', (data) => {
     if (data?.type === 'travelClockUpdate') TravelClock.refresh();

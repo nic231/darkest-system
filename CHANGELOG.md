@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.2-alpha (2026-08-08)
+
+- Fix: the dial sat on top of the connected-players list. It now measures the player list at runtime and sits directly above it, so it stays clear no matter how many people are connected.
+- Fix: the route dropdown was unreadable — the open list is painted by the browser, not the select box, so it needs its own colours. Options and group headers are now themed properly.
+- **Travel no longer spoils destinations.** The public chat message used to name where the party was going ("The Abandoned Campsite → Cave Mouth"), which the players shouldn't know until they arrive. It now describes the journey from their point of view instead — "The party follows the trail north" — using the book's own exit labels, which are already written that way. The GM's dropdown still shows real destinations.
+- **Region-specific travel flavour.** A random atmospheric line is added to travel messages, drawn from each region's stated conditions — ash and heat in the Ravages, rising water in the Flood, thickening undergrowth in the Backwoods. Purely sensory: no destinations, mechanics, or plot beats, so it's always safe to show players. Passing time deliberately gets none — that's the GM's to narrate.
+- **Travelling now activates the destination's scene**, if that region has been imported. If it hasn't, it says so rather than failing silently.
+- Added a 30m option to the pass-time buttons, for places the party won't linger.
+- Added **Set day & time** for moving the clock directly — flashbacks, time skips between arcs, or fixing a misclick.
+
 ## 0.13.1-alpha (2026-08-08)
 
 **The woods eat the daylight.** Per the book: the first day and night pass normally, but after that "the days begin to grow drastically shorter, with dusk and dawn growing longer until finally they merge," settling at "about ten hours of dusk and fourteen hours of night."

@@ -12,6 +12,9 @@
         ~{{daylightHours}}h of true daylight in this day.
       {{/if}}
     </div>
+    <button type="button" class="clock-reset" title="Set the day and time directly">
+      <i class="fas fa-pen"></i> Set day &amp; time
+    </button>
   </div>
 
   {{#if hasRoutes}}
@@ -68,6 +71,7 @@
 
   <div class="travel-skips">
     <span class="travel-skips-label">Or just pass time:</span>
+    <button type="button" class="time-skip" data-minutes="30">30m</button>
     <button type="button" class="time-skip" data-minutes="60">1h</button>
     <button type="button" class="time-skip" data-minutes="240">4h</button>
     <button type="button" class="time-skip" data-minutes="480">8h (sleep)</button>

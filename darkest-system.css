@@ -4443,12 +4443,15 @@
 /* ----------------------------------------
    Travel & Time — the always-visible dial
 ---------------------------------------- */
-/* Docked to the bottom-left, clear of Foundry's own sidebar (right) and
-   scene controls (far left), so it doesn't fight the default UI. */
+/* Docked bottom-left, ABOVE the player list rather than beside it -- the
+   list grows upward as players connect, so anything sharing its bottom
+   edge eventually gets covered. The actual offset is measured from the
+   live player list at runtime (see positionDial()); this is just the
+   fallback for before that first measurement lands. */
 #darkest-travel-dial {
   position: fixed;
-  bottom: 12px;
-  left: 130px;
+  bottom: 220px;
+  left: 12px;
   z-index: 70;
   display: flex;
   align-items: center;
@@ -4544,11 +4547,36 @@
   opacity: 0.9;
 }
 
+.clock-reset {
+  margin-top: 8px;
+  width: auto;
+  padding: 3px 10px;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--darkest-text-muted, #7a7268);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.clock-reset:hover {
+  background: var(--darkest-accent, #8b3a3a);
+  color: #fff;
+}
+
 .travel-chat-light {
   margin-top: 4px;
   font-size: 12px;
   font-style: italic;
   color: #b06a4a;
+}
+
+.travel-chat-flavour {
+  margin: 4px 0 6px;
+  padding-left: 8px;
+  border-left: 2px solid var(--darkest-border, #4a4038);
+  font-style: italic;
+  color: var(--darkest-text-muted, #7a7268);
 }
 
 .travel-group {
@@ -4578,6 +4606,28 @@
   border: 1px solid var(--darkest-border, #4a4038);
   border-radius: 4px;
   padding: 5px 7px;
+}
+
+/* The open dropdown list is painted by the OS/browser, not the select
+   box, so it needs its own colours -- without these the options render
+   as near-black text on the dark theme and the list is unreadable. */
+.travel-tool-container select option {
+  background: var(--darkest-bg-dark, #1e1c19);
+  color: var(--darkest-text, #e8dcc8);
+  padding: 4px 6px;
+}
+
+.travel-tool-container select optgroup {
+  background: var(--darkest-bg-dark, #1e1c19);
+  color: var(--darkest-accent, #8b3a3a);
+  font-style: normal;
+  font-weight: 700;
+}
+
+.travel-tool-container select option:checked,
+.travel-tool-container select option:hover {
+  background: var(--darkest-accent, #8b3a3a);
+  color: #fff;
 }
 
 .travel-no-routes {
