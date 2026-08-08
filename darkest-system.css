@@ -4586,10 +4586,25 @@
   flex: 1;
 }
 
-.travel-group label {
+/* Foundry's own window styling sets a dark label colour at higher
+   specificity than a bare class, so these need the app scope to win --
+   otherwise the field labels render near-black on the dark panel. */
+.travel-tool .travel-group label,
+.travel-tool .travel-message-group label,
+.travel-tool label {
   font-weight: 600;
   font-size: 12px;
-  color: var(--darkest-text, #e8dcc8);
+  color: var(--darkest-text, #cec9c0);
+  text-shadow: none;
+}
+
+.travel-tool .travel-preview {
+  color: var(--darkest-text, #cec9c0);
+}
+
+.travel-tool .travel-skips-label,
+.travel-tool .travel-no-routes {
+  color: var(--darkest-text-muted, #7a7268);
 }
 
 .travel-row {

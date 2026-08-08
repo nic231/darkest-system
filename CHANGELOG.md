@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.6-alpha (2026-08-09)
+
+- Fix: **mid-afternoon was reading as night.** The day cycle was anchored at hour 0 = dawn, which crushed dawn/day/dusk into the morning and left night covering the entire afternoon and evening — on Day 1, night began at 15:00. The lit part of the day is now centred on midday and eaten from both ends as the days shorten, so the clock reads the way people expect: Day 1 has dawn ~04:30, daylight until ~16:30, dusk to ~19:30, night after; by Day 6 it's dusk 07:00–17:00 and night the rest, still matching the book's 10h/14h end state. Night correctly wraps through midnight.
+- Fix: the travel tool's field labels and preview text were nearly unreadable — Foundry's own window styling was overriding them at higher specificity with a dark colour.
+- Fix: changing scenes by any other means (the scene nav, the sidebar) left the travel tool stale — its "From here" route list and the region it reads for flavour both depend on the active scene. It now refreshes on any scene change, not just when travelling through the tool.
+
 ## 0.13.5-alpha (2026-08-09)
 
 - Fix: routes with no distance ("a few steps" between adjacent locations, or one the book never quantified) couldn't be travelled at all — the button required a computed duration, so those routes could never move the party or switch the scene. Picking a route is now enough on its own: it travels and switches scene without advancing the clock. A typed distance still takes precedence when there is one.

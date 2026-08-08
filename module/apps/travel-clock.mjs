@@ -255,11 +255,15 @@ export class TravelClock {
   static DAYLIGHT_DECAY_DAYS = 5;
 
   /**
-   * Phase boundaries for a given day number, as hours from the START of
-   * the cycle (which is dawn, not midnight -- in woods that eventually
-   * lose the sun entirely, a solar clock is meaningless, so the displayed
-   * time is really "position in the current cycle" and 00:00 is daybreak).
-   * Returns the START hour of each phase.
+   * Phase boundaries for a given day number, as clock hours (0-24).
+   *
+   * The light is centred on midday and eaten from both ends: as the days
+   * shorten, dawn starts later and night starts earlier, with dusk
+   * growing to fill the gap. Night wraps through midnight, as it should.
+   *
+   * Day 1 is a normal day -- dawn ~06:00, daylight to ~16:00, dusk to
+   * ~19:00, night after. By the end state there is no dawn or daylight at
+   * all: 10h of dusk (centred on midday, ~07:00-17:00) and 14h of night.
    */
   static dayStructure(day) {
     // Progress from 0 (day 1, normal) to 1 (fully merged dusk/night).
@@ -267,20 +271,22 @@ export class TravelClock {
 
     const lerp = (from, to) => from + (to - from) * t;
 
-    // Day 1: 2h dawn, 10h day, 3h dusk, 9h night (a normal-ish cycle).
-    // End state: no dawn, no day, 10h dusk, 14h night.
-    const dawnLength = lerp(2, 0);
-    const dayLength = lerp(10, 0);
-    const duskLength = lerp(3, 10);
+    // Lengths, interpolated toward the book's stated end state.
+    const dawnLength = lerp(2, 0);   // 2h -> none
+    const dayLength = lerp(10, 0);   // 10h -> none
+    const duskLength = lerp(3, 10);  // 3h -> 10h
 
-    // Night fills whatever is left, landing on 14h at the end state.
-    const nightStart = dawnLength + dayLength + duskLength;
+    // Keep the lit part of the cycle centred on midday (12:00) so the
+    // clock still reads the way people expect -- morning is morning,
+    // afternoon is afternoon -- while the light narrows around noon.
+    const litLength = dawnLength + dayLength + duskLength;
+    const dawnStart = 12 - litLength / 2;
 
     return {
-      dawnStart: 0,
-      dayStart: dawnLength,
-      duskStart: dawnLength + dayLength,
-      nightStart,
+      dawnStart,
+      dayStart: dawnStart + dawnLength,
+      duskStart: dawnStart + dawnLength + dayLength,
+      nightStart: dawnStart + litLength,
       // Exposed for the tool/dial so the GM can see the woods closing in.
       daylightHours: Math.round(dayLength * 10) / 10,
       merged: dayLength <= 0.05 && dawnLength <= 0.05,
@@ -292,13 +298,12 @@ export class TravelClock {
     const h = minutes / 60;
     const s = TravelClock.dayStructure(day);
 
-    // Night wraps past midnight, so anything before dawn ends is night
-    // once the cycle has collapsed far enough that dawn no longer exists.
-    if (h >= s.nightStart) return 'night';
+    // Night wraps through midnight, so it's everything outside the lit
+    // window rather than a single trailing block.
+    if (h < s.dawnStart || h >= s.nightStart) return 'night';
     if (h >= s.duskStart) return 'dusk';
     if (h >= s.dayStart) return 'day';
-    if (s.dayStart > 0) return 'dawn';
-    return 'night';
+    return 'dawn';
   }
 
   static PHASE_META = {
@@ -348,8 +353,11 @@ export class TravelClock {
 
   static refresh() {
     renderDial();
+    // Re-render the tool too: its "From here" route list and the region
+    // it reads for flavour both depend on the active scene, so it goes
+    // stale the moment the GM switches scenes by any other means.
     const tool = Object.values(ui.windows).find(w => w instanceof TravelTool);
-    if (tool) tool.render();
+    if (tool?.rendered) tool.render();
   }
 }
 
@@ -746,7 +754,10 @@ export function registerTravelClockSettings() {
  * Register hooks that keep the dial in sync.
  */
 export function registerTravelClockHooks() {
-  Hooks.on('canvasReady', () => renderDial());
+  // A scene change moves the party: the dial's region-specific time and
+  // the tool's "From here" routes both depend on it, so refresh both
+  // rather than just redrawing the dial.
+  Hooks.on('canvasReady', () => TravelClock.refresh());
   Hooks.on('ready', () => renderDial());
   // The player list changes height as people connect/disconnect, and the
   // dial sits directly on top of it -- re-measure whenever it redraws.
