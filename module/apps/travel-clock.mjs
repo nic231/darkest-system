@@ -489,10 +489,11 @@ export class TravelTool extends Application {
     // still nudge it before committing.
     html.find('[name="route"]').on('change', (ev) => {
       const route = TRAVEL_ROUTES.find(r => `${r.fromSlug}::${r.label}` === ev.currentTarget.value);
-      if (!route) return;
-      if (route.km) html.find('[name="km"]').val(route.km);
-      else html.find('[name="km"]').val('');
-      html.find('[name="hours"]').val(route.hours ?? '');
+      // Always reset both boxes first -- otherwise clearing the dropdown,
+      // or picking a route with no distance, silently leaves the previous
+      // selection's numbers behind and travels the wrong distance.
+      html.find('[name="km"]').val(route?.km ? route.km : '');
+      html.find('[name="hours"]').val(route?.hours ?? '');
       this._updatePreview(html);
     });
 
@@ -538,7 +539,12 @@ export class TravelTool extends Application {
 
     const preview = html.find('.travel-preview');
     if (!minutes) {
-      preview.text('Enter a distance or pick a route.');
+      // A route with no distance still travels -- it just doesn't move
+      // the clock. Say so, rather than implying the button won't work.
+      const hasRoute = !!html.find('[name="route"]').val();
+      preview.text(hasRoute
+        ? 'No distance — travels and switches scene without advancing the clock.'
+        : 'Enter a distance or pick a route.');
       return;
     }
     const dayNote = days > 0 ? ` (+${days} day${days > 1 ? 's' : ''})` : '';
@@ -547,13 +553,19 @@ export class TravelTool extends Application {
 
   async _travel(html) {
     const minutes = this._computeMinutes(html);
-    if (!minutes) {
-      ui.notifications.warn('Enter a distance, or pick a route with a known one.');
-      return;
-    }
     const pace = html.find('[name="pace"]').val() || 'normal';
     const routeKey = html.find('[name="route"]').val();
     const route = TRAVEL_ROUTES.find(r => `${r.fromSlug}::${r.label}` === routeKey);
+
+    // A route with no distance is still a real journey -- "a few steps"
+    // between adjacent locations, or one the book never quantified. Those
+    // should still move the party and switch the scene, just without
+    // advancing the clock. Only block when there's nothing to act on at
+    // all: no route picked AND no distance typed.
+    if (!minutes && !route) {
+      ui.notifications.warn('Pick a route, or enter a distance.');
+      return;
+    }
 
     // Public text never names the destination -- the party doesn't know
     // where they're going until they get there. See describeJourney().
@@ -652,14 +664,20 @@ export class TravelTool extends Application {
     const result = await TravelClock.advance(minutes);
     const state = TravelClock.displayState();
 
+    // A journey of a few steps (or one the book never quantified) moves
+    // the party without moving the clock -- report the time rather than
+    // claiming "0m passes".
+    const timeLine = minutes >= 1
+      ? `<strong>${TravelClock.formatDuration(minutes)}</strong> passes.
+         It is now <strong>${state.fixed ? state.phaseLabel : state.time}</strong>
+         on <strong>Day ${result.day}</strong>.`
+      : `It is <strong>${state.fixed ? state.phaseLabel : state.time}</strong>
+         on <strong>Day ${result.day}</strong>.`;
+
     let content = `<div class="travel-chat">
       <div class="travel-chat-head"><i class="fas fa-hourglass-half"></i> ${flavour}</div>
       ${flavourLine ? `<div class="travel-chat-flavour">${flavourLine}</div>` : ''}
-      <div class="travel-chat-body">
-        <strong>${TravelClock.formatDuration(minutes)}</strong> passes.
-        It is now <strong>${state.fixed ? state.phaseLabel : state.time}</strong>
-        on <strong>Day ${result.day}</strong>.
-      </div>`;
+      <div class="travel-chat-body">${timeLine}</div>`;
 
     if (result.daysPassed > 0) {
       // A day boundary is where the book's daily effects live (Winter's

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.5-alpha (2026-08-09)
+
+- Fix: routes with no distance ("a few steps" between adjacent locations, or one the book never quantified) couldn't be travelled at all — the button required a computed duration, so those routes could never move the party or switch the scene. Picking a route is now enough on its own: it travels and switches scene without advancing the clock. A typed distance still takes precedence when there is one.
+- The chat message no longer claims "0m passes" for those journeys; it just reports the current time.
+- Fix: changing the route dropdown now always resets the distance boxes. Previously, picking a route with no distance (or clearing the dropdown) left the previous selection's numbers behind, so the next trip silently travelled the wrong distance.
+
 ## 0.13.4-alpha (2026-08-09)
 
 - The pass-time buttons now post a plain "Time has passed." instead of narrating ("The party rests" / "waits" / "lingers a while"). The GM describes what happened and triggers whatever follows — the message just records that the clock moved. Travel keeps its journey description and regional flavour.
