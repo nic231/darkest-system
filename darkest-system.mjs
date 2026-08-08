@@ -23,6 +23,13 @@ import { TransgressionTracker, registerTransgressionSettings } from './module/ap
 import { DoomTally, registerDoomTallySettings, registerDoomTallyHooks } from './module/apps/doom-tally.mjs';
 import { NpcTracker, registerNpcTrackerSettings } from './module/apps/npc-tracker.mjs';
 import { GmWhisperTool } from './module/apps/gm-whisper.mjs';
+import {
+  TravelClock,
+  TravelTool,
+  renderDial,
+  registerTravelClockSettings,
+  registerTravelClockHooks,
+} from './module/apps/travel-clock.mjs';
 
 /* ----------------------------------------
    Initialize System
@@ -73,6 +80,9 @@ Hooks.once('init', function() {
 
   // Register NPC tracker settings
   registerNpcTrackerSettings();
+
+  // Register travel clock settings
+  registerTravelClockSettings();
 
   // Preload Handlebars templates
   return _preloadHandlebarsTemplates();
@@ -201,6 +211,7 @@ async function _preloadHandlebarsTemplates() {
     'systems/darkest-system/templates/apps/transgression-tracker.hbs',
     'systems/darkest-system/templates/apps/doom-tally.hbs',
     'systems/darkest-system/templates/apps/npc-tracker.hbs',
+    'systems/darkest-system/templates/apps/travel-tool.hbs',
 
     // Dialogs - NOT preloaded due to inline scripts
     // They are rendered dynamically via renderTemplate() instead
@@ -226,9 +237,15 @@ Hooks.once('ready', function() {
   game.darkestSystem.TransgressionTracker = TransgressionTracker;
   game.darkestSystem.DoomTally = DoomTally;
   game.darkestSystem.NpcTracker = NpcTracker;
+  game.darkestSystem.TravelTool = TravelTool;
+  game.darkestSystem.TravelClock = TravelClock;
 
   // Register doom tally hooks
   registerDoomTallyHooks();
+
+  // Register travel clock hooks and draw the dial
+  registerTravelClockHooks();
+  renderDial();
 
   // Socket handler for GM actions (player-to-GM delegation)
   game.socket.on('system.darkest-system', (data) => {
@@ -359,6 +376,20 @@ Hooks.on('getSceneControlButtons', (controls) => {
       const existing = Object.values(ui.windows).find(w => w.constructor.name === 'GmWhisperTool');
       if (existing) existing.bringToTop();
       else new GmWhisperTool().render(true);
+    }
+  };
+
+  tokenTools.travelTool = {
+    name: 'travelTool',
+    title: 'Travel & Time',
+    icon: 'fa-solid fa-hourglass-half',
+    order: toolCount + 3,
+    button: true,
+    visible: true,
+    onChange: () => {
+      const existing = Object.values(ui.windows).find(w => w.constructor.name === 'TravelTool');
+      if (existing) existing.bringToTop();
+      else new TravelTool().render(true);
     }
   };
 });

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.0-alpha (2026-08-08)
+
+**New: Travel & Time tracking.**
+
+- A **sun/moon dial** now sits at the bottom-left of the screen for everyone, showing the current time, day count, and phase (dawn / day / dusk / night) with a tinted icon for each. It's region-aware: standing in The Road, which the book describes as "night always," the dial reads *Endless Night* regardless of the underlying clock -- time still passes there, it just never looks like daylight.
+- A **Travel & Time tool** (GM, token-layer button -- or click the dial) advances the clock by travelling a route. Pick a route from a dropdown and choose Slow (3 km/h), Normal (4 km/h), or Fast (5 km/h); it shows the duration and arrival time before you commit. Pace only changes how long the journey takes -- it deliberately carries no other mechanical effect, since the rules don't define one.
+- The route dropdown is **context-aware**: routes leaving the location whose scene you're currently viewing are listed first under "From here", with everything else below. With 318 routes in the book, an unsorted list would be unusable.
+- **Route distances come from the companion module** (`travel-data.js`, generated at build time by parsing the book's own exit-scene text). 271 of the 318 routes have a machine-readable distance -- either a km figure or an explicit duration like "about three hours down the road." The remainder fall back to manual km/hours entry, which is always available. Two source typos where metres were labelled km ("a half mile (800 km)") are corrected during parsing.
+- Quick "pass time" buttons for 1h / 4h / 8h (sleep) cover resting and waiting without inventing a journey.
+- Time changes post to chat, and crossing midnight flags a new day with a reminder to check exposure, rest locks, and daily ability uses. Per design, **nothing is auto-applied** -- the dial tells you when, you decide what.
+
 ## 0.12.4-alpha (2026-08-08)
 
 Full codebase audit pass -- three real bugs fixed, one missing UI entry point added.

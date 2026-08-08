@@ -1,0 +1,67 @@
+<div class="travel-tool-container">
+
+  <div class="travel-now">
+    <div class="travel-now-time">{{#if isFixedRegion}}{{phaseLabel}}{{else}}{{time}}{{/if}}</div>
+    <div class="travel-now-day">Day {{day}}{{#unless isFixedRegion}} · {{phaseLabel}}{{/unless}}</div>
+  </div>
+
+  {{#if hasRoutes}}
+  <div class="travel-group">
+    <label>Route</label>
+    <select name="route">
+      <option value="">— pick a route, or enter a distance below —</option>
+      {{#if hereRoutes.length}}
+      <optgroup label="From here{{#if hereName}}: {{hereName}}{{/if}}">
+        {{#each hereRoutes}}
+        <option value="{{key}}">{{label}}</option>
+        {{/each}}
+      </optgroup>
+      {{/if}}
+      <optgroup label="Everywhere else">
+        {{#each otherRoutes}}
+        <option value="{{key}}">{{label}}</option>
+        {{/each}}
+      </optgroup>
+    </select>
+  </div>
+  {{else}}
+  <p class="travel-no-routes">
+    No route data loaded — enable the Darkest Woods content module for the
+    book's distances, or just enter a distance manually.
+  </p>
+  {{/if}}
+
+  <div class="travel-row">
+    <div class="travel-group">
+      <label>Distance (km)</label>
+      <input type="number" name="km" min="0" step="0.1" placeholder="e.g. 13" />
+    </div>
+    <div class="travel-group">
+      <label>or Hours</label>
+      <input type="number" name="hours" min="0" step="0.25" placeholder="e.g. 2" />
+    </div>
+  </div>
+
+  <div class="travel-group">
+    <label>Pace</label>
+    <select name="pace">
+      {{#each paces}}
+      <option value="{{key}}"{{#if (eq key "normal")}} selected{{/if}}>{{label}} ({{speed}} km/h)</option>
+      {{/each}}
+    </select>
+  </div>
+
+  <div class="travel-preview">Enter a distance or pick a route.</div>
+
+  <button type="button" class="travel-go">
+    <i class="fas fa-person-walking"></i> Travel
+  </button>
+
+  <div class="travel-skips">
+    <span class="travel-skips-label">Or just pass time:</span>
+    <button type="button" class="time-skip" data-minutes="60">1h</button>
+    <button type="button" class="time-skip" data-minutes="240">4h</button>
+    <button type="button" class="time-skip" data-minutes="480">8h (sleep)</button>
+  </div>
+
+</div>

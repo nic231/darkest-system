@@ -4439,3 +4439,217 @@
   margin: 0;
   line-height: 1.5;
 }
+
+/* ----------------------------------------
+   Travel & Time — the always-visible dial
+---------------------------------------- */
+/* Docked to the bottom-left, clear of Foundry's own sidebar (right) and
+   scene controls (far left), so it doesn't fight the default UI. */
+#darkest-travel-dial {
+  position: fixed;
+  bottom: 12px;
+  left: 130px;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 12px;
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 999px;
+  background: var(--darkest-bg-dark, #1e1c19);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+  color: var(--darkest-text, #e8dcc8);
+  font-family: var(--font-primary, inherit);
+  pointer-events: auto;
+  user-select: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#darkest-travel-dial.gm-clickable {
+  cursor: pointer;
+}
+
+#darkest-travel-dial.gm-clickable:hover {
+  border-color: var(--darkest-accent, #8b3a3a);
+  box-shadow: 0 2px 14px rgba(139, 58, 58, 0.45);
+}
+
+#darkest-travel-dial .dial-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+/* Each phase tints the icon -- the readout stays legible in all four. */
+#darkest-travel-dial.phase-dawn .dial-icon { color: #d8a05a; }
+#darkest-travel-dial.phase-day .dial-icon { color: #e8c87a; }
+#darkest-travel-dial.phase-dusk .dial-icon { color: #b06a4a; }
+#darkest-travel-dial.phase-night .dial-icon { color: #7a8fb8; }
+
+#darkest-travel-dial .dial-readout {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+#darkest-travel-dial .dial-time {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+#darkest-travel-dial .dial-day {
+  font-size: 11px;
+  color: var(--darkest-text-muted, #7a7268);
+  letter-spacing: 0.04em;
+}
+
+/* ----------------------------------------
+   Travel & Time — the GM tool
+---------------------------------------- */
+.travel-tool-container {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.travel-now {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--darkest-bg-medium, #2a2a2a), var(--darkest-purple, #4a2d6b));
+}
+
+.travel-now-time {
+  font-size: 30px;
+  font-weight: bold;
+  line-height: 1;
+  color: #fff;
+}
+
+.travel-now-day {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--darkest-text-muted, #7a7268);
+}
+
+.travel-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.travel-group label {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--darkest-text, #e8dcc8);
+}
+
+.travel-row {
+  display: flex;
+  gap: 8px;
+}
+
+.travel-tool-container select,
+.travel-tool-container input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--darkest-bg-medium, #2a2a2a);
+  color: var(--darkest-text, #e8dcc8);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  padding: 5px 7px;
+}
+
+.travel-no-routes {
+  margin: 0;
+  padding: 8px;
+  border-radius: 4px;
+  background: var(--darkest-bg-medium, #2a2a2a);
+  color: var(--darkest-text-muted, #7a7268);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.travel-preview {
+  padding: 8px 10px;
+  border-radius: 4px;
+  border-left: 3px solid var(--darkest-accent, #8b3a3a);
+  background: var(--darkest-bg-medium, #2a2a2a);
+  font-size: 13px;
+  color: var(--darkest-text, #e8dcc8);
+}
+
+.travel-go {
+  padding: 9px;
+  border: 1px solid var(--darkest-accent, #8b3a3a);
+  border-radius: 4px;
+  background: var(--darkest-accent, #8b3a3a);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.travel-go:hover {
+  filter: brightness(1.15);
+}
+
+.travel-skips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px solid var(--darkest-border, #4a4038);
+}
+
+.travel-skips-label {
+  font-size: 11px;
+  color: var(--darkest-text-muted, #7a7268);
+}
+
+.travel-skips .time-skip {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 4px 10px;
+  font-size: 11px;
+  background: var(--darkest-bg-medium, #2a2a2a);
+  color: var(--darkest-text, #e8dcc8);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.travel-skips .time-skip:hover {
+  background: var(--darkest-accent, #8b3a3a);
+  color: #fff;
+}
+
+/* Travel chat card */
+.travel-chat {
+  border-left: 3px solid var(--darkest-purple, #4a2d6b);
+  padding: 6px 10px;
+}
+
+.travel-chat-head {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.travel-chat-newday {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--darkest-border, #4a4038);
+  color: #d8a05a;
+}
+
+.travel-chat-hint {
+  display: block;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--darkest-text-muted, #7a7268);
+}
