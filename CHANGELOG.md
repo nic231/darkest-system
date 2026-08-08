@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.3-alpha (2026-08-08)
+
+- Transgression escalation now has real stakes tied to the rules: tier 1 (levels 1-4) "The woods stir and whisper", tier 2 (5-9) "The woods are waking. The wind seems to carry distant voices, but you can't make out what they say", tier 3 (level 10) "The woods awaken. You hear it clearly now: '[region's key phrase]'. Something terrible is coming..." -- per the rulebook, each witch's key phrase is meant to leak as a whisper/dream message and encodes a clue about escaping the woods. Falls back to generic wording if no region/key phrase is configured. House mode keeps its existing flat tier wording (no witches/key phrases there).
+
 ## 0.12.2-alpha (2026-08-07)
 
 - Verified system mechanics against the official GM reference sheet -- action rolls, Darkest Die tie-breaking (a tie does NOT trigger a transgression, matching the "higher than both kept dice" rule), death check Doom subtraction, and damage all already matched correctly. The four narrative transgression triggers (leaving the path, retracing the same path two days running, killing an animal without gratitude, destroying a large section of woods) can't be auto-detected from dice rolls -- they're GM judgment calls. The Transgression Tracker's existing per-region "+" button already handles marking these (same public tiered message and GM whisper as dice-triggered transgressions); its tooltip now documents this explicitly.

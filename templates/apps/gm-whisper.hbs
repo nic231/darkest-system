@@ -1,0 +1,21 @@
+<div class="gm-whisper-container">
+  <div class="whisper-message-group">
+    <label>Message</label>
+    <textarea name="whisperText" rows="4" placeholder="What do they see, hear, or feel that no one else does..."></textarea>
+    <small class="hint">Enter sends to a random player. Shift+Enter for a new line.</small>
+  </div>
+
+  <div class="whisper-player-list">
+    {{#each players}}
+    <button type="button" class="whisper-player-btn" data-user-id="{{id}}" style="border-left-color: {{color}}">
+      <i class="fas fa-user"></i> {{name}}
+    </button>
+    {{else}}
+    <div class="no-players">No connected players with a character.</div>
+    {{/each}}
+  </div>
+
+  <button type="button" class="whisper-random-btn">
+    <i class="fas fa-dice"></i> Whisper to Random Player
+  </button>
+</div>

@@ -22,6 +22,7 @@ import { registerDarkestRoll } from './module/dice/darkest-roll.mjs';
 import { TransgressionTracker, registerTransgressionSettings } from './module/apps/transgression-tracker.mjs';
 import { DoomTally, registerDoomTallySettings, registerDoomTallyHooks } from './module/apps/doom-tally.mjs';
 import { NpcTracker, registerNpcTrackerSettings } from './module/apps/npc-tracker.mjs';
+import { GmWhisperTool } from './module/apps/gm-whisper.mjs';
 
 /* ----------------------------------------
    Initialize System
@@ -277,6 +278,24 @@ Hooks.once('ready', function() {
           Hooks.callAll('darkestSystem.transgression');
         }
         break;
+
+      case 'gmWhisperAlert':
+        // A plain chat whisper is easy to miss in a busy log. Pop a
+        // dismissible dialog on ONLY the targeted player's own client --
+        // every client receives this broadcast, so check it's actually
+        // addressed to this user before doing anything.
+        if (data.userId === game.user.id) {
+          new Dialog({
+            title: 'The GM whispers to you...',
+            content: `<div class="darkest-dialog darkest-gm-whisper-popup"><i class="fas fa-eye"></i><p>${data.content}</p></div>`,
+            buttons: {
+              ok: { icon: '<i class="fas fa-check"></i>', label: 'Understood' }
+            },
+            default: 'ok'
+          }).render(true);
+          AudioHelper.play({ src: 'sounds/lock.wav', volume: 0.8, loop: false }, false);
+        }
+        break;
     }
   });
 });
@@ -317,6 +336,20 @@ Hooks.on('getSceneControlButtons', (controls) => {
       const existing = Object.values(ui.windows).find(w => w.constructor.name === 'NpcTracker');
       if (existing) existing.bringToTop();
       else new NpcTracker().render(true);
+    }
+  };
+
+  tokenTools.gmWhisper = {
+    name: 'gmWhisper',
+    title: 'Whisper to Player',
+    icon: 'fa-solid fa-user-secret',
+    order: toolCount + 2,
+    button: true,
+    visible: true,
+    onChange: () => {
+      const existing = Object.values(ui.windows).find(w => w.constructor.name === 'GmWhisperTool');
+      if (existing) existing.bringToTop();
+      else new GmWhisperTool().render(true);
     }
   };
 });

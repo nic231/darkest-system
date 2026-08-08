@@ -30,9 +30,10 @@
       "CallUponWoods": "Call Upon the Woods",
       "CallUponWoodsWarning": "Adding the Darkest Die grants +{bonus} but triggers a transgression and you gain a Doom!",
       "DarkestDie": "Darkest Die",
-      "WoodsStirTier1": "The Woods stir...",
-      "WoodsStirTier2": "The Woods are waking. You are no longer unnoticed.",
-      "WoodsStirTier3": "The Woods see you. Something terrible is coming...",
+      "WoodsStirTier1": "The woods stir and whisper.",
+      "WoodsStirTier2": "The woods are waking. The wind seems to carry distant voices, but you can't make out what they say.",
+      "WoodsStirTier3": "The woods awaken. You hear it clearly now: \"{phrase}\". Something terrible is coming...",
+      "WoodsStirTier3Generic": "The woods awaken. You hear it clearly now, a whisper on the edge of understanding. Something terrible is coming...",
       "HouseStirTier1": "The House creaks...",
       "HouseStirTier2": "The House grows restless. Its hatred is stirring.",
       "HouseStirTier3": "The House hates you. Something terrible is coming..."

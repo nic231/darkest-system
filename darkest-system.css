@@ -4325,3 +4325,117 @@
   margin: 2px 0 4px;
   padding: 0 2px;
 }
+
+/* ----------------------------------------
+   GM Whisper Tool
+---------------------------------------- */
+.gm-whisper-container {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.whisper-message-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.whisper-message-group label {
+  font-weight: 600;
+  color: var(--darkest-text, #e8dcc8);
+}
+
+.gm-whisper-container textarea {
+  width: 100%;
+  resize: vertical;
+  background: var(--darkest-bg-medium, #2a2a2a);
+  color: var(--darkest-text, #e8dcc8);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-family: inherit;
+}
+
+.gm-whisper-container .hint {
+  color: var(--darkest-text-muted, #7a7268);
+  font-size: 11px;
+}
+
+.whisper-player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.whisper-player-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--darkest-bg-medium, #2a2a2a);
+  color: var(--darkest-text, #e8dcc8);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-left: 3px solid var(--darkest-accent, #8b3a3a);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.whisper-player-btn:hover {
+  background: var(--darkest-accent, #8b3a3a);
+  color: #fff;
+}
+
+.gm-whisper-container .no-players {
+  color: var(--darkest-text-muted, #7a7268);
+  font-size: 12px;
+  text-align: center;
+  padding: 8px;
+}
+
+.whisper-random-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--darkest-purple, #4a2d6b);
+  color: #fff;
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: filter 0.15s;
+}
+
+.whisper-random-btn:hover {
+  filter: brightness(1.15);
+}
+
+.darkest-gm-whisper {
+  padding: 8px 10px;
+  border-left: 3px solid var(--darkest-accent, #8b3a3a);
+}
+
+.darkest-gm-whisper-popup {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 4px;
+}
+
+.darkest-gm-whisper-popup i {
+  font-size: 24px;
+  color: var(--darkest-accent, #8b3a3a);
+  margin-top: 2px;
+}
+
+.darkest-gm-whisper-popup p {
+  margin: 0;
+  line-height: 1.5;
+}

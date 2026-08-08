@@ -204,10 +204,21 @@ export class TransgressionTracker extends Application {
   /**
    * Public-facing ominous message shown to everyone (including the GM),
    * tiered by the region/house's current level (1-10). Deliberately vague
-   * -- the GM-only detail (the witch's actual next scripted action) is
-   * whispered separately, where the level is known.
+   * at tiers 1-2 -- the GM-only detail (the witch's actual next scripted
+   * action) is whispered separately, where the level is known. At tier 3
+   * (level 10, the witch's transgression cycle about to loop), the message
+   * for Woods mode surfaces the region's actual key phrase per the rules:
+   * "Many of the transgression events involve a mysterious whisper... each
+   * witch also has its own key phrase... [that] encodes a clue about the
+   * means of escaping the Darkest Woods." House mode has no witches/key
+   * phrases, so it keeps its own flat tier wording unchanged.
    */
-  static _publicStirMessage(level, isHouseMode) {
+  static _publicStirMessage(level, isHouseMode, keyPhrase) {
+    if (!isHouseMode && level >= 10) {
+      return keyPhrase
+        ? game.i18n.format('DARKEST.Roll.WoodsStirTier3', { phrase: keyPhrase })
+        : game.i18n.localize('DARKEST.Roll.WoodsStirTier3Generic');
+    }
     const key = level >= 10 ? 'Tier3' : level >= 5 ? 'Tier2' : 'Tier1';
     const localizeKey = `DARKEST.Roll.${isHouseMode ? 'House' : 'Woods'}Stir${key}`;
     return game.i18n.localize(localizeKey);
@@ -254,10 +265,12 @@ export class TransgressionTracker extends Application {
     await this.setTransgressions(transgressions);
 
     // Public ominous message, tiered by the new level -- everyone sees this,
-    // GM included; it never names the witch's actual action.
+    // GM included; it never names the witch's actual scripted action (only
+    // the tier-3 key phrase, per the rules -- see _publicStirMessage).
     const isHouseMode = this.getGameMode() === 'darkest-house';
+    const stirMessage = TransgressionTracker._publicStirMessage(region.level, isHouseMode, ALL[regionSlug].keyPhrase);
     await ChatMessage.create({
-      content: `<div class="transgression-message player-ominous"><i class="fas fa-tree"></i> ${TransgressionTracker._publicStirMessage(region.level, isHouseMode)}</div>`
+      content: `<div class="transgression-message player-ominous"><i class="fas fa-tree"></i> ${stirMessage}</div>`
     });
 
     // Post the triggered event to GM chat
