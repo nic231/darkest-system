@@ -454,20 +454,36 @@ export class TravelTool extends Application {
     const clock = TravelClock.getClock();
     const state = TravelClock.displayState();
 
-    // Routes leaving the location the GM is currently looking at come
-    // first -- with 318 routes in the book, an unsorted list is unusable.
-    const hereSlug = canvas?.scene?.flags?.['darkest-woods']?.locationSlug ?? null;
-    const here = [];
-    const elsewhere = [];
-    for (const r of TRAVEL_ROUTES) {
-      const entry = {
+    // Only routes leaving where the party actually is. Listing all 318 was
+    // unusable, and the useful ones are always the exits from here.
+    // A queued multi-leg journey continues from its LAST leg's
+    // destination, not the current scene -- otherwise you can only ever
+    // add neighbours of where you started.
+    const originSlug = this._legs?.length
+      ? this._legs[this._legs.length - 1].route.toSlug
+      : (canvas?.scene?.flags?.['darkest-woods']?.locationSlug ?? null);
+
+    const hereRoutes = TRAVEL_ROUTES
+      .filter(r => r.fromSlug === originSlug)
+      .map(r => ({
         key: `${r.fromSlug}::${r.label}`,
         label: TravelTool._routeLabel(r),
-        known: r.km !== null || r.hours !== null,
-      };
-      (r.fromSlug === hereSlug ? here : elsewhere).push(entry);
-    }
-    elsewhere.sort((a, b) => a.label.localeCompare(b.label));
+      }));
+
+    // Prefer the last leg's own destination title -- a dead-end location
+    // has no outgoing routes, so looking it up by fromSlug would fail.
+    const originName = this._legs?.length
+      ? (this._legs[this._legs.length - 1].route.toTitle ?? null)
+      : (originSlug ? (TRAVEL_ROUTES.find(r => r.fromSlug === originSlug)?.fromTitle ?? null) : null);
+
+    // Queued legs, with a running total so the GM can see the whole trip.
+    const legs = (this._legs ?? []).map((l, i) => ({
+      index: i,
+      label: l.route.toTitle || 'Unknown',
+      via: l.route.label,
+      duration: l.minutes >= 1 ? TravelClock.formatDuration(l.minutes) : '—',
+    }));
+    const legTotal = (this._legs ?? []).reduce((sum, l) => sum + l.minutes, 0);
 
     return {
       day: clock.day,
@@ -476,10 +492,13 @@ export class TravelTool extends Application {
       isFixedRegion: state.fixed,
       daylightHours: state.daylightHours,
       merged: state.merged,
-      hereName: hereSlug ? (TRAVEL_ROUTES.find(r => r.fromSlug === hereSlug)?.fromTitle ?? null) : null,
-      hereRoutes: here,
-      otherRoutes: elsewhere,
+      originName,
+      hereRoutes,
+      hasHereRoutes: hereRoutes.length > 0,
       hasRoutes: TRAVEL_ROUTES.length > 0,
+      legs,
+      hasLegs: legs.length > 0,
+      legTotal: legTotal >= 1 ? TravelClock.formatDuration(legTotal) : null,
       paces: Object.keys(PACE_SPEED).map(p => ({
         key: p,
         label: PACE_LABEL[p],
@@ -514,6 +533,18 @@ export class TravelTool extends Application {
     });
 
     html.find('[name="km"], [name="hours"], [name="pace"]').on('change keyup', () => this._updatePreview(html));
+
+    // Multi-leg journeys: queue several hops, then walk them as one trip.
+    html.find('.leg-add').click(() => this._addLeg(html));
+    html.find('.leg-remove').click((ev) => {
+      const i = parseInt(ev.currentTarget.dataset.index);
+      this._legs.splice(i, 1);
+      this.render();
+    });
+    html.find('.leg-clear').click(() => {
+      this._legs = [];
+      this.render();
+    });
 
     html.find('.travel-go').click(() => this._travel(html));
     // Passing time gets no flavour and no narration at all -- the GM
@@ -567,7 +598,54 @@ export class TravelTool extends Application {
     preview.text(`${TravelClock.formatDuration(minutes)} — arrive ${arrival}${dayNote}`);
   }
 
+  /**
+   * Queue the currently-selected route as another leg of a longer
+   * journey. The party often crosses several locations in one push, and
+   * doing that as separate trips means a chat message and a scene change
+   * for each -- this collapses it into one journey with one arrival.
+   */
+  _addLeg(html) {
+    const routeKey = html.find('[name="route"]').val();
+    const route = TRAVEL_ROUTES.find(r => `${r.fromSlug}::${r.label}` === routeKey);
+    if (!route) {
+      ui.notifications.warn('Pick a route to add.');
+      return;
+    }
+
+    this._legs ??= [];
+    this._legs.push({ route, minutes: this._computeMinutes(html) });
+    // Re-rendering repoints the dropdown at the new last stop, so the next
+    // pick continues the journey rather than starting over.
+    this.render();
+  }
+
+  /**
+   * Walk a queued multi-leg journey as a single trip: one chat message,
+   * one arrival, the clock advanced by the whole duration.
+   */
+  async _travelLegs() {
+    const legs = this._legs;
+    const totalMinutes = legs.reduce((sum, l) => sum + l.minutes, 0);
+    const last = legs[legs.length - 1];
+
+    // Describe only the FIRST leg -- the party set out that way, and
+    // naming every turn would spell out the route they're discovering.
+    const opening = describeJourney(legs[0].route.label);
+    const legNote = legs.length > 1
+      ? `, and keeps going for ${legs.length} stretches of trail`
+      : '';
+
+    this._legs = [];
+    await this._passTime(totalMinutes, `${opening}${legNote}.`, {
+      region: TravelClock.currentRegion(),
+      route: last.route,
+    });
+  }
+
   async _travel(html) {
+    // A queued journey takes precedence over whatever is in the form.
+    if (this._legs?.length) return this._travelLegs();
+
     const minutes = this._computeMinutes(html);
     const pace = html.find('[name="pace"]').val() || 'normal';
     const routeKey = html.find('[name="route"]').val();

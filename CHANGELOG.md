@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.14.0-alpha (2026-08-09)
+
+- **Multi-leg journeys.** The party often pushes through several locations in one go, which previously meant a separate trip, chat message, and scene change for each. You can now queue legs with **Add leg** and walk them as one journey: a single message, a single arrival at the far end, and the clock advanced by the whole duration. The route dropdown follows the queue, so each pick continues from the last stop rather than from where you started. Only the first leg is described in chat — naming every turn would spell out the route the party is still discovering.
+- The route dropdown now lists **only routes leaving the current scene**. The "Everywhere else" group listed all 318 routes and was unusable; the useful ones are always the exits from where the party actually is.
+- Fix: the travel tool's labels and preview text were still unreadable. Foundry core styles labels inside its own windows at a specificity a plain class can't beat, so these are now scoped through the app window and marked important.
+
 ## 0.13.7-alpha (2026-08-09)
 
 - The shrinking daylight is no longer announced to players. Saying "barely 8 hours of true light remain" gave the characters a measurement they can't possibly have — on day 2 there's nothing to compare against — and pre-empted the realisation the players should reach themselves. Public messages now say only that a new day has begun.

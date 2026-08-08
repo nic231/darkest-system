@@ -17,24 +17,41 @@
     </button>
   </div>
 
+  {{#if hasLegs}}
+  <div class="travel-legs">
+    <div class="travel-legs-head">
+      Journey{{#if legTotal}} · {{legTotal}}{{/if}}
+      <button type="button" class="leg-clear" title="Clear the whole journey">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    {{#each legs}}
+    <div class="travel-leg">
+      <span class="travel-leg-name">{{label}}</span>
+      <span class="travel-leg-time">{{duration}}</span>
+      <button type="button" class="leg-remove" data-index="{{index}}" title="Remove this leg">
+        <i class="fas fa-minus"></i>
+      </button>
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
+
   {{#if hasRoutes}}
   <div class="travel-group">
-    <label>Route</label>
+    <label>{{#if hasLegs}}Continue from {{originName}}{{else}}Route from {{#if originName}}{{originName}}{{else}}here{{/if}}{{/if}}</label>
     <select name="route">
       <option value="">— pick a route, or enter a distance below —</option>
-      {{#if hereRoutes.length}}
-      <optgroup label="From here{{#if hereName}}: {{hereName}}{{/if}}">
-        {{#each hereRoutes}}
-        <option value="{{key}}">{{label}}</option>
-        {{/each}}
-      </optgroup>
-      {{/if}}
-      <optgroup label="Everywhere else">
-        {{#each otherRoutes}}
-        <option value="{{key}}">{{label}}</option>
-        {{/each}}
-      </optgroup>
+      {{#each hereRoutes}}
+      <option value="{{key}}">{{label}}</option>
+      {{/each}}
     </select>
+    {{#unless hasHereRoutes}}
+    <p class="travel-no-routes">
+      No routes lead out of this scene. Import the region, or enter a
+      distance manually below.
+    </p>
+    {{/unless}}
   </div>
   {{else}}
   <p class="travel-no-routes">
@@ -65,9 +82,14 @@
 
   <div class="travel-preview">Enter a distance or pick a route.</div>
 
-  <button type="button" class="travel-go">
-    <i class="fas fa-person-walking"></i> Travel
-  </button>
+  <div class="travel-actions">
+    <button type="button" class="leg-add" title="Add this leg and keep planning">
+      <i class="fas fa-plus"></i> Add leg
+    </button>
+    <button type="button" class="travel-go">
+      <i class="fas fa-person-walking"></i> {{#if hasLegs}}Travel journey{{else}}Travel{{/if}}
+    </button>
+  </div>
 
   <div class="travel-skips">
     <span class="travel-skips-label">Or just pass time:</span>

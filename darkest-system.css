@@ -4586,25 +4586,32 @@
   flex: 1;
 }
 
-/* Foundry's own window styling sets a dark label colour at higher
-   specificity than a bare class, so these need the app scope to win --
-   otherwise the field labels render near-black on the dark panel. */
-.travel-tool .travel-group label,
-.travel-tool .travel-message-group label,
-.travel-tool label {
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--darkest-text, #cec9c0);
-  text-shadow: none;
+/* Foundry core styles labels inside its own app windows at a specificity
+   a bare class can't beat, so scope these through .app/.application (both
+   names exist across v12-v14) and mark them important -- otherwise the
+   field labels render near-black on the dark panel. */
+.app.travel-tool .travel-tool-container label,
+.application.travel-tool .travel-tool-container label,
+.travel-tool .travel-tool-container label {
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  color: var(--darkest-text, #cec9c0) !important;
+  text-shadow: none !important;
 }
 
+.app.travel-tool .travel-preview,
+.application.travel-tool .travel-preview,
 .travel-tool .travel-preview {
-  color: var(--darkest-text, #cec9c0);
+  color: var(--darkest-text, #cec9c0) !important;
 }
 
+.app.travel-tool .travel-skips-label,
+.application.travel-tool .travel-skips-label,
+.app.travel-tool .travel-no-routes,
+.application.travel-tool .travel-no-routes,
 .travel-tool .travel-skips-label,
 .travel-tool .travel-no-routes {
-  color: var(--darkest-text-muted, #7a7268);
+  color: var(--darkest-text-muted, #9a9186) !important;
 }
 
 .travel-row {
@@ -4662,6 +4669,90 @@
   background: var(--darkest-bg-medium, #2a2a2a);
   font-size: 13px;
   color: var(--darkest-text, #e8dcc8);
+}
+
+/* Queued multi-leg journey */
+.travel-legs {
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.travel-legs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  background: var(--darkest-bg-medium, #2a2723);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--darkest-text-muted, #9a9186);
+}
+
+.travel-leg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  color: var(--darkest-text, #cec9c0);
+}
+
+.travel-leg-name {
+  flex: 1;
+}
+
+.travel-leg-time {
+  font-size: 11px;
+  color: var(--darkest-text-muted, #9a9186);
+}
+
+.travel-legs .leg-remove,
+.travel-legs .leg-clear {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 1px 6px;
+  font-size: 10px;
+  line-height: 1.4;
+  background: transparent;
+  color: var(--darkest-text-muted, #9a9186);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.travel-legs .leg-remove:hover,
+.travel-legs .leg-clear:hover {
+  background: var(--darkest-accent, #7a1c1c);
+  color: #fff;
+}
+
+.travel-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.travel-actions .leg-add {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 9px 12px;
+  background: var(--darkest-bg-medium, #2a2723);
+  color: var(--darkest-text, #cec9c0);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.travel-actions .leg-add:hover {
+  background: var(--darkest-bg-light, #3a3630);
+}
+
+.travel-actions .travel-go {
+  flex: 1;
 }
 
 .travel-go {
