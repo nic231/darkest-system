@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.2-alpha (2026-08-07)
+
+- Verified system mechanics against the official GM reference sheet -- action rolls, Darkest Die tie-breaking (a tie does NOT trigger a transgression, matching the "higher than both kept dice" rule), death check Doom subtraction, and damage all already matched correctly. The four narrative transgression triggers (leaving the path, retracing the same path two days running, killing an animal without gratitude, destroying a large section of woods) can't be auto-detected from dice rolls -- they're GM judgment calls. The Transgression Tracker's existing per-region "+" button already handles marking these (same public tiered message and GM whisper as dice-triggered transgressions); its tooltip now documents this explicitly.
+
 ## 0.12.1-alpha (2026-08-07)
 
 - Fix: **all player-to-GM socket delegation was silently non-functional for real (non-GM) player accounts** -- wounds, dooms, NPC damage, GM whispers, and transgression tracking. Root cause: `game.socket.emit()`/`.on()` only actually relays between different Foundry clients if the system's manifest explicitly opts in with `"socket": true` (confirmed against Foundry's own GitHub issue tracker: "Modules do not receive socket events by default"). `system.json` never had this flag, so every socket emit from a player's client reached Foundry's server and then went nowhere -- it silently never worked for a genuine second connected player, even though testing it by controlling a character from the GM's own session appeared to work (that path never needed the socket at all, since `game.user.isGM` is already true there). **Both GM and players need a full reload (not just cache refresh) after this update, since it's a manifest change Foundry only re-reads on load.**
