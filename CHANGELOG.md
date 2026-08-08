@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.3-alpha (2026-08-08)
+
+- Rewrote the region travel flavour to describe **conditions only** — terrain, weather, temperature, light, smell, footing. The previous set included lines that implied events ("Something disturbs the water nearby and does not surface", "Tracks appear alongside the party, then stop"), which stole beats belonging to the GM: a random line shouldn't make players ask "wait, what was that?" Nothing in the table now implies a presence, an event, or anything uncanny.
+- Expanded from 5 to 6 lines per region (48 total) so repeats come round less often.
+
 ## 0.13.2-alpha (2026-08-08)
 
 - Fix: the dial sat on top of the connected-players list. It now measures the player list at runtime and sits directly above it, so it stays clear no matter how many people are connected.

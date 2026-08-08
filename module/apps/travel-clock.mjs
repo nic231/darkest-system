@@ -46,71 +46,85 @@ const FIXED_TIME_REGIONS = {
 
 /**
  * Region-specific travel flavour, added at random to the public travel
- * message. Purely atmospheric -- these never reveal a destination, a
- * mechanic, or a plot beat, so they're safe to show players every time.
+ * message.
+ *
+ * These describe CONDITIONS ONLY -- terrain, weather, temperature, light,
+ * smell, footing. Nothing here may imply an event, a presence, or
+ * anything uncanny: no "something moves", no tracks that stop, no
+ * birdsong in the wrong place. Those beats belong to the GM, and a random
+ * line stealing one undercuts it. If a line could make a player ask
+ * "wait, what was that?", it does not belong in this table.
  *
  * Drawn from each region's stated conditions: The Lost is temperate and
  * rainy with no wind, The Dismal is a humid swamp, Ravages is an endless
  * fire, The Keepers is cold pine mountains, The Flood is constant rain,
- * Winter's Mercy is lethal cold, The Backwoods is the most dangerous
- * place in the woods, and The Road is a paved road under permanent night.
+ * Winter's Mercy is lethal cold, The Backwoods is dense and untravelled,
+ * and The Road is a paved road under permanent night.
  */
 const REGION_FLAVOUR = {
   'the-lost': [
-    'The trees stand close and patient, and nothing moves in them.',
-    'Rain comes and goes without wind to carry it.',
-    'The half-light never quite changes, and the way back stops being obvious.',
-    'Somewhere behind, a branch settles. Nobody turns around.',
-    'The birdsong stops for a while, then starts again somewhere it should not be.',
+    'The trees stand close, and the light through the canopy stays thin and grey.',
+    'Rain comes and goes. There is no wind to carry it.',
+    'Damp leaf litter deadens every footstep.',
+    'The undergrowth is low and even, and the ground stays soft.',
+    'The air is cool and still, and smells of wet bark.',
+    'Roots cross the path often enough to keep everyone watching their feet.',
   ],
   'the-dismal': [
-    'The ground gives underfoot, and the air tastes of stagnant water.',
-    'Something disturbs the water nearby and does not surface.',
-    'Insects hang in curtains over the wet ground.',
+    'The muddy ground gives underfoot, and the air tastes of stagnant water.',
     'The stink of rot thickens, then thins, then thickens again.',
-    'Wet branches knock together overhead like something counting.',
+    'Insects hang in curtains over the wet ground.',
+    'Standing water spreads across the low ground, black and unmoving.',
+    'The humidity is total. Clothes cling and never dry.',
+    'Moss and dead creeper hang from every branch within reach.',
   ],
   'the-ravages-of-flame': [
     'Ash falls steadily, settling in hair and collars.',
     'The heat never eases. Breathing is work.',
-    'Somewhere off the path, timber cracks and gives way.',
     'The smoke thins just enough to show more burning ahead.',
-    'Embers drift past, still glowing, going the wrong way against the air.',
+    'The ground is hot through boot leather, and blackened underfoot.',
+    'Everything is the colour of char and old orange light.',
+    'The air is dry enough to crack lips within the hour.',
   ],
   'the-keepers': [
     'The pines close overhead and the cold settles into everything.',
     'Loose stone shifts underfoot on the climb.',
-    'The air is thin and sharp, and sound carries too far.',
-    'Something watches from higher up the slope and does not follow.',
-    'Mist pools in the hollows below, hiding the ground already crossed.',
+    'The air is thin and sharp, and the going is slow.',
+    'Mist pools in the hollows below, thick and unmoving.',
+    'Fallen needles carpet the slope, slick where they are wet.',
+    'The grade never quite levels out. The legs feel it.',
   ],
   'the-flood': [
     'The rain does not stop. It has not stopped for a long time.',
     'Water runs over the path ankle-deep, then knee-deep, then shallow again.',
     'Everything is soaked through and stays that way.',
-    'Something floats past in the brown water, turning slowly.',
     'The sound of running water comes from every direction at once.',
+    'The ground beneath the water is soft, and the footing is uncertain.',
+    'Debris collects against the trees where the current slows.',
   ],
   'winters-mercy': [
     'The cold gets into the joints and stays there.',
     'Fresh snow hides whatever the ground is really doing.',
-    'Breath freezes in the air and hangs a moment too long.',
-    'Tracks appear alongside the party, then stop without turning aside.',
+    'Breath freezes in the air with every step.',
     'The white glare gives way to blue shadow, and the temperature drops again.',
+    'Snow comes to mid-calf, and every stride costs.',
+    'Ice sheathes the branches and cracks when they are touched.',
   ],
   'the-backwoods': [
     'The undergrowth thickens until the way ahead has to be forced.',
-    'Nothing here has been walked in a very long time.',
-    'The trees lean wrong, and the quiet has weight to it.',
-    'Something large moved through here recently. The damage is fresh.',
-    'The deeper the party goes, the less the woods pretend.',
+    'There is no trail here worth the name.',
+    'The canopy closes overhead and takes what light there was.',
+    'Thorns catch at sleeves and packs with every few steps.',
+    'The ground is damp and cold, and stays that way.',
+    'Deadfall crosses the route often enough to slow everything down.',
   ],
   'the-road': [
     'The faded yellow stripe runs on ahead into the dark.',
     'The asphalt is cracked but level, and the walking is easy.',
-    'No headlights. No sound of engines. The road is theirs alone.',
     'The dark past the shoulder is complete, and stays that way.',
-    'Stars show through a gap overhead, in no constellation anyone knows.',
+    'Weeds push up through the seams in the road surface.',
+    'The night air is cool and dry, and the road holds the day it never had.',
+    'The verge is gravel and dead grass, and the treeline sits well back.',
   ],
 };
 
