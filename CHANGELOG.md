@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.4-alpha (2026-08-09)
+
+- The pass-time buttons now post a plain "Time has passed." instead of narrating ("The party rests" / "waits" / "lingers a while"). The GM describes what happened and triggers whatever follows — the message just records that the clock moved. Travel keeps its journey description and regional flavour.
+
 ## 0.13.3-alpha (2026-08-08)
 
 - Rewrote the region travel flavour to describe **conditions only** — terrain, weather, temperature, light, smell, footing. The previous set included lines that implied events ("Something disturbs the water nearby and does not surface", "Tracks appear alongside the party, then stop"), which stole beats belonging to the GM: a random line shouldn't make players ask "wait, what was that?" Nothing in the table now implies a presence, an event, or anything uncanny.

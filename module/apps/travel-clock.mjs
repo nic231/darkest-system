@@ -499,14 +499,12 @@ export class TravelTool extends Application {
     html.find('[name="km"], [name="hours"], [name="pace"]').on('change keyup', () => this._updatePreview(html));
 
     html.find('.travel-go').click(() => this._travel(html));
-    // Passing time deliberately gets NO regional flavour -- the GM
-    // narrates waiting themselves. Only travel is dressed automatically.
+    // Passing time gets no flavour and no narration at all -- the GM
+    // describes what happened and triggers whatever follows. The message
+    // exists only to record that the clock moved.
     html.find('.time-skip').click((ev) => {
       const mins = parseInt(ev.currentTarget.dataset.minutes) || 0;
-      const label = mins >= 480 ? 'The party rests.'
-        : mins >= 60 ? 'The party waits.'
-        : 'The party lingers a while.';
-      this._passTime(mins, label);
+      this._passTime(mins, 'Time has passed.');
     });
 
     html.find('.clock-reset').click(() => this._promptReset());
