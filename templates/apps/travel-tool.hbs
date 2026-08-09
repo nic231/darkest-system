@@ -17,9 +17,94 @@
     </button>
   </div>
 
+  {{!-- The common case: step out of where the party already is. --}}
+  {{#if hasRoutes}}
+  <div class="travel-group">
+    <label>{{#if hasLegs}}Continue from {{originName}}{{else}}Route from {{#if originName}}{{originName}}{{else}}here{{/if}}{{/if}}</label>
+    <select name="route">
+      <option value="">— pick a route, or enter a distance below —</option>
+      {{#each hereRoutes}}
+      <option value="{{key}}">{{label}}</option>
+      {{/each}}
+    </select>
+    {{#unless hasHereRoutes}}
+    <p class="travel-no-routes">
+      No routes lead out of this scene. Import the region, plan a journey
+      below, or enter a distance manually.
+    </p>
+    {{/unless}}
+  </div>
+  {{else}}
+  <p class="travel-no-routes">
+    No route data loaded — enable the Darkest Woods content module for the
+    book's distances, or just enter a distance manually.
+  </p>
+  {{/if}}
+
+  <div class="travel-row">
+    <div class="travel-group">
+      <label>Distance (km)</label>
+      <input type="number" name="km" min="0" step="0.1" placeholder="e.g. 13" />
+    </div>
+    <div class="travel-group">
+      <label>or Hours</label>
+      <input type="number" name="hours" min="0" step="0.25" placeholder="e.g. 2" />
+    </div>
+  </div>
+
+  <div class="travel-group">
+    <label>Pace</label>
+    <select name="pace">
+      {{#each paces}}
+      <option value="{{key}}"{{#if (eq key "normal")}} selected{{/if}}>{{label}} ({{speed}} km/h){{#if offRoad}} — road only{{/if}}</option>
+      {{/each}}
+    </select>
+  </div>
+
+  {{#if hasLegs}}
+  <div class="travel-legs">
+    <div class="travel-legs-head">
+      Journey{{#if legTotal}} · {{legTotal}}{{/if}}
+      <button type="button" class="leg-clear" title="Clear the whole journey">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    {{#each legs}}
+    <div class="travel-leg">
+      <span class="travel-leg-name">{{label}}</span>
+      <span class="travel-leg-time">{{duration}}</span>
+      <button type="button" class="leg-remove" data-index="{{index}}" title="Remove this leg">
+        <i class="fas fa-minus"></i>
+      </button>
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
+
+  <div class="travel-preview">Enter a distance or pick a route.</div>
+
+  <div class="travel-actions">
+    <button type="button" class="leg-add" title="Add this leg and keep planning">
+      <i class="fas fa-plus"></i> Add leg
+    </button>
+    <button type="button" class="travel-go">
+      <i class="fas fa-person-walking"></i> {{#if hasLegs}}Travel journey{{else}}Travel{{/if}}
+    </button>
+  </div>
+
+  <div class="travel-skips">
+    <span class="travel-skips-label">Or just pass time:</span>
+    <button type="button" class="time-skip" data-minutes="30">30m</button>
+    <button type="button" class="time-skip" data-minutes="60">1h</button>
+    <button type="button" class="time-skip" data-minutes="240">4h</button>
+    <button type="button" class="time-skip" data-minutes="480">8h (sleep)</button>
+  </div>
+
+  {{!-- Cross-map planning and campaign state: needed far less often, so
+        they sit below the everyday controls. --}}
   {{#if hasRoutes}}
   <div class="travel-plan">
-    <div class="travel-plan-head">Plan a journey</div>
+    <div class="travel-plan-head">Plan a longer journey</div>
     <div class="travel-row">
       <div class="travel-group">
         <label>From</label>
@@ -55,87 +140,5 @@
     </div>
   </div>
   {{/if}}
-
-  {{#if hasLegs}}
-  <div class="travel-legs">
-    <div class="travel-legs-head">
-      Journey{{#if legTotal}} · {{legTotal}}{{/if}}
-      <button type="button" class="leg-clear" title="Clear the whole journey">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    {{#each legs}}
-    <div class="travel-leg">
-      <span class="travel-leg-name">{{label}}</span>
-      <span class="travel-leg-time">{{duration}}</span>
-      <button type="button" class="leg-remove" data-index="{{index}}" title="Remove this leg">
-        <i class="fas fa-minus"></i>
-      </button>
-    </div>
-    {{/each}}
-  </div>
-  {{/if}}
-
-  {{#if hasRoutes}}
-  <div class="travel-group">
-    <label>{{#if hasLegs}}Continue from {{originName}}{{else}}Route from {{#if originName}}{{originName}}{{else}}here{{/if}}{{/if}}</label>
-    <select name="route">
-      <option value="">— pick a route, or enter a distance below —</option>
-      {{#each hereRoutes}}
-      <option value="{{key}}">{{label}}</option>
-      {{/each}}
-    </select>
-    {{#unless hasHereRoutes}}
-    <p class="travel-no-routes">
-      No routes lead out of this scene. Import the region, or enter a
-      distance manually below.
-    </p>
-    {{/unless}}
-  </div>
-  {{else}}
-  <p class="travel-no-routes">
-    No route data loaded — enable the Darkest Woods content module for the
-    book's distances, or just enter a distance manually.
-  </p>
-  {{/if}}
-
-  <div class="travel-row">
-    <div class="travel-group">
-      <label>Distance (km)</label>
-      <input type="number" name="km" min="0" step="0.1" placeholder="e.g. 13" />
-    </div>
-    <div class="travel-group">
-      <label>or Hours</label>
-      <input type="number" name="hours" min="0" step="0.25" placeholder="e.g. 2" />
-    </div>
-  </div>
-
-  <div class="travel-group">
-    <label>Pace</label>
-    <select name="pace">
-      {{#each paces}}
-      <option value="{{key}}"{{#if (eq key "normal")}} selected{{/if}}>{{label}} ({{speed}} km/h){{#if offRoad}} — road only{{/if}}</option>
-      {{/each}}
-    </select>
-  </div>
-
-  <div class="travel-preview">Enter a distance or pick a route.</div>
-
-  <div class="travel-actions">
-    <button type="button" class="leg-add" title="Add this leg and keep planning">
-      <i class="fas fa-plus"></i> Add leg
-    </button>
-    <button type="button" class="travel-go">
-      <i class="fas fa-person-walking"></i> {{#if hasLegs}}Travel journey{{else}}Travel{{/if}}
-    </button>
-  </div>
-
-  <div class="travel-skips">
-    <span class="travel-skips-label">Or just pass time:</span>
-    <button type="button" class="time-skip" data-minutes="30">30m</button>
-    <button type="button" class="time-skip" data-minutes="60">1h</button>
-    <button type="button" class="time-skip" data-minutes="240">4h</button>
-    <button type="button" class="time-skip" data-minutes="480">8h (sleep)</button>
-  </div>
 
 </div>

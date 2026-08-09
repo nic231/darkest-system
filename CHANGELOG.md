@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.1-alpha (2026-08-09)
+
+- Reordered the travel tool so the everyday flow comes first: the "Route from here" picker, distance, pace, and Travel now sit directly under the clock. Cross-map journey planning and the birdsong toggles moved below them — both are useful but reached for far less often than simply stepping out of the current location.
+
 ## 0.16.0-alpha (2026-08-09)
 
 **Driving.** The Road is a real paved road with a working car on it, so the travel tool now has a Driving mode (50 km/h) alongside the walking paces.
