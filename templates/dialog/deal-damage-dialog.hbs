@@ -84,13 +84,14 @@
 
   {{#if damageEquipment.length}}
   <div class="form-group">
-    <label>Weapon Bonus</label>
+    <label>Weapon</label>
     <div class="damage-equipment-list">
       {{#each damageEquipment}}
       <label class="damage-equip-option">
         <input type="checkbox" name="damageEquip" value="{{system.damageRatingBonus}}"
           data-name="{{name}}" data-item-id="{{id}}" {{#if selected}}checked{{/if}} />
-        {{name}} <span class="equip-bonus">(+{{system.damageRatingBonus}} Rating)</span>
+        {{name}}
+        <span class="equip-bonus{{#if (lt system.damageRatingBonus 0)}} penalty{{/if}}">({{#if (gt system.damageRatingBonus 0)}}+{{/if}}{{system.damageRatingBonus}} Rating)</span>
         {{#if system.combatNote}}<span class="equip-note">— {{system.combatNote}}</span>{{/if}}
       </label>
       {{/each}}

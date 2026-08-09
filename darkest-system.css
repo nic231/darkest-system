@@ -3942,6 +3942,11 @@
   font-size: 12px;
 }
 
+/* A weapon that makes damage worse shouldn't read as a bonus. */
+.damage-equip-option .equip-bonus.penalty {
+  color: var(--darkest-accent-glow, #d94040);
+}
+
 .damage-equip-option .equip-note {
   color: var(--darkest-text-muted);
   font-style: italic;

@@ -614,8 +614,10 @@ export class DarkestActorSheet extends ActorSheet {
 
     const equipment = this.actor.items.filter(i => i.type === 'equipment');
     const lastWeaponId = this.actor.getFlag('darkest-system', 'lastDamageWeaponId') || null;
+    // Any non-zero modifier makes this a weapon worth listing -- a cursed
+    // or unwieldy item at -1 has to be selectable too, not filtered out.
     const damageEquipment = equipment
-      .filter(i => (i.system.damageRatingBonus || 0) > 0)
+      .filter(i => (i.system.damageRatingBonus || 0) !== 0)
       .map(i => ({ id: i.id, name: i.name, system: i.system, selected: i.id === lastWeaponId }));
     const otherEquipment = equipment.filter(i => !(i.system.damageRatingBonus || 0));
 

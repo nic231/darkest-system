@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.1-alpha (2026-08-09)
+
+- Weapon damage modifiers can now be **negative**. The field existed and worked for bonuses (the iron spike's +1 to damage Rating), but the item sheet capped it at 0, and a negative value would have been filtered out of the Deal Damage dialog entirely — listed as neither a weapon nor ordinary gear, so it would simply vanish. Cursed or unwieldy weapons at -1 now work.
+- Renamed the field "Damage Rating Modifier" (it isn't always a bonus), and the dialog now shows the sign correctly — no more "(+-1 Rating)" — with penalties in red rather than the bonus green.
+
 ## 0.15.0-alpha (2026-08-09)
 
 **Cross-map journey planning.** Later in a campaign the party will stand somewhere and decide to go back to a place three regions away — planning that leg by leg was unusable.
