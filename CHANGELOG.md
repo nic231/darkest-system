@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.16.0-alpha (2026-08-09)
+
+**Driving.** The Road is a real paved road with a working car on it, so the travel tool now has a Driving mode (50 km/h) alongside the walking paces.
+
+- Driving only helps where there's a road. On a forest trail it silently falls back to walking speed — a car at a trailhead is a parked car. The pace dropdown flags "road only" when the current scene isn't drivable.
+- Fixed a subtlety this exposed: The Road's routes are quoted in the book as *durations* ("about three hours down the road"), and those are **walking** times. The old code scaled durations by pace ratio, which is right for walking but meant "3 hours" stayed roughly 3 hours in a car. Durations are now converted back to an implied distance at walking speed before the actual pace is applied, so a 7-hour walk becomes a 34-minute drive. Walking times are unchanged (the two formulas are algebraically identical).
+- Travel descriptions know the difference: "The party drives on up the road" rather than "follows the trail north", and a journey entirely on roads reads as "stretches of road" rather than trail.
+
 ## 0.15.1-alpha (2026-08-09)
 
 - Weapon damage modifiers can now be **negative**. The field existed and worked for bonuses (the iron spike's +1 to damage Rating), but the item sheet capped it at 0, and a negative value would have been filtered out of the Deal Damage dialog entirely — listed as neither a weapon nor ordinary gear, so it would simply vanish. Cursed or unwieldy weapons at -1 now work.

@@ -37,19 +37,35 @@ export const BIRDSONGS = [
   { key: 'unnamed', label: 'Unnamed birdsong' },
 ];
 
-// Walking speed in km/h. Only the travel time changes with pace -- pace
+// Travel speed in km/h. Only the travel time changes with pace -- pace
 // deliberately carries no other mechanical effect (not a published rule).
+//
+// Driving is a separate mode rather than another walking pace. It matters
+// on The Road, which is a real paved road with a working car on it, and
+// nowhere else -- you cannot drive a forest trail. The speed is
+// deliberately modest: cracked asphalt in permanent darkness, with no
+// reason to hurry toward anything out here.
 const PACE_SPEED = {
   slow: 3,
   normal: 4,
   fast: 5,
+  drive: 50,
 };
 
 const PACE_LABEL = {
   slow: 'Slow',
   normal: 'Normal',
   fast: 'Fast',
+  drive: 'Driving',
 };
+
+// Only these regions have anything a vehicle can use.
+const DRIVABLE_REGIONS = new Set(['the-road']);
+
+/** Whether a route can be driven -- paved road only. */
+function isDrivable(route) {
+  return /\broad\b/i.test(route?.label || '');
+}
 
 // Regions whose time of day never changes, regardless of the world clock.
 // "The Road: Paved road with faded yellow stripe. Night always."
@@ -163,8 +179,8 @@ function regionFlavour(regionSlug) {
  * Anything unusual ("Cave Opening", "Stairs", "Mordecai's Door") is
  * distinctive enough to read well verbatim.
  */
-function describeJourney(label) {
-  if (!label) return 'The party travels on';
+function describeJourney(label, driving = false) {
+  if (!label) return driving ? 'The party drives on' : 'The party travels on';
 
   // "Trail to the North" / "Trail Northwest" -> "follows the trail north"
   const directed = label.match(
@@ -173,15 +189,20 @@ function describeJourney(label) {
   if (directed) {
     const [, adj, kind, dir] = directed;
     const surface = `${adj ? adj.toLowerCase() + ' ' : ''}${kind.toLowerCase()}`;
-    return `The party follows the ${surface} ${dir.toLowerCase()}`;
+    const verb = driving ? 'drives' : 'follows';
+    return `The party ${verb} the ${surface} ${dir.toLowerCase()}`;
   }
 
   // The Road's stock directions read naturally as-is.
-  if (/^Farther Up the Road$/i.test(label)) return 'The party continues up the road';
-  if (/^Back Down the Road$/i.test(label)) return 'The party heads back down the road';
-  if (/^The Road Back$/i.test(label)) return 'The party heads back down the road';
+  if (/^Farther Up the Road$/i.test(label)) {
+    return driving ? 'The party drives on up the road' : 'The party continues up the road';
+  }
+  if (/^Back Down the Road$/i.test(label) || /^The Road Back$/i.test(label)) {
+    return driving ? 'The party drives back down the road' : 'The party heads back down the road';
+  }
   if (/^The Road on the (Left|Right)$/i.test(label)) {
-    return `The party takes the road on the ${RegExp.$1.toLowerCase()}`;
+    const side = RegExp.$1.toLowerCase();
+    return `The party ${driving ? 'drives' : 'takes'} the road on the ${side}`;
   }
 
   // A label that already names a route ("Secret Path of the Grackle",
@@ -273,8 +294,19 @@ export class TravelClock {
   static UNMEASURED_LEG_MINUTES = 15;
 
   static routeMinutes(route, pace = 'normal') {
-    if (route.hours) return route.hours * 60 * (PACE_SPEED.normal / PACE_SPEED[pace]);
-    if (route.km) return (route.km / PACE_SPEED[pace]) * 60;
+    // Driving only helps on a road. A car on a forest trail is a car
+    // parked at the trailhead, so fall back to walking pace elsewhere.
+    const effectivePace = (pace === 'drive' && !isDrivable(route)) ? 'normal' : pace;
+
+    if (route.hours) {
+      // The book quotes The Road's routes as durations ("about three
+      // hours down the road") -- those are WALKING times. Convert back to
+      // a distance at walking speed before applying the actual pace,
+      // otherwise "3 hours" would stay 3 hours in a car.
+      const impliedKm = route.hours * PACE_SPEED.normal;
+      return (impliedKm / PACE_SPEED[effectivePace]) * 60;
+    }
+    if (route.km) return (route.km / PACE_SPEED[effectivePace]) * 60;
     // km === 0 means "a few steps" -- genuinely negligible.
     if (route.km === 0) return 0;
     return TravelClock.UNMEASURED_LEG_MINUTES;
@@ -645,6 +677,10 @@ export class TravelTool extends Application {
         key: p,
         label: PACE_LABEL[p],
         speed: PACE_SPEED[p],
+        // Driving is offered everywhere -- the party might have a car
+        // anywhere -- but it only actually speeds up road routes, so flag
+        // it when the current scene isn't somewhere you can drive.
+        offRoad: p === 'drive' && !DRIVABLE_REGIONS.has(TravelClock.currentRegion()),
       })),
     };
   }
@@ -783,6 +819,7 @@ export class TravelTool extends Application {
       return;
     }
 
+    this._lastPace = pace;
     this._legs = result.legs.map(route => ({
       route,
       minutes: TravelClock.routeMinutes(route, pace),
@@ -805,6 +842,9 @@ export class TravelTool extends Application {
     }
 
     this._legs ??= [];
+    // Remember the pace the journey was planned at, so travelling it
+    // later still knows whether the party was driving.
+    this._lastPace = html.find('[name="pace"]').val() || 'normal';
     this._legs.push({ route, minutes: this._computeMinutes(html) });
     // Re-rendering repoints the dropdown at the new last stop, so the next
     // pick continues the journey rather than starting over.
@@ -822,9 +862,13 @@ export class TravelTool extends Application {
 
     // Describe only the FIRST leg -- the party set out that way, and
     // naming every turn would spell out the route they're discovering.
-    const opening = describeJourney(legs[0].route.label);
+    const driving = this._lastPace === 'drive' && isDrivable(legs[0].route);
+    const opening = describeJourney(legs[0].route.label, driving);
+    // A journey entirely on roads isn't "stretches of trail".
+    const allRoad = legs.every(l => isDrivable(l.route));
+    const stretch = allRoad ? 'stretches of road' : 'stretches of trail';
     const legNote = legs.length > 1
-      ? `, and keeps going for ${legs.length} stretches of trail`
+      ? `, and keeps going for ${legs.length} ${stretch}`
       : '';
 
     this._legs = [];
@@ -855,8 +899,14 @@ export class TravelTool extends Application {
 
     // Public text never names the destination -- the party doesn't know
     // where they're going until they get there. See describeJourney().
-    const journey = route ? describeJourney(route.label) : 'The party travels';
-    const paceNote = pace === 'normal' ? '' : ` at a ${PACE_LABEL[pace].toLowerCase()} pace`;
+    const driving = pace === 'drive' && (!route || isDrivable(route));
+    const journey = route
+      ? describeJourney(route.label, driving)
+      : (driving ? 'The party drives on' : 'The party travels');
+    // "at a driving pace" reads badly; the verb already says it.
+    const paceNote = (pace === 'normal' || pace === 'drive')
+      ? ''
+      : ` at a ${PACE_LABEL[pace].toLowerCase()} pace`;
 
     await this._passTime(minutes, `${journey}${paceNote}.`, {
       region: TravelClock.currentRegion(),
