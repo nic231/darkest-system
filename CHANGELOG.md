@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.2-alpha (2026-08-09)
+
+- The journey planner's From/To pickers are now searchable text boxes rather than dropdowns. 63 of the 131 locations start with "The", so type-ahead on a plain select was near useless — you can now type any part of a name ("cemetery", "weald", "baba") and filter as you go.
+- Matching is forgiving: exact name, slug, the name ignoring a leading "The", or a unique partial match all work. Ambiguous input is deliberately rejected rather than guessed — typing "stone" won't silently pick between the Stone Circle and the Stone Terror.
+- Choosing a destination from the list plans the route immediately, but does so quietly, so tabbing out of a half-typed name doesn't throw a warning mid-thought.
+
 ## 0.16.1-alpha (2026-08-09)
 
 - Reordered the travel tool so the everyday flow comes first: the "Route from here" picker, distance, pace, and Travel now sit directly under the clock. Cross-map journey planning and the birdsong toggles moved below them — both are useful but reached for far less often than simply stepping out of the current location.

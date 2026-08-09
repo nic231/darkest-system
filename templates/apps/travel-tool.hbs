@@ -105,25 +105,27 @@
   {{#if hasRoutes}}
   <div class="travel-plan">
     <div class="travel-plan-head">Plan a longer journey</div>
+    {{!-- Text inputs backed by a datalist rather than selects: nearly half
+          the locations start with "The", so type-ahead on a select is
+          useless. A datalist matches anywhere in the name. --}}
     <div class="travel-row">
       <div class="travel-group">
         <label>From</label>
-        <select name="planFrom">
-          {{#each locations}}
-          <option value="{{slug}}"{{#if (eq slug ../originSlug)}} selected{{/if}}>{{title}}</option>
-          {{/each}}
-        </select>
+        <input type="text" name="planFrom" list="darkest-locations"
+               value="{{originName}}" placeholder="type to search…" autocomplete="off" />
       </div>
       <div class="travel-group">
         <label>To</label>
-        <select name="planTo">
-          <option value="">— choose —</option>
-          {{#each locations}}
-          <option value="{{slug}}">{{title}}</option>
-          {{/each}}
-        </select>
+        <input type="text" name="planTo" list="darkest-locations"
+               placeholder="type to search…" autocomplete="off" />
       </div>
     </div>
+
+    <datalist id="darkest-locations">
+      {{#each locations}}
+      <option value="{{title}}"></option>
+      {{/each}}
+    </datalist>
     <button type="button" class="plan-find">
       <i class="fas fa-route"></i> Work out the route
     </button>

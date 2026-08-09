@@ -685,6 +685,32 @@ export class TravelTool extends Application {
     };
   }
 
+  /**
+   * Turn whatever the GM typed into a location slug.
+   *
+   * Tries, in order: exact title, exact slug, title ignoring a leading
+   * "The", then a unique substring match. Substring is only accepted when
+   * it matches exactly one location -- guessing between several would
+   * silently send the party somewhere they didn't ask to go.
+   */
+  static _resolveLocation(input) {
+    const raw = (input ?? '').trim();
+    if (!raw) return null;
+
+    const needle = raw.toLowerCase();
+    const stripThe = (s) => s.replace(/^the\s+/i, '').toLowerCase();
+    const locations = TravelClock.allLocations();
+
+    const exact = locations.find(l => l.title.toLowerCase() === needle || l.slug === needle);
+    if (exact) return exact.slug;
+
+    const noThe = locations.find(l => stripThe(l.title) === stripThe(raw));
+    if (noThe) return noThe.slug;
+
+    const partial = locations.filter(l => l.title.toLowerCase().includes(needle));
+    return partial.length === 1 ? partial[0].slug : null;
+  }
+
   static _routeLabel(r) {
     const dest = r.toTitle || 'Unknown';
     let dist;
@@ -743,7 +769,10 @@ export class TravelTool extends Application {
 
     // Cross-map planning: work out a route between two arbitrary places.
     html.find('.plan-find').click(() => this._findRoute(html));
-    html.find('[name="planTo"]').on('change', () => this._findRoute(html));
+    // Picking from the datalist fires 'change', so plan straight away --
+    // but quietly, since this also fires on blur with a half-typed name
+    // and shouldn't scold the GM mid-thought.
+    html.find('[name="planTo"]').on('change', () => this._findRoute(html, { quiet: true }));
 
     this._updatePreview(html);
   }
@@ -796,17 +825,34 @@ export class TravelTool extends Application {
    * travelling immediately: the tool does the arithmetic, the GM decides
    * whether the party could plausibly walk it.
    */
-  _findRoute(html) {
-    const from = html.find('[name="planFrom"]').val();
-    const to = html.find('[name="planTo"]').val();
+  _findRoute(html, { quiet = false } = {}) {
+    const warn = (msg) => { if (!quiet) ui.notifications.warn(msg); };
+
+    // The pickers are free-text (datalist), so resolve typed names back to
+    // slugs -- and be forgiving about it, since "cemetery" should find
+    // "The Cemetery" when half the map starts with "The".
+    const fromInput = html.find('[name="planFrom"]').val();
+    const toInput = html.find('[name="planTo"]').val();
     const pace = html.find('[name="pace"]').val() || 'normal';
 
-    if (!from || !to) {
-      ui.notifications.warn('Pick where the party is starting and where they are going.');
+    if (!fromInput || !toInput) {
+      warn('Type where the party is starting and where they are going.');
+      return;
+    }
+
+    const from = TravelTool._resolveLocation(fromInput);
+    const to = TravelTool._resolveLocation(toInput);
+
+    if (!from) {
+      warn(`No location matching "${fromInput}".`);
+      return;
+    }
+    if (!to) {
+      warn(`No location matching "${toInput}".`);
       return;
     }
     if (from === to) {
-      ui.notifications.warn('The party is already there.');
+      warn('The party is already there.');
       return;
     }
 
