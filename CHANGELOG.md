@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.3-alpha (2026-08-09)
+
+- Fix: everyone except the person rolling saw only the Darkest Die — the main 2d6/3d6 never appeared on their screen. Sequencing the two animations means suppressing Dice So Nice's automatic one (`flags['dice-so-nice'].skip`), but that flag travels with the chat message to *every* client, so observers' own Dice So Nice sat out the main roll too, and `showForRoll()` only animates on the client that calls it. The roller now broadcasts the sequence over the system socket and all clients play the same two-stage animation locally. Whispered rolls still only animate for their intended recipients.
+
 ## 0.16.2-alpha (2026-08-09)
 
 - The journey planner's From/To pickers are now searchable text boxes rather than dropdowns. 63 of the 131 locations start with "The", so type-ahead on a plain select was near useless — you can now type any part of a name ("cemetery", "weald", "baba") and filter as you go.

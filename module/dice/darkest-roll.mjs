@@ -1,3 +1,39 @@
+/** The Darkest Die's distinctive purple, shared by every client. */
+export const DARKEST_DIE_APPEARANCE = {
+  colorset: 'custom',
+  labelColor: '#ffffff',
+  diceColor: '#6a2fa0',
+  outlineColor: '#3a1a5c',
+  edgeColor: '#8b3ad4',
+  texture: 'none',
+  material: 'plastic'
+};
+
+/**
+ * Animate the main dice, then the Darkest Die, in that order.
+ *
+ * Run identically on the roller's client and (via the darkestDiceAnimation
+ * socket case) on every other client, so all screens see the same two-stage
+ * sequence rather than the roller seeing both and observers seeing only the
+ * Darkest Die.
+ *
+ * `synchronize` is deliberately false: each client is already being told to
+ * play this locally, so letting Dice So Nice broadcast as well would show
+ * observers a duplicate set of dice.
+ */
+export async function playDarkestDiceSequence({ mainRoll, darkestRoll, user, speaker, whisper }) {
+  if (!game.dice3d) return;
+
+  await game.dice3d.showForRoll(mainRoll, user, false, whisper ?? null, false, null, speaker ?? null);
+
+  if (!darkestRoll) return;
+  darkestRoll.options.appearance = DARKEST_DIE_APPEARANCE;
+  await game.dice3d.showForRoll(
+    darkestRoll, user, false, whisper ?? null, false, null, speaker ?? null,
+    { ghost: false, secret: false }
+  );
+}
+
 /**
  * Custom roll class for The Darkest System
  * Handles the unique mechanics: 2d6 + Darkest Die + Rating vs Target Number
@@ -250,34 +286,36 @@ export class DarkestRoll extends Roll {
       const whisperTargets = Array.isArray(messageData.whisper) && messageData.whisper.length
         ? messageData.whisper
         : null;
-      await game.dice3d.showForRoll(
-        this,
-        game.user,
-        true,
-        whisperTargets,
-        false,
-        null,
-        messageData.speaker ?? null
-      );
-      this.darkestDieRoll.options.appearance = {
-        colorset: 'custom',
-        labelColor: '#ffffff',
-        diceColor: '#6a2fa0',
-        outlineColor: '#3a1a5c',
-        edgeColor: '#8b3ad4',
-        texture: 'none',
-        material: 'plastic'
-      };
-      await game.dice3d.showForRoll(
-        this.darkestDieRoll,
-        game.user,
-        true,
-        whisperTargets,
-        false,
-        null,
-        messageData.speaker ?? null,
-        { ghost: false, secret: false }
-      );
+
+      this.darkestDieRoll.options.appearance = DARKEST_DIE_APPEARANCE;
+
+      // showForRoll() only animates on the client that calls it. The `skip`
+      // flag above then travels with the ChatMessage to EVERY client, so
+      // observers' own Dice So Nice suppresses its automatic animation too
+      // -- leaving them with no dice at all. (Passing `synchronize` here
+      // doesn't help: it broadcasts a single roll immediately, which both
+      // races the sequencing and reveals the Darkest Die alongside the main
+      // dice instead of after it.)
+      //
+      // So mirror the sequence ourselves: tell other clients to replay the
+      // same two-stage animation locally, then run it here. Same socket
+      // delegation pattern as postGmWhisper/applyWound.
+      game.socket.emit('system.darkest-system', {
+        type: 'darkestDiceAnimation',
+        mainRoll: this.toJSON(),
+        darkestRoll: this.darkestDieRoll.toJSON(),
+        userId: game.user.id,
+        speaker: messageData.speaker ?? null,
+        whisper: whisperTargets,
+      });
+
+      await playDarkestDiceSequence({
+        mainRoll: this,
+        darkestRoll: this.darkestDieRoll,
+        user: game.user,
+        speaker: messageData.speaker ?? null,
+        whisper: whisperTargets,
+      });
     }
 
     // Tactical GM-only information (NPC defeat threshold, lethal-blow

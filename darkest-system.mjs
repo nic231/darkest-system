@@ -18,7 +18,7 @@ import { DarkestActor } from './module/actor/actor.mjs';
 import { DarkestActorSheet } from './module/actor/actor-sheet.mjs';
 import { DarkestItem } from './module/item/item.mjs';
 import { DarkestItemSheet } from './module/item/item-sheet.mjs';
-import { registerDarkestRoll } from './module/dice/darkest-roll.mjs';
+import { registerDarkestRoll, playDarkestDiceSequence } from './module/dice/darkest-roll.mjs';
 import { TransgressionTracker, registerTransgressionSettings } from './module/apps/transgression-tracker.mjs';
 import { DoomTally, registerDoomTallySettings, registerDoomTallyHooks } from './module/apps/doom-tally.mjs';
 import { NpcTracker, registerNpcTrackerSettings } from './module/apps/npc-tracker.mjs';
@@ -270,6 +270,29 @@ Hooks.once('ready', function() {
           NpcTracker.applyDamage(data.woundRating);
         }
         break;
+
+      case 'darkestDiceAnimation': {
+        // The roller suppressed Dice So Nice's automatic animation (so the
+        // main dice land before the Darkest Die rather than alongside it).
+        // That `skip` flag rides along with the ChatMessage to every client,
+        // so observers get no dice unless we replay the sequence for them.
+        if (data.userId === game.user.id) break;  // roller already played it
+
+        // A whispered roll must only animate for its intended recipients.
+        if (Array.isArray(data.whisper) && data.whisper.length
+            && !data.whisper.includes(game.user.id) && !game.user.isGM) break;
+
+        const mainRoll = Roll.fromData(data.mainRoll);
+        const darkestRoll = data.darkestRoll ? Roll.fromData(data.darkestRoll) : null;
+        playDarkestDiceSequence({
+          mainRoll,
+          darkestRoll,
+          user: game.users.get(data.userId) ?? game.user,
+          speaker: data.speaker,
+          whisper: data.whisper,
+        });
+        break;
+      }
 
       case 'postGmWhisper':
         // A whispered ChatMessage is always visible to its own author, no
