@@ -56,7 +56,7 @@
     <label>Pace</label>
     <select name="pace">
       {{#each paces}}
-      <option value="{{key}}"{{#if (eq key "normal")}} selected{{/if}}>{{label}} ({{speed}} km/h){{#if offRoad}} — road only{{/if}}</option>
+      <option value="{{key}}"{{#if (eq key "normal")}} selected{{/if}}>{{label}} ({{speed}} km/h){{#if offRoad}} — road only{{/if}}{{#if offWater}} — swamp only{{/if}}</option>
       {{/each}}
     </select>
   </div>

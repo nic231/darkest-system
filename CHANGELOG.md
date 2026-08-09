@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.17.0-alpha (2026-08-09)
+
+**Pirogues.** The Dismal's residents keep flat-bottomed swamp boats moored at the pier, and the Flood has a raft by the Bosque. "By pirogue" is now a travel pace alongside walking and driving.
+
+- Wading is now modelled properly, which the tool was previously ignoring: the book says watery paths are walked **at half speed**, so flooded trails and waterways now take twice as long on foot. A 1.6 km flooded trail is 48 minutes wading, 24 minutes on dry ground.
+- A pirogue removes that penalty and is a little faster besides — "normal walking speed, or even a bit faster" — so the same flooded trail is 19 minutes by boat. Routes are detected as navigable from their labels ("Flooded Trail to the West", "Waterway to the North").
+- A boat on dry land falls back to walking, the same way driving does off-road. The pace dropdown flags "swamp only" outside the Dismal and the Flood.
+- Travel descriptions change with the mode: the party *poles* the waterway north rather than following it, and a multi-leg journey entirely on water reads as "stretches of water".
+- The Dismal and the Flood have their own on-the-water atmosphere lines. The walking ones are written from inside the mud — clinging clothes, uncertain footing — which is wrong for someone sitting in a boat. Conditions only, as before.
+
 ## 0.16.3-alpha (2026-08-09)
 
 - Fix: everyone except the person rolling saw only the Darkest Die — the main 2d6/3d6 never appeared on their screen. Sequencing the two animations means suppressing Dice So Nice's automatic one (`flags['dice-so-nice'].skip`), but that flag travels with the chat message to *every* client, so observers' own Dice So Nice sat out the main roll too, and `showForRoll()` only animates on the client that calls it. The roller now broadcasts the sequence over the system socket and all clients play the same two-stage animation locally. Whispered rolls still only animate for their intended recipients.

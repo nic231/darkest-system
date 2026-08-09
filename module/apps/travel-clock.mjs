@@ -49,6 +49,7 @@ const PACE_SPEED = {
   slow: 3,
   normal: 4,
   fast: 5,
+  boat: 5,
   drive: 50,
 };
 
@@ -56,15 +57,46 @@ const PACE_LABEL = {
   slow: 'Slow',
   normal: 'Normal',
   fast: 'Fast',
+  boat: 'By pirogue',
   drive: 'Driving',
 };
 
 // Only these regions have anything a vehicle can use.
 const DRIVABLE_REGIONS = new Set(['the-road']);
 
+// Regions with pirogues moored and enough water to float one. The Dismal's
+// residents keep flat-bottomed swamp boats at the pier in a Town Called
+// Dismal; the Flood has a raft by the Bosque.
+const BOATABLE_REGIONS = new Set(['the-dismal', 'a-town-called-dismal', 'the-flood']);
+
 /** Whether a route can be driven -- paved road only. */
 function isDrivable(route) {
   return /\broad\b/i.test(route?.label || '');
+}
+
+/**
+ * Whether a route is water a pirogue can actually be poled along.
+ *
+ * The book marks these explicitly: "Flooded Trail", "Waterway", and paths
+ * described as covered in a foot or two of water. A dry track through the
+ * swamp is still a dry track -- you'd be carrying the boat.
+ */
+function isNavigable(route) {
+  return /\b(waterway|flooded|water|bayou|channel|creek)\b/i.test(route?.label || '');
+}
+
+/**
+ * On foot, standing water halves your speed -- the book is explicit that
+ * these paths are walked "at half speed". A pirogue removes that penalty
+ * and is a touch faster besides ("normal walking speed -- or even a bit
+ * faster"), which is why `boat` above sits at 5 km/h rather than 4.
+ *
+ * This applies to the WALKING paces only; `boat` is already the unpenalised
+ * speed and `drive` never meets a flooded trail.
+ */
+function wadingPenalty(route, pace) {
+  const onFoot = pace === 'slow' || pace === 'normal' || pace === 'fast';
+  return (onFoot && isNavigable(route)) ? 0.5 : 1;
 }
 
 // Regions whose time of day never changes, regardless of the world clock.
@@ -157,9 +189,44 @@ const REGION_FLAVOUR = {
   ],
 };
 
-/** A random atmospheric line for a region, or null if we have none. */
-function regionFlavour(regionSlug) {
-  const lines = REGION_FLAVOUR[regionSlug];
+// Travelling by pirogue changes what the party would actually notice. The
+// walking lines above are written from inside the mud -- clothes clinging,
+// footing uncertain, leeches on the legs -- none of which applies to
+// someone sitting in a flat-bottomed boat. Conditions only, same as the
+// rest of the table: nothing here implies an event.
+const BOAT_FLAVOUR = {
+  'the-dismal': [
+    'The pole finds bottom easily, and the hull slides on between the cypress knees.',
+    'Black water parts around the bow and closes again behind.',
+    'Duckweed mats over the surface, and the boat leaves a green scar through it.',
+    'Insects hang in curtains above the water, and the boat carries the party through them.',
+    'Branches hang low enough that everyone learns to duck without looking.',
+    'The stink of stagnant water rises where the pole disturbs the bottom.',
+    'Cattails and tall grass close in on both sides, then open out again.',
+    'The hull knocks against something submerged, and slides clear.',
+  ],
+  'a-town-called-dismal': [
+    'The stilted houses pass by overhead, and the jetties drip.',
+    'The pole finds bottom easily, and the hull slides on past the moorings.',
+    'Black water laps at the pilings, and the boat rides its own wake.',
+  ],
+  'the-flood': [
+    'The rain drums on the hull and pools in the bottom of the boat.',
+    'The current pulls at the hull, and holding a line takes work.',
+    'Floodwater carries the boat over what used to be a road.',
+    'Debris knocks against the hull where the current slows.',
+    'Treetops break the surface on both sides, and the boat threads between them.',
+  ],
+};
+
+/**
+ * A random atmospheric line for a region, or null if we have none.
+ *
+ * `boating` swaps in the on-the-water set where one exists -- a party in a
+ * pirogue shouldn't be told the mud gives underfoot.
+ */
+function regionFlavour(regionSlug, boating = false) {
+  const lines = (boating && BOAT_FLAVOUR[regionSlug]) || REGION_FLAVOUR[regionSlug];
   if (!lines?.length) return null;
   return lines[Math.floor(Math.random() * lines.length)];
 }
@@ -179,17 +246,20 @@ function regionFlavour(regionSlug) {
  * Anything unusual ("Cave Opening", "Stairs", "Mordecai's Door") is
  * distinctive enough to read well verbatim.
  */
-function describeJourney(label, driving = false) {
-  if (!label) return driving ? 'The party drives on' : 'The party travels on';
+function describeJourney(label, driving = false, boating = false) {
+  if (!label) {
+    if (boating) return 'The party poles on through the water';
+    return driving ? 'The party drives on' : 'The party travels on';
+  }
 
   // "Trail to the North" / "Trail Northwest" -> "follows the trail north"
   const directed = label.match(
-    /^(?:(Flooded|Steep|Narrow|Winding|Overgrown)\s+)?(Trail|Track|Road|Path|Way|Stairs?|Tunnel|Bridge)\s+(?:(?:to|toward)\s+the\s+)?(North|South|East|West|Northeast|Northwest|Southeast|Southwest)$/i
+    /^(?:(Flooded|Steep|Narrow|Winding|Overgrown)\s+)?(Trail|Track|Road|Path|Way|Stairs?|Tunnel|Bridge|Waterway)\s+(?:(?:to|toward)\s+the\s+)?(North|South|East|West|Northeast|Northwest|Southeast|Southwest)$/i
   );
   if (directed) {
     const [, adj, kind, dir] = directed;
     const surface = `${adj ? adj.toLowerCase() + ' ' : ''}${kind.toLowerCase()}`;
-    const verb = driving ? 'drives' : 'follows';
+    const verb = boating ? 'poles' : (driving ? 'drives' : 'follows');
     return `The party ${verb} the ${surface} ${dir.toLowerCase()}`;
   }
 
@@ -209,10 +279,11 @@ function describeJourney(label, driving = false) {
   // "Stairs Down") slots in after "takes the". Anything else is a phrase
   // rather than a noun ("Exiting the Woods", "Woodfolk Symbol") and would
   // read as nonsense there, so fall back to something always grammatical.
-  if (/\b(trail|track|road|path|way|stairs?|tunnel|bridge|pier|door|opening|gate|steps)\b/i.test(label)) {
-    return `The party takes the ${label.replace(/^The\s+/i, '').toLowerCase()}`;
+  if (/\b(trail|track|road|path|way|stairs?|tunnel|bridge|pier|door|opening|gate|steps|waterway)\b/i.test(label)) {
+    const verb = boating ? 'poles along the' : 'takes the';
+    return `The party ${verb} ${label.replace(/^The\s+/i, '').toLowerCase()}`;
   }
-  return 'The party presses on';
+  return boating ? 'The party presses on through the water' : 'The party presses on';
 }
 
 export class TravelClock {
@@ -296,7 +367,13 @@ export class TravelClock {
   static routeMinutes(route, pace = 'normal') {
     // Driving only helps on a road. A car on a forest trail is a car
     // parked at the trailhead, so fall back to walking pace elsewhere.
-    const effectivePace = (pace === 'drive' && !isDrivable(route)) ? 'normal' : pace;
+    let effectivePace = (pace === 'drive' && !isDrivable(route)) ? 'normal' : pace;
+    // Likewise a pirogue on dry land: you'd be carrying it. Fall back to
+    // walking, which on a dry route takes no wading penalty either.
+    if (effectivePace === 'boat' && !isNavigable(route)) effectivePace = 'normal';
+
+    // Wading standing water is half speed; a boat avoids that entirely.
+    const penalty = wadingPenalty(route, effectivePace);
 
     if (route.hours) {
       // The book quotes The Road's routes as durations ("about three
@@ -304,9 +381,9 @@ export class TravelClock {
       // a distance at walking speed before applying the actual pace,
       // otherwise "3 hours" would stay 3 hours in a car.
       const impliedKm = route.hours * PACE_SPEED.normal;
-      return (impliedKm / PACE_SPEED[effectivePace]) * 60;
+      return (impliedKm / (PACE_SPEED[effectivePace] * penalty)) * 60;
     }
-    if (route.km) return (route.km / PACE_SPEED[effectivePace]) * 60;
+    if (route.km) return (route.km / (PACE_SPEED[effectivePace] * penalty)) * 60;
     // km === 0 means "a few steps" -- genuinely negligible.
     if (route.km === 0) return 0;
     return TravelClock.UNMEASURED_LEG_MINUTES;
@@ -681,6 +758,9 @@ export class TravelTool extends Application {
         // anywhere -- but it only actually speeds up road routes, so flag
         // it when the current scene isn't somewhere you can drive.
         offRoad: p === 'drive' && !DRIVABLE_REGIONS.has(TravelClock.currentRegion()),
+        // Same idea for the pirogue: offered anywhere, but flagged outside
+        // the swamp regions where there's actually a boat to take.
+        offWater: p === 'boat' && !BOATABLE_REGIONS.has(TravelClock.currentRegion()),
       })),
     };
   }
@@ -909,10 +989,15 @@ export class TravelTool extends Application {
     // Describe only the FIRST leg -- the party set out that way, and
     // naming every turn would spell out the route they're discovering.
     const driving = this._lastPace === 'drive' && isDrivable(legs[0].route);
-    const opening = describeJourney(legs[0].route.label, driving);
-    // A journey entirely on roads isn't "stretches of trail".
+    const boating = this._lastPace === 'boat' && isNavigable(legs[0].route);
+    const opening = describeJourney(legs[0].route.label, driving, boating);
+    // A journey entirely on roads isn't "stretches of trail" -- nor is one
+    // poled along waterways.
     const allRoad = legs.every(l => isDrivable(l.route));
-    const stretch = allRoad ? 'stretches of road' : 'stretches of trail';
+    const allWater = legs.every(l => isNavigable(l.route));
+    const stretch = allWater ? 'stretches of water'
+      : allRoad ? 'stretches of road'
+      : 'stretches of trail';
     const legNote = legs.length > 1
       ? `, and keeps going for ${legs.length} ${stretch}`
       : '';
@@ -921,6 +1006,7 @@ export class TravelTool extends Application {
     await this._passTime(totalMinutes, `${opening}${legNote}.`, {
       region: TravelClock.currentRegion(),
       route: last.route,
+      boating,
     });
   }
 
@@ -946,17 +1032,22 @@ export class TravelTool extends Application {
     // Public text never names the destination -- the party doesn't know
     // where they're going until they get there. See describeJourney().
     const driving = pace === 'drive' && (!route || isDrivable(route));
+    const boating = pace === 'boat' && (!route || isNavigable(route));
     const journey = route
-      ? describeJourney(route.label, driving)
-      : (driving ? 'The party drives on' : 'The party travels');
-    // "at a driving pace" reads badly; the verb already says it.
-    const paceNote = (pace === 'normal' || pace === 'drive')
+      ? describeJourney(route.label, driving, boating)
+      : (driving ? 'The party drives on'
+        : boating ? 'The party poles on through the water'
+        : 'The party travels');
+    // "at a driving pace" / "at a by pirogue pace" read badly; the verb
+    // already carries the mode.
+    const paceNote = (pace === 'normal' || pace === 'drive' || pace === 'boat')
       ? ''
       : ` at a ${PACE_LABEL[pace].toLowerCase()} pace`;
 
     await this._passTime(minutes, `${journey}${paceNote}.`, {
       region: TravelClock.currentRegion(),
       route,
+      boating,
     });
   }
 
@@ -1041,7 +1132,7 @@ export class TravelTool extends Application {
   async _passTime(minutes, flavour, opts = {}) {
     // Capture the region BEFORE any scene change, so the flavour describes
     // the ground actually crossed rather than wherever the party ends up.
-    const flavourLine = opts.region ? regionFlavour(opts.region) : null;
+    const flavourLine = opts.region ? regionFlavour(opts.region, opts.boating) : null;
 
     const result = await TravelClock.advance(minutes);
     const state = TravelClock.displayState();
