@@ -4671,6 +4671,78 @@
   color: var(--darkest-text, #e8dcc8);
 }
 
+/* Cross-map journey planner */
+.travel-plan,
+.birdsongs {
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.travel-plan-head,
+.birdsongs-head {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--darkest-text-muted, #9a9186);
+  margin-bottom: 6px;
+}
+
+.birdsongs-hint {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  font-style: italic;
+}
+
+.travel-plan .plan-find {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px;
+  background: var(--darkest-bg-medium, #2a2723);
+  color: var(--darkest-text, #cec9c0);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.travel-plan .plan-find:hover {
+  background: var(--darkest-bg-light, #3a3630);
+}
+
+.birdsong-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.birdsong-toggle {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 3px 8px;
+  font-size: 11px;
+  background: transparent;
+  color: var(--darkest-text-muted, #9a9186);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0.65;
+}
+
+.birdsong-toggle:hover {
+  opacity: 1;
+}
+
+/* A known birdsong is a real unlock -- make it read as one. */
+.birdsong-toggle.known {
+  opacity: 1;
+  background: rgba(184, 50, 50, 0.18);
+  border-color: var(--darkest-accent-light, #b83232);
+  color: var(--darkest-text, #cec9c0);
+}
+
 /* Queued multi-leg journey */
 .travel-legs {
   border: 1px solid var(--darkest-border, #4a4038);

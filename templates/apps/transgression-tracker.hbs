@@ -65,6 +65,19 @@
   </div>
   {{/if}}
 
+  {{#if birdsongs}}
+  <div class="birdsongs">
+    <div class="birdsongs-head">Birdsongs known <span class="birdsongs-hint">(opens secret trails when travelling)</span></div>
+    <div class="birdsong-list">
+      {{#each birdsongs}}
+      <button type="button" class="birdsong-toggle{{#if known}} known{{/if}}" data-bird="{{key}}">
+        <i class="fas {{#if known}}fa-feather{{else}}fa-feather-pointed{{/if}}"></i> {{label}}
+      </button>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
   <div class="regions-list">
     {{#each regions}}
     <div class="region-row {{#if isCurrent}}current{{/if}} {{#if isWarning}}warning{{/if}} {{#if isCritical}}critical{{/if}}"

@@ -16,6 +16,7 @@
  */
 
 const SETTING_CLOCK = 'travelClock';
+const SETTING_BIRDSONGS = 'knownBirdsongs';
 
 // Travel routes injected by the darkest-woods module. Empty without it.
 export let TRAVEL_ROUTES = [];
@@ -23,6 +24,18 @@ export let TRAVEL_ROUTES = [];
 Hooks.once('darkestSystem.registerTravelRoutes', (data) => {
   if (Array.isArray(data?.routes)) TRAVEL_ROUTES = data.routes;
 });
+
+// The birds whose songs unlock secret trails. One route in the book is a
+// birdsong path without a named bird, hence the catch-all.
+export const BIRDSONGS = [
+  { key: 'thrush', label: 'Wood Thrush' },
+  { key: 'cardinal', label: 'Cardinal' },
+  { key: 'grackle', label: 'Grackle' },
+  { key: 'dove', label: 'Mourning Dove' },
+  { key: 'warbler', label: 'Pine Warbler' },
+  { key: 'nightingale', label: 'Nightingale' },
+  { key: 'unnamed', label: 'Unnamed birdsong' },
+];
 
 // Walking speed in km/h. Only the travel time changes with pace -- pace
 // deliberately carries no other mechanical effect (not a published rule).
@@ -213,6 +226,129 @@ export class TravelClock {
     await TravelClock.setClock(next);
     TravelClock.broadcastUpdate();
     return { ...next, daysPassed };
+  }
+
+  // ── Birdsongs ─────────────────────────────────────────────────────────
+
+  /** Birdsongs the party has learned, as a set of keys. */
+  static getKnownBirdsongs() {
+    try {
+      return new Set(game.settings.get('darkest-system', SETTING_BIRDSONGS) || []);
+    } catch (e) {
+      return new Set();
+    }
+  }
+
+  static async setKnownBirdsongs(keys) {
+    await game.settings.set('darkest-system', SETTING_BIRDSONGS, [...keys]);
+    TravelClock.broadcastUpdate();
+  }
+
+  /** Toggle one birdsong on or off. GM-only in practice. */
+  static async toggleBirdsong(key) {
+    const known = TravelClock.getKnownBirdsongs();
+    if (known.has(key)) known.delete(key);
+    else known.add(key);
+    await TravelClock.setKnownBirdsongs(known);
+  }
+
+  /** Whether a given route is currently passable. */
+  static canUseRoute(route, known = null) {
+    if (!route.birdsong) return true;
+    const songs = known ?? TravelClock.getKnownBirdsongs();
+    return songs.has(route.bird ?? 'unnamed');
+  }
+
+  // ── Route finding ─────────────────────────────────────────────────────
+
+  /**
+   * Travel time for a single route, in minutes, at the given pace.
+   *
+   * Routes the book never quantified are charged a small nominal cost
+   * rather than nothing. Treating them as free made the route finder
+   * prefer absurd paths -- a 16-leg detour through the Rootrealm scored
+   * "faster" than an 8-leg walk purely because its legs were unmeasured.
+   * A few minutes each keeps them cheap without making them free.
+   */
+  static UNMEASURED_LEG_MINUTES = 15;
+
+  static routeMinutes(route, pace = 'normal') {
+    if (route.hours) return route.hours * 60 * (PACE_SPEED.normal / PACE_SPEED[pace]);
+    if (route.km) return (route.km / PACE_SPEED[pace]) * 60;
+    // km === 0 means "a few steps" -- genuinely negligible.
+    if (route.km === 0) return 0;
+    return TravelClock.UNMEASURED_LEG_MINUTES;
+  }
+
+  /**
+   * Shortest path between two locations by travel time (Dijkstra).
+   *
+   * The map is a single connected component of 131 locations, so a path
+   * almost always exists -- but only across routes the party can actually
+   * use, which is why birdsong trails are filtered out unless known.
+   *
+   * Returns { legs, minutes } or null if unreachable. This finds the
+   * QUICKEST route, not the one the party knows; whether they'd actually
+   * find it is the GM's call, which is why the result is shown as an
+   * editable plan rather than executed directly.
+   */
+  static findRoute(fromSlug, toSlug, pace = 'normal') {
+    if (!fromSlug || !toSlug || fromSlug === toSlug) return null;
+
+    const known = TravelClock.getKnownBirdsongs();
+    const adjacency = new Map();
+    for (const route of TRAVEL_ROUTES) {
+      if (!route.fromSlug || !route.toSlug) continue;
+      if (!TravelClock.canUseRoute(route, known)) continue;
+      if (!adjacency.has(route.fromSlug)) adjacency.set(route.fromSlug, []);
+      adjacency.get(route.fromSlug).push(route);
+    }
+
+    const best = new Map([[fromSlug, 0]]);
+    const prev = new Map();
+    // A simple priority queue is fine at this size (131 nodes).
+    const queue = [{ slug: fromSlug, cost: 0 }];
+
+    while (queue.length) {
+      queue.sort((a, b) => a.cost - b.cost);
+      const { slug, cost } = queue.shift();
+      if (slug === toSlug) break;
+      if (cost > (best.get(slug) ?? Infinity)) continue;
+
+      for (const route of adjacency.get(slug) ?? []) {
+        const next = cost + TravelClock.routeMinutes(route, pace);
+        if (next < (best.get(route.toSlug) ?? Infinity)) {
+          best.set(route.toSlug, next);
+          prev.set(route.toSlug, route);
+          queue.push({ slug: route.toSlug, cost: next });
+        }
+      }
+    }
+
+    if (!prev.has(toSlug)) return null;
+
+    const legs = [];
+    let cursor = toSlug;
+    while (cursor !== fromSlug) {
+      const route = prev.get(cursor);
+      if (!route) return null;
+      legs.unshift(route);
+      cursor = route.fromSlug;
+    }
+
+    return { legs, minutes: best.get(toSlug) ?? 0 };
+  }
+
+  /** Every location that appears in the route graph, for the pickers. */
+  static allLocations() {
+    const seen = new Map();
+    for (const route of TRAVEL_ROUTES) {
+      if (route.fromSlug && !seen.has(route.fromSlug)) seen.set(route.fromSlug, route.fromTitle);
+      if (route.toSlug && !seen.has(route.toSlug)) seen.set(route.toSlug, route.toTitle);
+    }
+    return [...seen.entries()]
+      .map(([slug, title]) => ({ slug, title: title || slug }))
+      .sort((a, b) => a.title.localeCompare(b.title));
   }
 
   // ── Display helpers ───────────────────────────────────────────────────
@@ -485,6 +621,8 @@ export class TravelTool extends Application {
     }));
     const legTotal = (this._legs ?? []).reduce((sum, l) => sum + l.minutes, 0);
 
+    const known = TravelClock.getKnownBirdsongs();
+
     return {
       day: clock.day,
       time: TravelClock.formatTime(clock.minutes),
@@ -493,12 +631,16 @@ export class TravelTool extends Application {
       daylightHours: state.daylightHours,
       merged: state.merged,
       originName,
+      originSlug,
       hereRoutes,
       hasHereRoutes: hereRoutes.length > 0,
       hasRoutes: TRAVEL_ROUTES.length > 0,
       legs,
       hasLegs: legs.length > 0,
       legTotal: legTotal >= 1 ? TravelClock.formatDuration(legTotal) : null,
+      // Cross-map planning: pick two places, get a route.
+      locations: TravelClock.allLocations(),
+      birdsongs: BIRDSONGS.map(b => ({ ...b, known: known.has(b.key) })),
       paces: Object.keys(PACE_SPEED).map(p => ({
         key: p,
         label: PACE_LABEL[p],
@@ -557,6 +699,16 @@ export class TravelTool extends Application {
 
     html.find('.clock-reset').click(() => this._promptReset());
 
+    // Birdsong toggles -- shared state with the Transgression Tracker.
+    html.find('.birdsong-toggle').click(async (ev) => {
+      await TravelClock.toggleBirdsong(ev.currentTarget.dataset.bird);
+      TravelClock.refresh();
+    });
+
+    // Cross-map planning: work out a route between two arbitrary places.
+    html.find('.plan-find').click(() => this._findRoute(html));
+    html.find('[name="planTo"]').on('change', () => this._findRoute(html));
+
     this._updatePreview(html);
   }
 
@@ -596,6 +748,46 @@ export class TravelTool extends Application {
     }
     const dayNote = days > 0 ? ` (+${days} day${days > 1 ? 's' : ''})` : '';
     preview.text(`${TravelClock.formatDuration(minutes)} — arrive ${arrival}${dayNote}`);
+  }
+
+  /**
+   * Plan a route between two arbitrary locations and load it into the leg
+   * queue, where the GM can edit it before committing.
+   *
+   * This finds the QUICKEST usable path, which is not the same as the one
+   * the party would actually find -- they may not know the way at all.
+   * That's why the result lands in the editable queue rather than
+   * travelling immediately: the tool does the arithmetic, the GM decides
+   * whether the party could plausibly walk it.
+   */
+  _findRoute(html) {
+    const from = html.find('[name="planFrom"]').val();
+    const to = html.find('[name="planTo"]').val();
+    const pace = html.find('[name="pace"]').val() || 'normal';
+
+    if (!from || !to) {
+      ui.notifications.warn('Pick where the party is starting and where they are going.');
+      return;
+    }
+    if (from === to) {
+      ui.notifications.warn('The party is already there.');
+      return;
+    }
+
+    const result = TravelClock.findRoute(from, to, pace);
+    if (!result) {
+      const known = TravelClock.getKnownBirdsongs();
+      ui.notifications.warn(known.size < BIRDSONGS.length
+        ? 'No route the party can currently walk — a secret trail may be needed. Check the birdsongs they know.'
+        : 'No route found between those locations.');
+      return;
+    }
+
+    this._legs = result.legs.map(route => ({
+      route,
+      minutes: TravelClock.routeMinutes(route, pace),
+    }));
+    this.render();
   }
 
   /**
@@ -845,6 +1037,18 @@ export function registerTravelClockSettings() {
     config: false,
     type: Object,
     default: { day: 1, minutes: 8 * 60 },
+  });
+
+  // Shared by the travel tool and the Transgression Tracker -- both read
+  // and write this one setting, so toggling in either place is reflected
+  // in the other.
+  game.settings.register('darkest-system', SETTING_BIRDSONGS, {
+    name: 'Known Birdsongs',
+    hint: 'Which birdsongs the party has learned, unlocking secret trails',
+    scope: 'world',
+    config: false,
+    type: Array,
+    default: [],
   });
 }
 

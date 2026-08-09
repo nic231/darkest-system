@@ -3,6 +3,7 @@
  * GM-only window for tracking transgression levels (Darkest Woods) or
  * house action escalation (Darkest House).
  */
+import { TravelClock, BIRDSONGS } from './travel-clock.mjs';
 
 // Content placeholders — populated by the darkest-woods module if installed,
 // or customised manually by the GM via the tracker UI.
@@ -410,12 +411,18 @@ export class TransgressionTracker extends Application {
       };
     });
 
+    // Birdsongs are campaign progress as much as a travel setting, so they
+    // appear here too. Both this and the travel tool read/write the same
+    // world setting, so toggling in either place updates the other.
+    const knownSongs = TravelClock.getKnownBirdsongs();
+
     return {
       isHouseMode: false,
       isEmpty: regions.length === 0,
       regions,
       currentRegion: currentRegion ? ALL[currentRegion]?.name : 'None',
       currentRegionSlug: currentRegion,
+      birdsongs: BIRDSONGS.map(b => ({ ...b, known: knownSongs.has(b.key) })),
       witchOptions: Object.entries(ALL).map(([slug, data]) => ({
         slug,
         name: data.name,
@@ -455,6 +462,14 @@ export class TransgressionTracker extends Application {
     }
 
     const isHouseMode = TransgressionTracker.getGameMode() === 'darkest-house';
+
+    // Birdsong toggles -- same world setting the travel tool uses, so a
+    // change here immediately opens/closes those secret trails there.
+    html.find('.birdsong-toggle').click(async (ev) => {
+      await TravelClock.toggleBirdsong(ev.currentTarget.dataset.bird);
+      TravelClock.refresh();
+      this.render();
+    });
 
     // Increment buttons (work in both modes)
     html.find('.increment-btn').click(async (ev) => {

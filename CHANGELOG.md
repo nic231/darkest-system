@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.15.0-alpha (2026-08-09)
+
+**Cross-map journey planning.** Later in a campaign the party will stand somewhere and decide to go back to a place three regions away — planning that leg by leg was unusable.
+
+- **Pick two locations, get a route.** A From/To pair (From defaults to where the party is) runs a shortest-path search across all 131 locations and loads the result into the leg queue as an editable plan. It finds the *quickest usable* route, which is deliberately not the same as the route the party would find — whether they know the way is a call only the GM can make, so the plan lands in the queue to accept, trim, or discard rather than being walked automatically.
+- **Birdsong trails are gated.** The book's 9 secret trails are now tagged in the route data (via the source's own `iconType`, which marks them far more reliably than the label text) and excluded from route-finding until the party learns the relevant birdsong. This has real teeth: Baba Yaga's Hut is genuinely unreachable until a birdsong opens the way, and the tool says so rather than silently failing.
+- **Birdsong toggles appear in both the travel tool and the Transgression Tracker**, backed by one shared world setting — toggling in either place updates the other, since knowing a birdsong is campaign progress as much as a travel option.
+- Routes the book never quantified are now charged a small nominal cost in pathfinding rather than counting as free. Treating them as zero made the finder prefer absurd paths — a 16-leg detour through the Rootrealm scored "faster" than an 8-leg walk purely because its legs were unmeasured.
+
 ## 0.14.0-alpha (2026-08-09)
 
 - **Multi-leg journeys.** The party often pushes through several locations in one go, which previously meant a separate trip, chat message, and scene change for each. You can now queue legs with **Add leg** and walk them as one journey: a single message, a single arrival at the far end, and the clock advanced by the whole duration. The route dropdown follows the queue, so each pick continues from the last stop rather than from where you started. Only the first leg is described in chat — naming every turn would spell out the route the party is still discovering.
