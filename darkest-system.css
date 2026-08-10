@@ -5288,3 +5288,68 @@
 .transgression-damped .damped-reason {
   opacity: 0.8;
 }
+
+/* ============================================================
+   NPC Tracker — quick creature creation
+   ============================================================ */
+
+.npc-tracker .quick-create {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.npc-tracker .quick-create-head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--darkest-accent-light, #b9a6e0);
+  margin-bottom: 6px;
+}
+
+.npc-tracker .quick-create-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.npc-tracker .quick-create-row input[type="text"] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.npc-tracker .quick-field {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  color: var(--darkest-text-muted, #9a9186);
+}
+
+.npc-tracker .quick-field input {
+  width: 56px;
+  text-align: center;
+}
+
+.npc-tracker .quick-create-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Spells out what a Rating actually means before you commit to it. */
+.npc-tracker .quick-create-preview {
+  margin-top: 6px;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--darkest-text-muted, #9a9186);
+  line-height: 1.4;
+}
+
+.npc-tracker .quick-clear-btn {
+  margin-top: 4px;
+  font-size: 11px;
+  width: 100%;
+}

@@ -44,11 +44,41 @@
   </div>
   {{/if}}
 
+  {{!-- Quick-create: a creature is just a name and a Rating, so this is the
+        whole of it. Rating drives the defeat threshold, the instant-kill
+        line, and the number to beat. --}}
+  <div class="quick-create">
+    <div class="quick-create-head">
+      <i class="fas fa-wand-sparkles"></i> Quick creature
+    </div>
+    <div class="quick-create-row">
+      <input type="text" name="quickName" placeholder="Wolf" maxlength="40" />
+      <label class="quick-field">
+        <span>Rating</span>
+        <input type="number" name="quickRating" value="4" min="1" max="10" step="1" />
+      </label>
+      <label class="quick-field">
+        <span>How many</span>
+        <input type="number" name="quickCount" value="1" min="1" max="{{maxSlots}}" step="1" />
+      </label>
+      <button type="button" class="quick-create-btn" data-tooltip="Create and start tracking">
+        <i class="fas fa-plus"></i> Add
+      </button>
+    </div>
+    <div class="quick-create-preview"></div>
+  </div>
+
   <footer class="tracker-footer">
     {{#if canAdd}}
     <p class="tracker-hint"><i class="fas fa-hand-point-up"></i> <span>{{localize "DARKEST.NPC.TrackerHint"}}</span></p>
     {{else}}
     <p class="tracker-hint tracker-full"><i class="fas fa-exclamation-triangle"></i> <span>{{localize "DARKEST.NPC.TrackerFull"}}</span></p>
+    {{/if}}
+    {{#if spentQuick}}
+    <button type="button" class="quick-clear-btn"
+            data-tooltip="Delete quick NPCs that are no longer in the tracker. Never touches anything you made yourself.">
+      <i class="fas fa-broom"></i> Clear {{spentQuick}} spent quick NPC{{#unless (eq spentQuick 1)}}s{{/unless}}
+    </button>
     {{/if}}
   </footer>
 

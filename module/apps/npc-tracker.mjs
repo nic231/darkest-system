@@ -9,8 +9,15 @@
  * roll produces a wound (via the darkestSystem.damageDealt hook).
  */
 
-const MAX_SLOTS = 6;
+// Raised from 6 when quick-create gained a count field: a pack of three
+// wolves plus a witch and a couple of strays used to overflow immediately.
+const MAX_SLOTS = 12;
 const SETTING_KEY = 'npcTracker';
+
+// Scratch NPCs made by the quick-create button live here, flagged so they
+// can be cleared in bulk without touching anything the GM built by hand.
+const QUICK_FOLDER = 'Quick NPCs';
+const QUICK_FLAG = 'quickNpc';
 
 export class NpcTracker extends Application {
 
@@ -50,20 +57,116 @@ export class NpcTracker extends Application {
   // ── Static operations ─────────────────────────────────────────────────────
 
   static async addNpc(actorId) {
+    return NpcTracker.addNpcs([actorId]);
+  }
+
+  /**
+   * Add several at once in a single write.
+   *
+   * getData_()/setData() is a read-modify-write on one setting, so adding a
+   * pack one call at a time would either need careful awaiting or lose
+   * slots. Batching sidesteps it entirely.
+   */
+  static async addNpcs(actorIds) {
     const data = NpcTracker.getData_();
-    if (data.slots.length >= MAX_SLOTS) {
-      ui.notifications.warn('NPC Tracker is full (6 slots). Remove an NPC first.');
+    const room = MAX_SLOTS - data.slots.length;
+    if (room <= 0) {
+      ui.notifications.warn(`NPC Tracker is full (${MAX_SLOTS} slots). Remove an NPC first.`);
       return;
     }
-    // Prevent duplicates
-    if (data.slots.find(s => s.actorId === actorId)) {
-      ui.notifications.info('That NPC is already in the tracker.');
-      return;
+    // Duplicates are allowed on purpose. Three wolves are three separate
+    // creatures with their own wound totals, and blocking the second one
+    // made a pack impossible to track at all. Quick-create numbers them
+    // ("Wolf 1", "Wolf 2") so the slots stay tellable apart; dragging the
+    // same actor in twice is the GM's call.
+    for (const actorId of actorIds.slice(0, room)) {
+      data.slots.push({ actorId, woundTotal: 0, defeated: false });
     }
-    data.slots.push({ actorId, woundTotal: 0, defeated: false });
-    // Auto-select if first slot
-    if (data.slots.length === 1) data.activeSlot = 0;
+    // Auto-select the first one added, if nothing was selected before.
+    if (data.activeSlot === null && data.slots.length) data.activeSlot = 0;
     await NpcTracker.setData(data);
+    NpcTracker._refresh();
+  }
+
+  /**
+   * Make N throwaway creatures of a given Rating and track them.
+   *
+   * Rating is the only number that matters for a creature in this system --
+   * it sets the defeat threshold (Rating x 3), the instant-kill line
+   * (Rating + 3), and the target number to hit it. So "a creature of level
+   * 4" is genuinely just a name and a 4, and everything else follows.
+   *
+   * These are real Actors rather than bare slot data, because the tracker
+   * resolves slots through game.actors and because a real Actor can be
+   * targeted, dropped on the canvas, and opened. They're foldered and
+   * flagged so they can be swept up afterwards.
+   */
+  static async quickCreate({ name, rating, count = 1 }) {
+    const clean = (name || '').trim() || 'Creature';
+    // Blank/absent falls back to the default; anything typed is clamped.
+    // Not `Number(x) || default` -- a typed 0 is falsy and would silently
+    // become a Rating 3 creature instead of clamping to 1. And not
+    // Number.isFinite alone -- Number('') and Number(null) are both 0, so an
+    // empty box would clamp to 1 rather than take the default.
+    const num = (v, dflt) => {
+      if (v === null || v === undefined || String(v).trim() === '') return dflt;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : dflt;
+    };
+    const r = Math.max(1, Math.min(10, Math.round(num(rating, 3))));
+    const n = Math.max(1, Math.min(MAX_SLOTS, Math.round(num(count, 1))));
+
+    const data = NpcTracker.getData_();
+    const room = MAX_SLOTS - data.slots.length;
+    if (room <= 0) {
+      ui.notifications.warn(`NPC Tracker is full (${MAX_SLOTS} slots). Remove something first.`);
+      return;
+    }
+    const making = Math.min(n, room);
+    if (making < n) {
+      ui.notifications.warn(`Only room for ${making} more -- creating ${making} of ${n}.`);
+    }
+
+    let folder = game.folders.find(f => f.type === 'Actor' && f.name === QUICK_FOLDER);
+    if (!folder) {
+      folder = await Folder.create({ name: QUICK_FOLDER, type: 'Actor', color: '#6a3a3a' });
+    }
+
+    // Numbered only when there's more than one, so a lone creature stays
+    // "Wolf" rather than the faintly silly "Wolf 1".
+    const payloads = Array.from({ length: making }, (_, i) => ({
+      name: making > 1 ? `${clean} ${i + 1}` : clean,
+      type: 'npc',
+      folder: folder.id,
+      system: { rating: r },
+      flags: { 'darkest-system': { [QUICK_FLAG]: true } },
+    }));
+
+    const actors = await Actor.createDocuments(payloads);
+    await NpcTracker.addNpcs(actors.map(a => a.id));
+
+    ui.notifications.info(
+      `Added ${making} x ${clean} (Rating ${r}, defeated at ${r * 3} wound rating).`
+    );
+  }
+
+  /**
+   * Delete quick-created actors that are no longer in the tracker.
+   *
+   * Only ones this tool made (flagged) and only ones not currently tracked,
+   * so clearing mid-fight can't delete something still on screen.
+   */
+  static async clearSpentQuickNpcs() {
+    const tracked = new Set(NpcTracker.getData_().slots.map(s => s.actorId));
+    const spent = game.actors.filter(a =>
+      a.getFlag('darkest-system', QUICK_FLAG) && !tracked.has(a.id)
+    );
+    if (!spent.length) {
+      ui.notifications.info('No spent quick NPCs to clear.');
+      return;
+    }
+    await Actor.deleteDocuments(spent.map(a => a.id));
+    ui.notifications.info(`Deleted ${spent.length} quick NPC${spent.length === 1 ? '' : 's'}.`);
     NpcTracker._refresh();
   }
 
@@ -200,11 +303,18 @@ export class NpcTracker extends Application {
       };
     }).filter(Boolean);
 
+    const tracked = new Set(data.slots.map(s => s.actorId));
+    const spentQuick = game.actors.filter(a =>
+      a.getFlag('darkest-system', QUICK_FLAG) && !tracked.has(a.id)
+    ).length;
+
     return {
       slots,
       activeSlot: data.activeSlot,
       hasSlots: slots.length > 0,
-      canAdd: data.slots.length < MAX_SLOTS
+      canAdd: data.slots.length < MAX_SLOTS,
+      maxSlots: MAX_SLOTS,
+      spentQuick
     };
   }
 
@@ -212,6 +322,38 @@ export class NpcTracker extends Application {
     super.activateListeners(html);
 
     // Select active NPC
+    // Quick-create. Show what the numbers mean before committing, since
+    // "Rating 4" on its own doesn't tell you much at a glance.
+    const updatePreview = () => {
+      const rawR = parseInt(html.find('[name="quickRating"]').val(), 10);
+      const rawN = parseInt(html.find('[name="quickCount"]').val(), 10);
+      const r = Math.max(1, Math.min(10, Number.isFinite(rawR) ? rawR : 3));
+      const n = Math.max(1, Number.isFinite(rawN) ? rawN : 1);
+      html.find('.quick-create-preview').text(
+        `${n > 1 ? `${n} creatures, each ` : ''}defeated at ${r * 3} total wound rating · `
+        + `a single wound of ${r + 3}+ kills outright · rolls against them target ${7 + r}`
+      );
+    };
+    html.find('[name="quickRating"], [name="quickCount"]').on('input change', updatePreview);
+    updatePreview();
+
+    const submitQuick = async () => {
+      await NpcTracker.quickCreate({
+        name: html.find('[name="quickName"]').val(),
+        rating: html.find('[name="quickRating"]').val(),
+        count: html.find('[name="quickCount"]').val(),
+      });
+    };
+    html.find('.quick-create-btn').click(submitQuick);
+    // Enter in the name box is the fast path mid-combat.
+    html.find('[name="quickName"]').on('keydown', (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); submitQuick(); }
+    });
+
+    html.find('.quick-clear-btn').click(async () => {
+      await NpcTracker.clearSpentQuickNpcs();
+    });
+
     html.find('.slot-select-btn').click(async (ev) => {
       const index = parseInt(ev.currentTarget.dataset.index);
       await NpcTracker.setActive(index);

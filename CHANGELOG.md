@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.20.0-alpha (2026-08-10)
+
+**Quick creatures in the NPC Tracker.** Type a name and a Rating, hit Add, and the creature is created and tracked. Rating is the only number a creature needs in this system — it sets the defeat threshold (Rating × 3), the instant-kill line (Rating + 3), and the number to hit it — so the form shows all three before you commit.
+
+- **Counts.** "Wolf ×3" creates Wolf 1, Wolf 2 and Wolf 3 as separate creatures with their own wound totals. A single creature stays unnumbered.
+- Quick creatures are real Actors, so they can still be targeted, dropped on the canvas, and opened. They go in a **Quick NPCs** folder and are flagged, so a **Clear spent** button in the tracker footer sweeps up the ones no longer being tracked — and never touches anything you built yourself.
+- **The tracker no longer blocks duplicates.** It used to refuse to add an actor already in a slot, which made a pack of wolves impossible to track. Three wolves are three creatures with three wound totals.
+- **Slots raised from 6 to 12**, since a pack plus a witch overflowed the old cap immediately.
+- Adding several NPCs is now a single write rather than one per creature.
+
 ## 0.19.1-alpha (2026-08-10)
 
 Bug fixes from a full review of the 0.18/0.19 changes. Three of these were data-loss or double-counting bugs that would have shown up in play.
