@@ -1,3 +1,5 @@
+import { SessionLog } from '../apps/session-log.mjs';
+
 /** The Darkest Die's distinctive purple, shared by every client. */
 export const DARKEST_DIE_APPEARANCE = {
   colorset: 'custom',
@@ -366,6 +368,30 @@ export class DarkestRoll extends Roll {
             speaker: messageData.speaker,
           });
         }
+      }
+    }
+
+    // Record the roll in the GM-only session log. Players roll most of the
+    // time and the log is a GM-scoped world setting they can't write, so
+    // delegate to a GM client (same pattern as postGmWhisper below).
+    if (!this.isDamageRoll) {
+      const speaker = messageData.speaker || ChatMessage.getSpeaker();
+      const entry = {
+        who: speaker.alias || game.user.name,
+        characterRating: this.characterRating,
+        taskRating: this.taskRating,
+        target: this.targetNumber,
+        total: this._total,
+        darkestDie: this.darkestDieResult,
+        outcome: this.isSpecialSuccess ? 'Special Success'
+          : this.isSuccess ? 'Success'
+          : this.isPartialSuccess ? 'Partial Success'
+          : 'Failure',
+      };
+      if (game.user.isGM) {
+        SessionLog.recordRoll(entry);
+      } else {
+        game.socket.emit('system.darkest-system', { type: 'logRoll', entry });
       }
     }
 

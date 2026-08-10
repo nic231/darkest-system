@@ -25,7 +25,10 @@
 
   <div class="house-level-dots">
     {{#each levelDots}}
-    <span class="level-dot {{#if filled}}filled{{/if}}" title="Action {{index}}"></span>
+    <span class="level-dot {{#if filled}}filled{{/if}}"
+          data-tooltip="Action {{index}}{{#if event}} — {{event}}{{/if}}"
+          data-tooltip-class="darkest-tooltip"
+          data-tooltip-direction="UP"></span>
     {{/each}}
   </div>
 
@@ -97,10 +100,15 @@
         <div class="transgression-level">
           <div class="level-dots">
             {{#each levelDots}}
+            {{!-- Tooltip text is plain, not HTML: Handlebars escapes the
+                  event text anyway, and Foundry renders data-tooltip as
+                  text unless explicitly told otherwise. --}}
             <span class="level-dot {{#if filled}}filled{{/if}}"
                   data-region="{{../slug}}"
                   data-level="{{index}}"
-                  title="Level {{index}}"></span>
+                  data-tooltip="Level {{index}}{{#if event}} — {{event}}{{/if}}"
+                  data-tooltip-class="darkest-tooltip"
+                  data-tooltip-direction="UP"></span>
             {{/each}}
           </div>
           <div class="loop-pips">

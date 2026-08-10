@@ -94,6 +94,7 @@
 
   <div class="travel-skips">
     <span class="travel-skips-label">Or just pass time:</span>
+    <button type="button" class="time-skip" data-minutes="15">15m</button>
     <button type="button" class="time-skip" data-minutes="30">30m</button>
     <button type="button" class="time-skip" data-minutes="60">1h</button>
     <button type="button" class="time-skip" data-minutes="240">4h</button>
@@ -135,9 +136,17 @@
     <div class="birdsongs-head">Birdsongs known <span class="birdsongs-hint">(opens secret trails)</span></div>
     <div class="birdsong-list">
       {{#each birdsongs}}
-      <button type="button" class="birdsong-toggle{{#if known}} known{{/if}}" data-bird="{{key}}">
-        <i class="fas {{#if known}}fa-feather{{else}}fa-feather-pointed{{/if}}"></i> {{label}}
-      </button>
+      <span class="birdsong-item">
+        <button type="button" class="birdsong-toggle{{#if known}} known{{/if}}" data-bird="{{key}}">
+          <i class="fas {{#if known}}fa-feather{{else}}fa-feather-pointed{{/if}}"></i> {{label}}
+        </button>
+        {{#if hasAudio}}
+        <button type="button" class="birdsong-play" data-bird="{{key}}"
+                data-tooltip="Play this birdsong for everyone">
+          <i class="fas fa-volume-high"></i>
+        </button>
+        {{/if}}
+      </span>
       {{/each}}
     </div>
   </div>

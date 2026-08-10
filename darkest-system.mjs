@@ -29,7 +29,9 @@ import {
   renderDial,
   registerTravelClockSettings,
   registerTravelClockHooks,
+  showTransitionVeil,
 } from './module/apps/travel-clock.mjs';
+import { SessionLog, registerSessionLog } from './module/apps/session-log.mjs';
 
 /* ----------------------------------------
    Initialize System
@@ -80,6 +82,8 @@ Hooks.once('init', function() {
 
   // Register NPC tracker settings
   registerNpcTrackerSettings();
+
+  registerSessionLog();
 
   // Register travel clock settings
   registerTravelClockSettings();
@@ -212,6 +216,7 @@ async function _preloadHandlebarsTemplates() {
     'systems/darkest-system/templates/apps/doom-tally.hbs',
     'systems/darkest-system/templates/apps/npc-tracker.hbs',
     'systems/darkest-system/templates/apps/travel-tool.hbs',
+    'systems/darkest-system/templates/apps/session-log.hbs',
 
     // Dialogs - NOT preloaded due to inline scripts
     // They are rendered dynamically via renderTemplate() instead
@@ -237,6 +242,7 @@ Hooks.once('ready', function() {
   game.darkestSystem.TransgressionTracker = TransgressionTracker;
   game.darkestSystem.DoomTally = DoomTally;
   game.darkestSystem.NpcTracker = NpcTracker;
+  game.darkestSystem.SessionLog = SessionLog;
   game.darkestSystem.TravelTool = TravelTool;
   game.darkestSystem.TravelClock = TravelClock;
 
@@ -293,6 +299,18 @@ Hooks.once('ready', function() {
         });
         break;
       }
+
+      case 'travelTransition':
+        // Fade every client's screen for a travel transition. Players see a
+        // hard canvas swap when scene.activate() reaches them; this covers it.
+        showTransitionVeil(data.phase);
+        break;
+
+      case 'logRoll':
+        // Players can't write the GM-scoped session log, so their rolls
+        // arrive here for a GM client to record.
+        if (game.user.isGM) SessionLog.recordRoll(data.entry);
+        break;
 
       case 'postGmWhisper':
         // A whispered ChatMessage is always visible to its own author, no
@@ -413,6 +431,20 @@ Hooks.on('getSceneControlButtons', (controls) => {
       const existing = Object.values(ui.windows).find(w => w.constructor.name === 'TravelTool');
       if (existing) existing.bringToTop();
       else new TravelTool().render(true);
+    }
+  };
+
+  tokenTools.sessionLog = {
+    name: 'sessionLog',
+    title: 'Session Log',
+    icon: 'fa-solid fa-scroll',
+    order: toolCount + 4,
+    button: true,
+    visible: true,
+    onChange: () => {
+      const existing = Object.values(ui.windows).find(w => w.constructor.name === 'SessionLog');
+      if (existing) existing.bringToTop();
+      else new SessionLog().render(true);
     }
   };
 });

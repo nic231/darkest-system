@@ -3016,6 +3016,18 @@
   border-color: var(--darkest-accent-light);
 }
 
+/* Transgression events run to ~200 characters. Foundry's tooltip sizes to
+   its content, so without a cap a level's description renders as one line
+   far wider than the window. `.darkest-tooltip` is applied via
+   data-tooltip-class on the dots. */
+#tooltip.darkest-tooltip,
+.tooltip.darkest-tooltip {
+  max-width: 340px;
+  text-align: left;
+  line-height: 1.35;
+  white-space: normal;
+}
+
 .transgression-tracker .level-dot.filled {
   background: var(--darkest-purple);
   border-color: var(--darkest-purple);
@@ -4901,4 +4913,321 @@
   font-size: 11px;
   font-style: italic;
   color: var(--darkest-text-muted, #7a7268);
+}
+
+/* ============================================================
+   Session Log — GM-only record of movement and dice
+   ============================================================ */
+
+.session-log-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 8px;
+}
+
+.session-log-container .log-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--darkest-border, #4a4038);
+  flex: 0 0 auto;
+}
+
+.session-log-container .log-tabs .item {
+  padding: 6px 12px;
+  cursor: pointer;
+  color: var(--darkest-text-muted, #9a9186);
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.session-log-container .log-tabs .item.active {
+  color: var(--darkest-accent-light, #b9a6e0);
+  border-bottom-color: var(--darkest-purple, #4e3f6e);
+}
+
+.session-log-container .log-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.session-log-container .log-empty {
+  color: var(--darkest-text-muted, #9a9186);
+  font-style: italic;
+  text-align: center;
+  padding: 28px 16px;
+  line-height: 1.5;
+}
+
+.session-log-container .log-empty i {
+  display: block;
+  font-size: 26px;
+  margin-bottom: 10px;
+  opacity: 0.5;
+}
+
+/* --- the path, the bit you draw the map from --- */
+.session-log-container .log-route {
+  background: rgba(78, 63, 110, 0.12);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+
+.session-log-container .log-route-head {
+  font-weight: bold;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--darkest-accent-light, #b9a6e0);
+  display: flex;
+  justify-content: space-between;
+}
+
+.session-log-container .log-route-count {
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--darkest-text-muted, #9a9186);
+}
+
+.session-log-container .log-route-chain {
+  margin-top: 6px;
+  line-height: 1.7;
+  font-size: 13px;
+}
+
+.session-log-container .log-route-revisit {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--darkest-text-muted, #9a9186);
+}
+
+.session-log-container .log-route-warn {
+  color: #c9a227;
+}
+
+/* --- tables --- */
+.session-log-container .log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.session-log-container .log-table th {
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--darkest-text-muted, #9a9186);
+  border-bottom: 1px solid var(--darkest-border, #4a4038);
+  padding: 4px 6px;
+  position: sticky;
+  top: 0;
+  background: var(--darkest-bg-dark, #1c1a17);
+}
+
+.session-log-container .log-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid rgba(74, 64, 56, 0.35);
+  vertical-align: top;
+}
+
+.session-log-container .log-to {
+  font-weight: bold;
+}
+
+.session-log-container .log-dim {
+  color: var(--darkest-text-muted, #9a9186);
+}
+
+.session-log-container .log-success { color: #7fb069; }
+.session-log-container .log-failure { color: #c56b5c; }
+
+.session-log-container .log-level {
+  font-weight: bold;
+  color: var(--darkest-accent-light, #b9a6e0);
+}
+
+/* --- stat tiles --- */
+.session-log-container .log-stat-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.session-log-container .log-stat {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.session-log-container .log-stat-value {
+  font-size: 19px;
+  font-weight: bold;
+  line-height: 1.1;
+}
+
+.session-log-container .log-stat-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--darkest-text-muted, #9a9186);
+  margin-top: 2px;
+}
+
+.session-log-container .log-stat.success .log-stat-value { color: #7fb069; }
+.session-log-container .log-stat.partial .log-stat-value { color: #c9a227; }
+.session-log-container .log-stat.failure .log-stat-value { color: #c56b5c; }
+.session-log-container .log-stat.darkest .log-stat-value { color: var(--darkest-accent-light, #b9a6e0); }
+
+.session-log-container .log-section-head {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--darkest-accent-light, #b9a6e0);
+  border-bottom: 1px solid var(--darkest-border, #4a4038);
+  padding-bottom: 3px;
+}
+
+/* --- Darkest Die distribution --- */
+.session-log-container .log-dd-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+  font-size: 12px;
+}
+
+.session-log-container .log-dd-face {
+  width: 14px;
+  text-align: center;
+  color: var(--darkest-text-muted, #9a9186);
+}
+
+.session-log-container .log-dd-row.is-one .log-dd-face {
+  color: var(--darkest-accent-light, #b9a6e0);
+  font-weight: bold;
+}
+
+.session-log-container .log-dd-bar {
+  flex: 1;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.session-log-container .log-dd-fill {
+  display: block;
+  height: 100%;
+  background: var(--darkest-purple, #4e3f6e);
+}
+
+.session-log-container .log-dd-row.is-one .log-dd-fill {
+  background: var(--darkest-accent-light, #b9a6e0);
+}
+
+.session-log-container .log-dd-count {
+  width: 24px;
+  text-align: right;
+  color: var(--darkest-text-muted, #9a9186);
+}
+
+/* --- footer --- */
+.session-log-container .log-footer {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  padding-top: 6px;
+  border-top: 1px solid var(--darkest-border, #4a4038);
+}
+
+/* ============================================================
+   Travel transition — the veil between setting out and arriving
+   ============================================================ */
+
+/* Covers the hard canvas swap players see when scene.activate() reaches
+   them. pointer-events: none is deliberate -- if a socket message is ever
+   dropped, a stuck veil must never be able to block input. The failsafe in
+   showTransitionVeil() removes it after 5s regardless. */
+#darkest-transition-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #05040a;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 800ms ease-in-out;
+}
+
+#darkest-transition-veil.visible {
+  opacity: 1;
+}
+
+/* The arrival card. Same shape as the departure card but marked out with a
+   warmer edge, so a glance at chat distinguishes "they set out" from "they
+   got there". */
+.travel-chat-arrival {
+  border-left-color: #8a6a3a !important;
+}
+
+.travel-chat-arrival .travel-chat-head {
+  color: #d8a05a;
+}
+
+/* Departure card has no time on it now -- the clock rides on arrival -- so
+   its body is usually absent. Give the flavour room to breathe. */
+.travel-chat-body {
+  margin-top: 4px;
+}
+
+/* The day the sun stops rising. Happens once per campaign, so it is allowed
+   to look like more than a log line. */
+.travel-chat-sunless {
+  border-left-color: #7a8fb8 !important;
+  background: linear-gradient(to right, rgba(30, 34, 52, 0.5), transparent);
+  padding: 10px 12px !important;
+}
+
+.travel-chat-sunless .travel-chat-head {
+  color: #9fb4d8;
+  font-size: 15px;
+}
+
+.travel-chat-sunless .travel-chat-flavour {
+  border-left-color: #4a5878 !important;
+  color: #8fa0c0 !important;
+}
+
+/* Birdsong play button, paired with its toggle in the travel tool. */
+.birdsong-item {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.birdsong-item .birdsong-play {
+  flex: 0 0 auto;
+  width: 26px;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--darkest-text-muted, #9a9186);
+  background: var(--darkest-bg-medium, #2a2a2a);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 3px;
+}
+
+.birdsong-item .birdsong-play:hover {
+  color: var(--darkest-accent-light, #b9a6e0);
+  border-color: var(--darkest-accent-light, #b9a6e0);
 }

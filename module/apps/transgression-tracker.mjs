@@ -4,6 +4,7 @@
  * house action escalation (Darkest House).
  */
 import { TravelClock, BIRDSONGS } from './travel-clock.mjs';
+import { SessionLog } from './session-log.mjs';
 
 // Content placeholders — populated by the darkest-woods module if installed,
 // or customised manually by the GM via the tracker UI.
@@ -246,6 +247,11 @@ export class TransgressionTracker extends Application {
     const antagonist = ALL[regionSlug].witch || ALL[regionSlug].name;
 
     region.level++;
+    SessionLog.recordTransgression({
+      region: ALL[regionSlug].name,
+      level: region.level,
+      witch: ALL[regionSlug].witch,
+    });
     if (region.level > 10) {
       region.level = 1;
       region.loops++;
@@ -360,7 +366,8 @@ export class TransgressionTracker extends Application {
         nextAction: level < 10 ? HOUSE_ACTIONS[level] : null,
         levelDots: Array.from({ length: 10 }, (_, i) => ({
           index: i + 1,
-          filled: i < level
+          filled: i < level,
+          event: HOUSE_ACTIONS[i] || null
         }))
       };
     }
@@ -394,9 +401,13 @@ export class TransgressionTracker extends Application {
         isWarning: transgression.loops >= 2,
         isCritical: transgression.loops >= 3,
         isCustom: !WITCHES[slug],
+        // Each dot carries its own level's event text, so the GM can read
+        // what a level does by hovering it rather than opening the events
+        // panel and counting rows.
         levelDots: Array.from({ length: 10 }, (_, i) => ({
           index: i + 1,
-          filled: i < transgression.level
+          filled: i < transgression.level,
+          event: (data.transgressionEvents || [])[i] || null
         })),
         loopPips: Array.from({ length: 3 }, (_, i) => ({
           filled: i < transgression.loops,

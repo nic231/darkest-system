@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.18.0-alpha (2026-08-10)
+
+**Arrivals.** Travelling is now two beats instead of one. The party sets out, the screen holds for a moment, the scene changes, and then they arrive — with a description of where they've ended up and the time it now is. Previously the chat message landed and the canvas swapped underneath it, which read as a jump cut.
+
+- **131 per-location arrival lines**, written from the book's own read-aloud text. They never name the destination, never pre-empt a reveal, and stop short of what you're about to describe yourself. 31 locations that *are* their own surprise (Another Rake, the Upper Sanctuary, Lester) deliberately fall back to a generic regional line instead.
+- Arrival text can be turned off entirely in system settings; the transition pause is configurable (default 1.5s, 0 disables it and the fade).
+- **A fade on every screen** during the transition, so players don't watch a hard canvas swap. It removes itself after 5s no matter what, and never blocks input — a dropped socket message can't strand anyone in the dark.
+- The clock moved from the departure message to the arrival one. It used to announce "it is now 16:40" before the party had actually got anywhere.
+
+**Fix: 38 location scenes had no region flag** — the whole of the Road, the Ghost Caves, the Rootrealm and the Temple of the Moon. The build script only assigned regions to areas that got their own folder, and those four never did. Consequences, all now fixed:
+
+- **"Endless Night" on the Road had never once displayed.** The Road's fixed-time region is a signature piece of the setting and the flag it keys off was never set.
+- The driving pace flagged itself as unavailable *on the actual road*.
+- Those 38 locations produced no atmospheric travel line at all, and six hand-written Road lines were dead code.
+
+**Also:**
+
+- New flavour tables for the Ghost Caves, the Rootrealm, the Temple of the Moon, and walking (as opposed to boating) in a Town Called Dismal.
+- Atmospheric lines no longer repeat back-to-back. With six lines per region, uniform random hit the same one about one travel in six, which reads as a bug rather than as weather.
+- **The day the sun stops rising** now gets its own public message. The exact daylight hours stay GM-only — the characters can't measure them — but a dawn that doesn't come is a fact anyone would notice, and it only happens once.
+- **Birdsong play buttons** in the travel tool, next to each toggle. The recordings ship inside location playlists; the button plays one to the whole table. Hidden when that region hasn't been imported.
+- New hooks `darkestSystem.travelBegin` and `darkestSystem.travelArrive`, and travel chat messages now carry `flags['darkest-system'].travel` so they can be identified without sniffing the DOM.
+
 ## 0.17.0-alpha (2026-08-09)
 
 **Pirogues.** The Dismal's residents keep flat-bottomed swamp boats moored at the pier, and the Flood has a raft by the Bosque. "By pirogue" is now a travel pace alongside walking and driving.

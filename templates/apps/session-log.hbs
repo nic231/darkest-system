@@ -1,0 +1,168 @@
+<div class="session-log-container">
+
+  <nav class="log-tabs">
+    <a class="item" data-tab="movement"><i class="fas fa-map-signs"></i> Movement{{#if moveCount}} ({{moveCount}}){{/if}}</a>
+    <a class="item" data-tab="dice"><i class="fas fa-dice-d6"></i> Dice{{#if rollCount}} ({{rollCount}}){{/if}}</a>
+    <a class="item" data-tab="transgressions"><i class="fas fa-eye"></i> Transgressions{{#if transgressionCount}} ({{transgressionCount}}){{/if}}</a>
+  </nav>
+
+  <div class="log-body">
+
+    {{!-- ── Movement ─────────────────────────────────────────────── --}}
+    <div class="tab" data-tab="movement">
+      {{#if moves.length}}
+
+      <div class="log-route">
+        <div class="log-route-head">
+          Path walked
+          <span class="log-route-count">{{route.distinct}} locations</span>
+        </div>
+        <div class="log-route-chain">{{route.chainText}}</div>
+        {{#if route.revisited.length}}
+        <div class="log-route-revisit">
+          <i class="fas fa-rotate-left"></i>
+          Revisited: {{#each route.revisited}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+          <span class="log-route-warn">— retracing on consecutive days is a transgression</span>
+        </div>
+        {{/if}}
+      </div>
+
+      <table class="log-table">
+        <thead>
+          <tr><th>From</th><th>To</th><th>Route</th><th>Took</th><th>Game time</th></tr>
+        </thead>
+        <tbody>
+          {{#each moves}}
+          <tr>
+            <td>{{from}}</td>
+            <td class="log-to">{{to}}</td>
+            <td class="log-dim">{{label}}{{#if pace}} <em>({{pace}})</em>{{/if}}</td>
+            <td>{{duration}}</td>
+            <td class="log-dim">{{gameTime}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      {{else}}
+      <p class="log-empty">
+        <i class="fas fa-map-signs"></i>
+        No movement recorded yet. Travel with the Travel &amp; Time tool and the
+        party's route builds up here — with the real location names, which the
+        public chat messages deliberately leave out.
+      </p>
+      {{/if}}
+    </div>
+
+    {{!-- ── Dice ─────────────────────────────────────────────────── --}}
+    <div class="tab" data-tab="dice">
+      {{#if stats}}
+
+      <div class="log-stat-row">
+        <div class="log-stat">
+          <div class="log-stat-value">{{stats.overall.total}}</div>
+          <div class="log-stat-label">rolls</div>
+        </div>
+        <div class="log-stat success">
+          <div class="log-stat-value">{{stats.overall.successPct}}%</div>
+          <div class="log-stat-label">success</div>
+        </div>
+        <div class="log-stat partial">
+          <div class="log-stat-value">{{stats.overall.partialPct}}%</div>
+          <div class="log-stat-label">partial</div>
+        </div>
+        <div class="log-stat failure">
+          <div class="log-stat-value">{{stats.overall.failurePct}}%</div>
+          <div class="log-stat-label">failure</div>
+        </div>
+        <div class="log-stat darkest">
+          <div class="log-stat-value">{{stats.onesRolled}}</div>
+          <div class="log-stat-label">Darkest 1s</div>
+        </div>
+      </div>
+
+      <h4 class="log-section-head">By character</h4>
+      <table class="log-table">
+        <thead>
+          <tr><th>Character</th><th>Rolls</th><th>Success</th><th>Partial</th><th>Failure</th></tr>
+        </thead>
+        <tbody>
+          {{#each stats.byCharacter}}
+          <tr>
+            <td>{{who}}</td>
+            <td>{{total}}</td>
+            <td class="log-success">{{success}} <span class="log-dim">({{successPct}}%)</span></td>
+            <td>{{partial}}</td>
+            <td class="log-failure">{{failure}} <span class="log-dim">({{failurePct}}%)</span></td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      <h4 class="log-section-head">Darkest Die</h4>
+      <div class="log-dd-chart">
+        {{#each stats.darkestDie}}
+        <div class="log-dd-row {{#if (eq face 1)}}is-one{{/if}}">
+          <span class="log-dd-face">{{face}}</span>
+          <span class="log-dd-bar"><span class="log-dd-fill" style="width: {{pct}}%"></span></span>
+          <span class="log-dd-count">{{count}}</span>
+        </div>
+        {{/each}}
+      </div>
+
+      {{#if stats.byTaskRating.length}}
+      <h4 class="log-section-head">Success by task rating</h4>
+      <table class="log-table">
+        <thead><tr><th>Task rating</th><th>Attempts</th><th>Succeeded</th></tr></thead>
+        <tbody>
+          {{#each stats.byTaskRating}}
+          <tr>
+            <td>{{taskRating}}</td>
+            <td>{{count}}</td>
+            <td>{{success}} <span class="log-dim">({{successPct}}%)</span></td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+      {{/if}}
+
+      {{else}}
+      <p class="log-empty">
+        <i class="fas fa-dice-d6"></i>
+        No rolls recorded yet.
+      </p>
+      {{/if}}
+    </div>
+
+    {{!-- ── Transgressions ───────────────────────────────────────── --}}
+    <div class="tab" data-tab="transgressions">
+      {{#if transgressions.length}}
+      <table class="log-table">
+        <thead><tr><th>Region</th><th>Level</th><th>Witch</th><th>At</th></tr></thead>
+        <tbody>
+          {{#each transgressions}}
+          <tr>
+            <td>{{region}}</td>
+            <td class="log-level">{{level}}</td>
+            <td class="log-dim">{{witch}}</td>
+            <td class="log-dim">{{when}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+      {{else}}
+      <p class="log-empty">
+        <i class="fas fa-eye"></i>
+        The woods have not stirred yet.
+      </p>
+      {{/if}}
+    </div>
+
+  </div>
+
+  <footer class="log-footer">
+    <button type="button" class="log-export"><i class="fas fa-file-export"></i> Export</button>
+    <button type="button" class="log-clear"><i class="fas fa-trash"></i> Clear log</button>
+  </footer>
+
+</div>
