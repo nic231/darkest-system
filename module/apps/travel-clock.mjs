@@ -1296,6 +1296,25 @@ export class TravelTool extends Application {
   }
 
   async _travel(html) {
+    // The transition now awaits a timer mid-flight, so a second click during
+    // that pause would advance the clock twice, post two departure messages,
+    // and lift the veil on the first journey while the second is still
+    // running. Worse, _travelLegs() clears this._legs before awaiting, so a
+    // re-entrant call would read an empty array and throw on last.route.
+    if (this._travelling) {
+      ui.notifications.warn('The party is already on the move.');
+      return;
+    }
+    this._travelling = true;
+    try {
+      await this._travelInner(html);
+    } finally {
+      this._travelling = false;
+      this.render();
+    }
+  }
+
+  async _travelInner(html) {
     // A queued journey takes precedence over whatever is in the form.
     if (this._legs?.length) return this._travelLegs();
 
@@ -1566,20 +1585,33 @@ export class TravelTool extends Application {
     // and only then do they arrive.
     if (opts.route) {
       const delay = TravelTool.transitionDelay();
-      if (delay > 0) {
-        TravelTool.broadcastVeil('depart');
-        await new Promise(r => setTimeout(r, delay));
-      }
+      let scene = null;
+      try {
+        if (delay > 0) {
+          TravelTool.broadcastVeil('depart');
+          await new Promise(r => setTimeout(r, delay));
+        }
 
-      const scene = await this._activateDestinationScene(opts.route);
-      if (delay > 0) TravelTool.broadcastVeil('arrive');
+        scene = await this._activateDestinationScene(opts.route);
 
-      if (scene) {
-        ui.notifications.info(`Now viewing: ${scene.name}`);
-      } else if (opts.route.toSlug) {
-        ui.notifications.warn(
-          `No scene imported for ${opts.route.toTitle || 'that destination'} -- import its region to travel there automatically.`
-        );
+        if (scene) {
+          ui.notifications.info(`Now viewing: ${scene.name}`);
+        } else if (opts.route.toSlug) {
+          ui.notifications.warn(
+            `No scene imported for ${opts.route.toTitle || 'that destination'} -- import its region to travel there automatically.`
+          );
+        }
+      } catch (err) {
+        // The clock has already advanced by this point, so swallowing the
+        // error and carrying on leaves a consistent state: the party is
+        // where they were, but the time really did pass. Rethrowing would
+        // skip the arrival message and leave the dial stale.
+        console.error('Darkest System | scene activation failed during travel', err);
+        ui.notifications.error('Could not switch to the destination scene -- see the console.');
+      } finally {
+        // Must run even if activation threw, or every client sits behind a
+        // veil until its own 5s failsafe fires.
+        if (delay > 0) TravelTool.broadcastVeil('arrive');
       }
 
       await this._postArrival({ route: opts.route, scene, timeLine, result, now });

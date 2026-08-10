@@ -253,26 +253,38 @@ Hooks.once('ready', function() {
   registerTravelClockHooks();
   renderDial();
 
-  // Socket handler for GM actions (player-to-GM delegation)
+  // Socket handler for GM actions (player-to-GM delegation).
+  //
+  // Delegated actions must run on exactly ONE client. Gating on
+  // `game.user.isGM` is not enough -- with a GM and an assistant GM both
+  // connected, that is true on both, so a single player's roll would
+  // advance the transgression track twice, post two stir messages, and
+  // double-count in the session log. Elect the lowest-id active GM instead;
+  // every client computes the same answer from the same user list.
+  const isPrimaryGM = () => {
+    if (!game.user.isGM) return false;
+    const gms = game.users.filter(u => u.isGM && u.active).sort((a, b) => a.id.localeCompare(b.id));
+    return gms.length === 0 || gms[0].id === game.user.id;
+  };
   game.socket.on('system.darkest-system', (data) => {
     if (!data?.type) return;
     switch (data.type) {
       case 'applyWound':
-        if (game.user.isGM) {
+        if (isPrimaryGM()) {
           const actor = game.actors.get(data.actorId);
           if (actor) actor.addWound(data.rating, data.woundType, data.description);
         }
         break;
 
       case 'applyDoom':
-        if (game.user.isGM) {
+        if (isPrimaryGM()) {
           const actor = game.actors.get(data.actorId);
           if (actor) actor.addDoom(data.description, data.source);
         }
         break;
 
       case 'applyNpcDamage':
-        if (game.user.isGM) {
+        if (isPrimaryGM()) {
           NpcTracker.applyDamage(data.woundRating);
         }
         break;
@@ -309,7 +321,7 @@ Hooks.once('ready', function() {
       case 'logRoll':
         // Players can't write the GM-scoped session log, so their rolls
         // arrive here for a GM client to record.
-        if (game.user.isGM) SessionLog.recordRoll(data.entry);
+        if (isPrimaryGM()) SessionLog.recordRoll(data.entry);
         break;
 
       case 'postGmWhisper':
@@ -318,7 +330,8 @@ Hooks.once('ready', function() {
         // creates a message whispered to the GM, that player still sees it
         // themselves. The message must actually be authored by a GM client
         // for the whisper to exclude the player as intended.
-        if (game.user.isGM) {
+        // One GM authors it, or two GMs produce two identical whispers.
+        if (isPrimaryGM()) {
           ChatMessage.create({
             content: data.content,
             whisper: game.users.filter(u => u.isGM).map(u => u.id),
@@ -341,7 +354,9 @@ Hooks.once('ready', function() {
         // when a PLAYER rolls a transgression, darkestSystem.transgression
         // fires only on their own browser, so the GM's client never sees it
         // and incrementTransgression() never runs. Delegate to a GM client.
-        if (game.user.isGM) {
+        // Exactly one GM, or the track advances once per connected GM --
+        // two stir messages and two levels from a single player's roll.
+        if (isPrimaryGM()) {
           Hooks.callAll('darkestSystem.transgression');
         }
         break;

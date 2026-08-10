@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.19.1-alpha (2026-08-10)
+
+Bug fixes from a full review of the 0.18/0.19 changes. Three of these were data-loss or double-counting bugs that would have shown up in play.
+
+- **Fix: multi-leg journeys lost their intermediate stops from the session log.** The legs were recorded in a loop without awaiting, and each write re-read the setting before the previous one had landed — so a five-leg journey saved one entry instead of five. Since public chat deliberately never names destinations, the log was the *only* record of those stops, and the "Path walked" map was drawn with holes in it. Writes are now queued.
+- **Fix: with two GMs connected, one player's transgression advanced the track twice** and posted two stir messages. The socket handler gated on "is a GM", which is true on every GM client at once. Delegated actions now elect a single GM (lowest id among active GMs, so every client agrees), which also fixes double-counted rolls in the session log and duplicate GM whispers.
+- **Fix: the transgression cooldown under-counted when several players rolled at once** — the exact case the feature exists for. Four simultaneous rolls each read the same counter and wrote the same value back, so the cooldown advanced by one instead of four. Now serialised.
+- **Fix: a failed scene activation left the transition half-finished.** The clock had already advanced, but the arrival message, the arrival hook and the dial refresh were all skipped, and every client sat behind the veil until its own 5-second failsafe fired. The transition is now exception-safe and the veil always lifts.
+- **Fix: double-clicking Travel could advance the clock twice, lift the veil mid-journey, and throw** on a queued multi-leg route (the leg list is cleared before the pause, so a second call read an empty array). Travel now refuses to start while a journey is in flight.
+- **Fix: a damped transgression could post a different message tier than a live one.** The tiers step at levels 5 and 10, and the held message used the current level rather than the one it would have reached — so at levels 4 and 9 a player watching the wording could tell the pacing rule was on. Damped and live messages are now identical at every level.
+
 ## 0.19.0-alpha (2026-08-10)
 
 **Transgression pacing** — an optional house rule for tables that found the track advancing faster than it could be narrated.

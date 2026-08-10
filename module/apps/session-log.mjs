@@ -20,6 +20,9 @@ const MAX_ENTRIES = 2000;  // ~20 sessions; trims oldest first
 
 export class SessionLog extends Application {
 
+  /** Serialises setting writes; see record(). */
+  static _writeQueue = Promise.resolve();
+
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: 'darkest-session-log',
@@ -43,16 +46,29 @@ export class SessionLog extends Application {
    * Append an entry. GM-authored only: players' clients must not write here
    * (they'd race each other and the setting is GM-scoped anyway), so a
    * player rolling dice delegates via the socket, same as everything else.
+   *
+   * Writes are serialised through a promise chain. This is a
+   * read-modify-write on one setting, and game.settings.get() hands back a
+   * fresh deserialised object every call -- so two overlapping records both
+   * read the same "before" state and the second write silently discards the
+   * first. That is not hypothetical: a multi-leg journey logs its legs in a
+   * loop, and a four-player round fires several rolls at once. Queueing here
+   * rather than at the call sites means no future caller can get it wrong.
    */
   static async record(entry) {
     if (!game.user.isGM) return;
-    const log = SessionLog.getLog();
-    log.entries.push({ t: Date.now(), ...entry });
-    if (log.entries.length > MAX_ENTRIES) {
-      log.entries = log.entries.slice(-MAX_ENTRIES);
-    }
-    await game.settings.set('darkest-system', SETTING_LOG, log);
-    SessionLog.refresh();
+    SessionLog._writeQueue = SessionLog._writeQueue
+      .catch(() => {})  // one failed write must not wedge the queue
+      .then(async () => {
+        const log = SessionLog.getLog();
+        log.entries.push({ t: Date.now(), ...entry });
+        if (log.entries.length > MAX_ENTRIES) {
+          log.entries = log.entries.slice(-MAX_ENTRIES);
+        }
+        await game.settings.set('darkest-system', SETTING_LOG, log);
+        SessionLog.refresh();
+      });
+    return SessionLog._writeQueue;
   }
 
   static async clear() {

@@ -25,6 +25,9 @@ Hooks.once('darkestSystem.registerTransgressionContent', (data) => {
 
 export class TransgressionTracker extends Application {
 
+  /** Serialises damping-state writes; see _checkDamping(). */
+  static _dampingQueue = Promise.resolve();
+
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: 'transgression-tracker',
@@ -259,6 +262,17 @@ export class TransgressionTracker extends Application {
    * from a live one. Only the GM sees why it was held.
    */
   static async _checkDamping() {
+    // Serialised: this is a read-modify-write on one setting, and the whole
+    // point of the feature is four players rolling at once. Overlapping
+    // calls would each read the same counter, both write the same value,
+    // and the cooldown would count one roll where two happened.
+    TransgressionTracker._dampingQueue = TransgressionTracker._dampingQueue
+      .catch(() => {})
+      .then(() => TransgressionTracker._checkDampingUnsafe());
+    return TransgressionTracker._dampingQueue;
+  }
+
+  static async _checkDampingUnsafe() {
     const cfg = TransgressionTracker.dampingConfig();
     if (cfg.mode === 'off') return { advance: true };
 
@@ -330,8 +344,14 @@ export class TransgressionTracker extends Application {
     const damping = await TransgressionTracker._checkDamping();
     if (!damping.advance) {
       const current = this.getTransgressions()[regionSlug] || { level: 0, loops: 0 };
+      // Tier the message off the level this trigger WOULD have reached, not
+      // the one it's held at. The tiers step at 5 and 10, so using the
+      // current level would post a tier-2 message where a live trigger
+      // posted tier-3 -- letting a player who tracks the wording work out
+      // that damping is on, at exactly the two most dramatic moments.
+      const wouldBe = current.level >= 10 ? 1 : current.level + 1;
       const stir = TransgressionTracker._publicStirMessage(
-        current.level, false, ALL[regionSlug].keyPhrase
+        wouldBe, false, ALL[regionSlug].keyPhrase
       );
       await ChatMessage.create({
         content: `<div class="transgression-message player-ominous"><i class="fas fa-tree"></i> ${stir}</div>`
