@@ -59,6 +59,16 @@
 
   <div class="tracker-toolbar">
     <button type="button" class="add-region-btn"><i class="fas fa-plus"></i> Add Region</button>
+    {{#if damping}}
+    <span class="damping-status{{#if damping.ready}} ready{{/if}}"
+          data-tooltip="Optional pacing rule. The woods still stir on every trigger; only the tracker is held back. Click to clear.">
+      <i class="fas fa-hourglass-half"></i>
+      {{damping.label}} · {{damping.detail}}
+      <button type="button" class="damping-reset" data-tooltip="Clear the cooldown">
+        <i class="fas fa-rotate-left"></i>
+      </button>
+    </span>
+    {{/if}}
   </div>
 
   {{#if isEmpty}}

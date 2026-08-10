@@ -6,6 +6,12 @@
 import { TravelClock, BIRDSONGS } from './travel-clock.mjs';
 import { SessionLog } from './session-log.mjs';
 
+const SETTING_DAMPING_MODE = 'transgressionDamping';
+const SETTING_DAMPING_MINUTES = 'transgressionCooldownMinutes';
+const SETTING_DAMPING_ROLLS = 'transgressionCooldownRolls';
+const SETTING_DAMPING_THRESHOLD = 'transgressionThreshold';
+const SETTING_DAMPING_STATE = 'transgressionDampingState';
+
 // Content placeholders — populated by the darkest-woods module if installed,
 // or customised manually by the GM via the tracker UI.
 export let HOUSE_ACTIONS = Array(10).fill('');
@@ -230,6 +236,83 @@ export class TransgressionTracker extends Application {
    * Increment transgression for a region (Darkest Woods) or advance the house
    * action counter (Darkest House).
    */
+  /** Current pacing settings, tolerant of a world that predates them. */
+  static dampingConfig() {
+    const get = (key, fallback) => {
+      try { return game.settings.get('darkest-system', key) ?? fallback; }
+      catch { return fallback; }
+    };
+    return {
+      mode: get(SETTING_DAMPING_MODE, 'off'),
+      minutes: get(SETTING_DAMPING_MINUTES, 5),
+      rolls: get(SETTING_DAMPING_ROLLS, 3),
+      threshold: get(SETTING_DAMPING_THRESHOLD, 3),
+      state: get(SETTING_DAMPING_STATE, { lastAdvanceMs: 0, rollsSinceAdvance: 999, provocation: 0 }),
+    };
+  }
+
+  /**
+   * Should this trigger actually move the tracker?
+   *
+   * Returns { advance, reason } -- when advance is false the caller still
+   * posts the public stir message, so players cannot tell a damped trigger
+   * from a live one. Only the GM sees why it was held.
+   */
+  static async _checkDamping() {
+    const cfg = TransgressionTracker.dampingConfig();
+    if (cfg.mode === 'off') return { advance: true };
+
+    const state = foundry.utils.deepClone(cfg.state);
+    const now = Date.now();
+    let advance = true;
+    let reason = null;
+
+    if (cfg.mode === 'time') {
+      const elapsedMs = now - (state.lastAdvanceMs || 0);
+      const waitMs = cfg.minutes * 60000;
+      if (elapsedMs < waitMs) {
+        advance = false;
+        const left = Math.ceil((waitMs - elapsedMs) / 60000);
+        reason = `held — ${left} more minute${left === 1 ? '' : 's'} of cooldown`;
+      }
+    } else if (cfg.mode === 'rolls') {
+      state.rollsSinceAdvance = (state.rollsSinceAdvance ?? 999) + 1;
+      if (state.rollsSinceAdvance <= cfg.rolls) {
+        advance = false;
+        const left = cfg.rolls - state.rollsSinceAdvance + 1;
+        reason = `held — ${left} more roll${left === 1 ? '' : 's'} of cooldown`;
+      }
+    } else if (cfg.mode === 'threshold') {
+      state.provocation = (state.provocation || 0) + 1;
+      if (state.provocation < cfg.threshold) {
+        advance = false;
+        reason = `provocation ${state.provocation}/${cfg.threshold}`;
+      }
+    }
+
+    if (advance) {
+      state.lastAdvanceMs = now;
+      state.rollsSinceAdvance = 0;
+      state.provocation = 0;
+    }
+    await game.settings.set('darkest-system', SETTING_DAMPING_STATE, state);
+    return { advance, reason };
+  }
+
+  /** Clear any accumulated cooldown, so the next trigger lands. */
+  static async resetDamping() {
+    await game.settings.set('darkest-system', SETTING_DAMPING_STATE, {
+      lastAdvanceMs: 0, rollsSinceAdvance: 999, provocation: 0,
+    });
+    TransgressionTracker.refresh();
+  }
+
+  static refresh() {
+    Object.values(ui.windows)
+      .filter(w => w instanceof TransgressionTracker)
+      .forEach(w => w.render(false));
+  }
+
   static async incrementTransgression(regionSlug) {
     if (this.getGameMode() === 'darkest-house') {
       return this._incrementHouseAction();
@@ -239,6 +322,34 @@ export class TransgressionTracker extends Application {
     if (!regionSlug || !ALL[regionSlug]) {
       ui.notifications.warn('No valid region selected for transgression tracking');
       return null;
+    }
+
+    // Optional pacing house rule. A damped trigger still stirs the woods --
+    // the players must not be able to tell the difference -- but leaves the
+    // track where it is so the GM can finish narrating the last one.
+    const damping = await TransgressionTracker._checkDamping();
+    if (!damping.advance) {
+      const current = this.getTransgressions()[regionSlug] || { level: 0, loops: 0 };
+      const stir = TransgressionTracker._publicStirMessage(
+        current.level, false, ALL[regionSlug].keyPhrase
+      );
+      await ChatMessage.create({
+        content: `<div class="transgression-message player-ominous"><i class="fas fa-tree"></i> ${stir}</div>`
+      });
+
+      const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
+      if (gmIds.length) {
+        await ChatMessage.create({
+          content: `<div class="transgression-message transgression-damped">
+            <i class="fas fa-hourglass-half"></i>
+            The woods stirred, but the track stayed at <strong>${current.level}</strong>
+            <span class="damped-reason">(${damping.reason})</span>
+          </div>`,
+          whisper: gmIds,
+        });
+      }
+      TransgressionTracker.refresh();
+      return current;
     }
 
     const transgressions = this.getTransgressions();
@@ -438,7 +549,39 @@ export class TransgressionTracker extends Application {
         slug,
         name: data.name,
         selected: slug === currentRegion
-      }))
+      })),
+      damping: TransgressionTracker._dampingStatus()
+    };
+  }
+
+  /** A one-line readout of the pacing rule, or null when it's off. */
+  static _dampingStatus() {
+    const cfg = TransgressionTracker.dampingConfig();
+    if (cfg.mode === 'off') return null;
+
+    const s = cfg.state || {};
+    if (cfg.mode === 'time') {
+      const leftMs = (cfg.minutes * 60000) - (Date.now() - (s.lastAdvanceMs || 0));
+      const ready = leftMs <= 0;
+      return {
+        label: `Cooldown ${cfg.minutes}m`,
+        detail: ready ? 'ready' : `${Math.ceil(leftMs / 60000)}m to go`,
+        ready,
+      };
+    }
+    if (cfg.mode === 'rolls') {
+      const done = s.rollsSinceAdvance ?? 999;
+      const ready = done > cfg.rolls;
+      return {
+        label: `Cooldown ${cfg.rolls} rolls`,
+        detail: ready ? 'ready' : `${cfg.rolls - done + 1} to go`,
+        ready,
+      };
+    }
+    return {
+      label: `Provocation ${cfg.threshold}`,
+      detail: `${s.provocation || 0}/${cfg.threshold}`,
+      ready: false,
     };
   }
 
@@ -476,6 +619,11 @@ export class TransgressionTracker extends Application {
 
     // Birdsong toggles -- same world setting the travel tool uses, so a
     // change here immediately opens/closes those secret trails there.
+    html.find('.damping-reset').click(async (ev) => {
+      ev.stopPropagation();
+      await TransgressionTracker.resetDamping();
+    });
+
     html.find('.birdsong-toggle').click(async (ev) => {
       await TravelClock.toggleBirdsong(ev.currentTarget.dataset.bird);
       TravelClock.refresh();
@@ -642,5 +790,71 @@ export function registerTransgressionSettings() {
     config: false,
     type: Object,
     default: { level: 0, loops: 0 }
+  });
+
+  // --- Optional house rule: slow the transgression track down -------------
+  //
+  // The Darkest Die is the highest of three d6 about 25.4% of the time, so
+  // with four players every round of combat produces roughly one
+  // transgression. A five-round fight burns half the witch's ten-level
+  // track, and the GM has no room to narrate one before the next lands.
+  //
+  // All three modes still post the public "the woods stir" message on every
+  // trigger -- the tension is the point, and players should never be able
+  // to tell a damped trigger from a live one. Only the LEVEL is held back.
+  game.settings.register('darkest-system', SETTING_DAMPING_MODE, {
+    name: 'Transgression pacing',
+    hint: 'Optional house rule. Stops the transgression track advancing several times in quick succession. The woods still stir on every trigger; only the tracker is held back.',
+    scope: 'world',
+    config: true,
+    type: String,
+    choices: {
+      off: 'Off — every trigger advances the track (default rules)',
+      time: 'Cooldown in minutes — ignore triggers for a while after one lands',
+      rolls: 'Cooldown in rolls — ignore triggers for the next few rolls',
+      threshold: 'Provocation — several triggers needed to advance one level',
+    },
+    default: 'off',
+    onChange: () => TransgressionTracker.refresh(),
+  });
+
+  game.settings.register('darkest-system', SETTING_DAMPING_MINUTES, {
+    name: 'Pacing: cooldown minutes',
+    hint: 'For "Cooldown in minutes". Real time, not game time. ~5 turns a five-round fight into roughly two advances instead of five.',
+    scope: 'world',
+    config: true,
+    type: Number,
+    range: { min: 1, max: 60, step: 1 },
+    default: 5,
+  });
+
+  game.settings.register('darkest-system', SETTING_DAMPING_ROLLS, {
+    name: 'Pacing: cooldown rolls',
+    hint: 'For "Cooldown in rolls". Unaffected by how fast your table plays. ~3 turns a five-round fight into roughly three advances instead of five.',
+    scope: 'world',
+    config: true,
+    type: Number,
+    range: { min: 1, max: 20, step: 1 },
+    default: 3,
+  });
+
+  game.settings.register('darkest-system', SETTING_DAMPING_THRESHOLD, {
+    name: 'Pacing: triggers per level',
+    hint: 'For "Provocation". How many times the woods must be provoked before the track moves once. 3 turns a five-round fight into roughly one advance instead of five.',
+    scope: 'world',
+    config: true,
+    type: Number,
+    range: { min: 2, max: 10, step: 1 },
+    default: 3,
+  });
+
+  // Runtime state for the above: when the last advance happened, how many
+  // rolls have passed since, and how much provocation has accumulated.
+  game.settings.register('darkest-system', SETTING_DAMPING_STATE, {
+    name: 'Transgression pacing state',
+    scope: 'world',
+    config: false,
+    type: Object,
+    default: { lastAdvanceMs: 0, rollsSinceAdvance: 999, provocation: 0 },
   });
 }

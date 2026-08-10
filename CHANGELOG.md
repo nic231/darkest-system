@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.19.0-alpha (2026-08-10)
+
+**Transgression pacing** — an optional house rule for tables that found the track advancing faster than it could be narrated.
+
+The Darkest Die is the highest of three d6 **25.4%** of the time. With four players that is very close to one transgression *per round of combat*: a five-round fight advances the track about five levels, half the witch's cycle, with no room to describe one before the next arrives.
+
+Three modes, off by default, chosen in system settings:
+
+| Mode | What it does | 5-round fight, 4 PCs |
+|---|---|---|
+| Off | Default rules | 5.1 advances |
+| Cooldown in minutes | Ignores triggers for N real minutes after one lands | 1.5 at 5m |
+| Cooldown in rolls | Ignores triggers for the next N rolls | 1.7 at 3 rolls |
+| Provocation | Needs N triggers to advance one level | 1.4 at 3 |
+
+**All three still stir the woods on every trigger.** The public ominous message fires exactly as before, so players cannot tell a held trigger from a live one — only the tracker is held back. The GM gets a quiet whisper saying why.
+
+Worth knowing when choosing: **provocation mode also heavily damps exploration**, where rolls are scattered — about 0.05 advances across four rolls in 40 minutes, against a baseline of 1.0 — because the count accumulates too slowly to ever reach the threshold. The minute-based cooldown damps combat hard while leaving exploration nearly untouched, so it is the best all-round choice. The roll-based cooldown is the one that behaves identically regardless of how fast your table plays.
+
+The tracker shows the current cooldown state, with a button to clear it.
+
 ## 0.18.0-alpha (2026-08-10)
 
 **Arrivals.** Travelling is now two beats instead of one. The party sets out, the screen holds for a moment, the scene changes, and then they arrive — with a description of where they've ended up and the time it now is. Previously the chat message landed and the canvas swapped underneath it, which read as a jump cut.
