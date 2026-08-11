@@ -32,6 +32,7 @@ import {
   showTransitionVeil,
 } from './module/apps/travel-clock.mjs';
 import { SessionLog, registerSessionLog } from './module/apps/session-log.mjs';
+import { DarkestAudio, registerAudioSettings } from './module/apps/audio.mjs';
 
 /* ----------------------------------------
    Initialize System
@@ -84,6 +85,8 @@ Hooks.once('init', function() {
   registerNpcTrackerSettings();
 
   registerSessionLog();
+
+  registerAudioSettings();
 
   // Register travel clock settings
   registerTravelClockSettings();
@@ -315,7 +318,15 @@ Hooks.once('ready', function() {
       case 'travelTransition':
         // Fade every client's screen for a travel transition. Players see a
         // hard canvas swap when scene.activate() reaches them; this covers it.
-        showTransitionVeil(data.phase);
+        // The audio payload starts the ambience bed on each client locally,
+        // so it begins in step with the fade rather than only for the GM.
+        showTransitionVeil(data.phase, data.audio ?? null);
+        break;
+
+      case 'playBirdsong':
+        // Diegetic -- the party is listening to the recording, so it plays
+        // for everyone rather than just whoever pressed the button.
+        DarkestAudio.playBirdsong(data.bird);
         break;
 
       case 'logRoll':

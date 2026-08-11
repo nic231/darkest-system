@@ -39,7 +39,15 @@ export class SessionLog extends Application {
   // ── Storage ───────────────────────────────────────────────────────────
 
   static getLog() {
-    return game.settings.get('darkest-system', SETTING_LOG) || { entries: [] };
+    const log = game.settings.get('darkest-system', SETTING_LOG) || { entries: [] };
+    // Entries recorded before per-row deletion existed have no id, which
+    // would leave their delete buttons inert. Backfill in memory; the next
+    // write persists it. Deterministic from position + timestamp so the same
+    // entry keeps the same id between renders.
+    for (let i = 0; i < log.entries.length; i++) {
+      if (!log.entries[i].id) log.entries[i].id = `legacy-${i}-${log.entries[i].t ?? 0}`;
+    }
+    return log;
   }
 
   /**
@@ -61,7 +69,11 @@ export class SessionLog extends Application {
       .catch(() => {})  // one failed write must not wedge the queue
       .then(async () => {
         const log = SessionLog.getLog();
-        log.entries.push({ t: Date.now(), ...entry });
+        // A stable id per entry so a row can be deleted by identity. Index
+        // is unusable (the tables render reversed) and the timestamp isn't
+        // unique -- four players rolling at once land in the same
+        // millisecond.
+        log.entries.push({ id: foundry.utils.randomID(), t: Date.now(), ...entry });
         if (log.entries.length > MAX_ENTRIES) {
           log.entries = log.entries.slice(-MAX_ENTRIES);
         }
@@ -75,6 +87,46 @@ export class SessionLog extends Application {
     if (!game.user.isGM) return;
     await game.settings.set('darkest-system', SETTING_LOG, { entries: [] });
     SessionLog.refresh();
+  }
+
+  /**
+   * Remove entries without wiping the log.
+   *
+   * Testing mid-campaign generates junk rows -- a travel that was really a
+   * dry run, a roll made to check a fix -- and clearing everything to be rid
+   * of them destroys the real session record too. `predicate` receives each
+   * entry and returns true to delete it.
+   *
+   * Goes through the same write queue as record(), or a delete racing a
+   * concurrent record would lose one of them.
+   */
+  static async remove(predicate) {
+    if (!game.user.isGM) return 0;
+    let removed = 0;
+    SessionLog._writeQueue = SessionLog._writeQueue
+      .catch(() => {})
+      .then(async () => {
+        const log = SessionLog.getLog();
+        const before = log.entries.length;
+        log.entries = log.entries.filter(e => !predicate(e));
+        removed = before - log.entries.length;
+        if (removed) {
+          await game.settings.set('darkest-system', SETTING_LOG, log);
+          SessionLog.refresh();
+        }
+      });
+    await SessionLog._writeQueue;
+    return removed;
+  }
+
+  /** Delete one entry by its stable id. */
+  static removeEntry(id) {
+    return SessionLog.remove(e => e.id === id);
+  }
+
+  /** Delete every entry of one kind ('move' | 'roll' | 'transgression'). */
+  static removeKind(kind) {
+    return SessionLog.remove(e => e.kind === kind);
   }
 
   static refresh() {
@@ -119,7 +171,23 @@ export class SessionLog extends Application {
       route: SessionLog._routeSummary(moves),
       stats: SessionLog._rollStats(rolls),
       rollCount: rolls.length,
+      // The stats above are aggregate, so there's nothing to click to drop a
+      // single test roll. This is the list that makes rolls deletable.
+      recentRolls: rolls.slice(-40).reverse().map(r => ({
+        id: r.id,
+        who: r.who || 'Unknown',
+        detail: `${r.characterRating ?? '?'} vs ${r.taskRating ?? '?'}`
+          + (r.target ? ` · target ${r.target}` : ''),
+        total: r.total ?? '',
+        darkestDie: r.darkestDie ?? '',
+        outcome: r.outcome || '',
+        outcomeClass: /partial/i.test(r.outcome || '') ? 'partial'
+          : /success/i.test(r.outcome || '') ? 'success' : 'failure',
+        when: SessionLog._clock(r)
+      })),
+      hasMoreRolls: rolls.length > 40,
       transgressions: transgressions.map(t => ({
+        id: t.id,
         region: t.region, level: t.level, witch: t.witch,
         when: SessionLog._clock(t)
       })).reverse(),
@@ -134,6 +202,7 @@ export class SessionLog extends Application {
 
   static _formatMoves(moves) {
     return moves.map((m, i) => ({
+      id: m.id,
       index: i + 1,
       from: m.fromTitle || '—',
       to: m.toTitle || '—',
@@ -235,6 +304,30 @@ export class SessionLog extends Application {
 
   activateListeners(html) {
     super.activateListeners(html);
+
+    // Single-row delete. No confirmation: it's one row, the log is a
+    // convenience record rather than game state, and a prompt per row would
+    // make tidying up after a test session tedious.
+    html.find('.log-del').click(async (ev) => {
+      const id = ev.currentTarget.dataset.id;
+      if (id) await SessionLog.removeEntry(id);
+    });
+
+    // Clearing a whole tab does confirm -- that one can lose real data.
+    html.find('.log-clear-kind').click(async (ev) => {
+      const kind = ev.currentTarget.dataset.kind;
+      const labels = { move: 'movements', roll: 'rolls', transgression: 'transgressions' };
+      const label = labels[kind] || 'entries';
+      const ok = await Dialog.confirm({
+        title: `Clear ${label}`,
+        content: `<p>Delete every recorded ${label}? Other tabs are untouched.</p>`,
+        defaultYes: false
+      });
+      if (ok) {
+        const n = await SessionLog.removeKind(kind);
+        ui.notifications.info(`Deleted ${n} ${label}.`);
+      }
+    });
 
     html.find('.log-clear').click(async () => {
       const ok = await Dialog.confirm({

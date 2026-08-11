@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.21.0-alpha (2026-08-10)
+
+**Session log entries can be deleted individually.** Clearing the whole log was the only option, which is no use when you're testing inside a live campaign — you'd lose the real session record along with the junk.
+
+- An **×** on any movement, roll or transgression row deletes just that entry. No confirmation; it's one row.
+- **Clear all movement / rolls / transgressions** per tab, with confirmation, leaving the other tabs untouched.
+- The Dice tab previously showed only aggregate stats, so there was nothing to click to remove a stray test roll. It now lists **Recent rolls** (last 40) with who, the roll, total, Darkest Die and outcome — delete one and the stats above recalculate without it.
+- Entries recorded before this change had no identity of their own; their ids are backfilled on read, so older log data is deletable too.
+
+**NPC Tracker layout fix.** In the quick-create row the Rating and How Many values were invisible — the inputs inherited Foundry's default text colour against a dark field — and the Add button was absorbing the leftover width, squeezing the name box to a sliver. The row is now a two-line grid with explicit colours, a labelled name field, and a full-width Add button.
+
+**Groundwork:**
+
+- New `module/apps/audio.mjs` — plays birdsong and travel ambience from files the GM supplies, on Foundry's **Environment** channel so it sits under the ambient volume slider rather than competing with dice clicks. Drop `birdsong-thrush.ogg` or `travel-default.ogg` into `extracted_content/audio/` and the build picks them up; see `AUDIO_GUIDE.md`.
+- Birdsong play buttons appear only when a clip for that bird actually exists.
+- Removed a Syrinscape passthrough that could never have worked — it probed `game.syrinscape`, which belongs to a different module than the one in use. The correct API is documented in `audio.mjs` for whenever that integration is picked up.
+
 ## 0.20.0-alpha (2026-08-10)
 
 **Quick creatures in the NPC Tracker.** Type a name and a Rating, hit Add, and the creature is created and tracked. Rating is the only number a creature needs in this system — it sets the defeat threshold (Rating × 3), the instant-kill line (Rating + 3), and the number to hit it — so the form shows all three before you commit.

@@ -5208,29 +5208,6 @@
   color: #8fa0c0 !important;
 }
 
-/* Birdsong play button, paired with its toggle in the travel tool. */
-.birdsong-item {
-  display: inline-flex;
-  align-items: stretch;
-  gap: 2px;
-}
-
-.birdsong-item .birdsong-play {
-  flex: 0 0 auto;
-  width: 26px;
-  padding: 0;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--darkest-text-muted, #9a9186);
-  background: var(--darkest-bg-medium, #2a2a2a);
-  border: 1px solid var(--darkest-border, #4a4038);
-  border-radius: 3px;
-}
-
-.birdsong-item .birdsong-play:hover {
-  color: var(--darkest-accent-light, #b9a6e0);
-  border-color: var(--darkest-accent-light, #b9a6e0);
-}
 
 /* ============================================================
    Transgression pacing (optional house rule)
@@ -5309,34 +5286,81 @@
   margin-bottom: 6px;
 }
 
+/* Two rows rather than one. Cramming name + rating + count + button onto a
+   single line left the name box a few pixels wide in a 420px window. */
 .npc-tracker .quick-create-row {
-  display: flex;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: end;
   gap: 6px;
 }
 
-.npc-tracker .quick-create-row input[type="text"] {
-  flex: 1 1 auto;
+/* Foundry core styles inputs inside .window-content at a specificity these
+   class selectors don't beat -- without an explicit colour the typed text
+   renders near-invisible against the dark field. Same fix the travel tool
+   uses at .travel-tool-container input. */
+.npc-tracker .quick-create input[type="text"],
+.npc-tracker .quick-create input[type="number"] {
+  box-sizing: border-box;
+  height: 28px;
+  background: var(--darkest-bg-medium, #2a2a2a);
+  color: var(--darkest-text, #e8dcc8);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  padding: 4px 7px;
+  font-size: 13px;
+}
+
+.npc-tracker .quick-create input[type="text"] {
+  width: 100%;
   min-width: 0;
 }
 
 .npc-tracker .quick-field {
-  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: 2px;
   font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
   color: var(--darkest-text-muted, #9a9186);
 }
 
-.npc-tracker .quick-field input {
-  width: 56px;
+.npc-tracker .quick-field-name {
+  min-width: 0;  /* lets the name column actually shrink inside the grid */
+}
+
+.npc-tracker .quick-field input[type="number"] {
+  width: 62px;
   text-align: center;
 }
 
+/* Foundry's number inputs get spinners that eat the visible width at this
+   size; the min/max are already enforced in code. */
+.npc-tracker .quick-create input[type="number"]::-webkit-inner-spin-button,
+.npc-tracker .quick-create input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Full width on its own row -- it was previously the flex item that soaked
+   up all the leftover space, which put it in a strange place. */
 .npc-tracker .quick-create-btn {
-  flex: 0 0 auto;
+  grid-column: 1 / -1;
+  width: 100%;
+  margin-top: 6px;
+  height: 28px;
   white-space: nowrap;
+  cursor: pointer;
+  background: var(--darkest-purple, #4e3f6e);
+  color: var(--darkest-text, #e8dcc8);
+  border: 1px solid var(--darkest-accent-light, #b9a6e0);
+  border-radius: 4px;
+}
+
+.npc-tracker .quick-create-btn:hover {
+  background: var(--darkest-accent-light, #b9a6e0);
+  color: var(--darkest-bg-dark, #1e1c19);
 }
 
 /* Spells out what a Rating actually means before you commit to it. */
@@ -5352,4 +5376,73 @@
   margin-top: 4px;
   font-size: 11px;
   width: 100%;
+}
+
+/* Birdsong play button, paired with its toggle. Only rendered when the GM
+   has supplied a clip for that bird, so most tables see none of these. */
+.birdsong-item {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.birdsong-item .birdsong-play {
+  flex: 0 0 auto;
+  width: 26px;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--darkest-text-muted, #9a9186);
+  background: var(--darkest-bg-medium, #2a2a2a);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 3px;
+}
+
+.birdsong-item .birdsong-play:hover {
+  color: var(--darkest-accent-light, #b9a6e0);
+  border-color: var(--darkest-accent-light, #b9a6e0);
+}
+
+/* Per-row delete in the session log, so a test entry can be dropped without
+   clearing the whole record mid-campaign. */
+.session-log-container .log-row-actions {
+  width: 24px;
+  text-align: right;
+  padding-right: 2px !important;
+}
+
+.session-log-container .log-del {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  line-height: 1;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--darkest-text-muted, #9a9186);
+  opacity: 0.5;
+}
+
+.session-log-container tr:hover .log-del {
+  opacity: 1;
+}
+
+.session-log-container .log-del:hover {
+  color: #c56b5c;
+}
+
+.session-log-container .log-clear-kind {
+  margin-top: 8px;
+  width: 100%;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--darkest-text-muted, #9a9186);
+  background: var(--darkest-bg-medium, #2a2a2a);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 3px;
+}
+
+.session-log-container .log-clear-kind:hover {
+  color: #c56b5c;
+  border-color: #c56b5c;
 }

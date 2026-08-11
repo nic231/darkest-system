@@ -16,6 +16,7 @@
  */
 
 import { SessionLog } from './session-log.mjs';
+import { DarkestAudio } from './audio.mjs';
 
 const SETTING_CLOCK = 'travelClock';
 const SETTING_BIRDSONGS = 'knownBirdsongs';
@@ -46,29 +47,14 @@ export const BIRDSONGS = [
   { key: 'unnamed', label: 'Unnamed birdsong' },
 ];
 
-// Where each birdsong recording lives. The content module ships them inside
-// LOCATION playlists (the place the party finds the recording), not as
-// birdsong playlists, so the lookup goes via the location's slug -- the same
-// flag the destination-scene lookup uses.
-//
-// Not every bird opens a trail: the Nightingale is a plot item (what the
-// Devil's Well tells you), so its button plays a sound but unlocks nothing.
-const BIRD_AUDIO = {
-  thrush: 'the-cemetery',
-  cardinal: 'frozen-corpse',
-  warbler: 'falling-embers',
-  dove: 'the-chasm',
-  nightingale: 'the-tower-of-frost',
-  grackle: 'the-devils-well',
-  unnamed: 'the-cremation-of-care',
-};
-
-/** The playlist holding a bird's recording, or null if not imported. */
-function birdPlaylist(birdKey) {
-  const slug = BIRD_AUDIO[birdKey];
-  if (!slug) return null;
-  return game.playlists?.find(p => p.getFlag('darkest-woods', 'locationSlug') === slug) ?? null;
-}
+// Birdsong playback was tried once against the book's own audio and removed:
+// those files are full location recordings ("The Path from the Elder Tree"
+// cassette happens to contain a Pine Warbler), so cueing a birdsong dumped a
+// whole tape into the scene. It is back now on a different footing -- it
+// plays only GM-supplied single-bird clips, dropped into
+// extracted_content/audio/ as birdsong-<bird>.ogg, and the button is absent
+// unless such a clip exists. The book's location audio is still left alone,
+// for the GM to share when the party finds the recording.
 
 // Travel speed in km/h. Only the travel time changes with pace -- pace
 // deliberately carries no other mechanical effect (not a published rule).
@@ -360,6 +346,9 @@ const VEIL_ID = 'darkest-transition-veil';
 // screen, so the veil always removes itself regardless of what arrives.
 const VEIL_FAILSAFE_MS = 5000;
 let _veilTimer = null;
+// The ambience bed currently playing under a transition, so it can be faded
+// out on arrival instead of running on over the new scene.
+let _travelSound = null;
 
 /**
  * Fade the screen out and back for a travel transition.
@@ -367,7 +356,7 @@ let _veilTimer = null;
  * Runs on every client via the travelTransition socket message. Deliberately
  * pointer-events: none, so even a stuck veil can't block input.
  */
-export function showTransitionVeil(phase) {
+export function showTransitionVeil(phase, audio = null) {
   if (phase === 'depart') {
     let veil = document.getElementById(VEIL_ID);
     if (!veil) {
@@ -379,6 +368,12 @@ export function showTransitionVeil(phase) {
     void veil.offsetWidth;
     veil.classList.add('visible');
 
+    // Ambience rides along with the veil so it starts on every client at the
+    // same moment the screen goes dark, rather than only on the GM's.
+    if (audio) {
+      _travelSound = DarkestAudio.playTravelAmbience(audio);
+    }
+
     clearTimeout(_veilTimer);
     _veilTimer = setTimeout(() => showTransitionVeil('arrive'), VEIL_FAILSAFE_MS);
     return;
@@ -386,6 +381,18 @@ export function showTransitionVeil(phase) {
 
   clearTimeout(_veilTimer);
   _veilTimer = null;
+
+  // Fade the bed out with the veil rather than cutting it dead. Guarded
+  // because the sound may have failed to start, or never existed.
+  if (_travelSound) {
+    const snd = _travelSound;
+    _travelSound = null;
+    try {
+      if (typeof snd.fade === 'function') snd.fade(0, { duration: 800 }).then(() => snd.stop?.());
+      else snd.stop?.();
+    } catch { /* a sound that won't fade is not worth breaking arrival over */ }
+  }
+
   const veil = document.getElementById(VEIL_ID);
   if (!veil) return;
   veil.classList.remove('visible');
@@ -943,13 +950,12 @@ export class TravelTool extends Application {
       legTotal: legTotal >= 1 ? TravelClock.formatDuration(legTotal) : null,
       // Cross-map planning: pick two places, get a route.
       locations: TravelClock.allLocations(),
-      // hasAudio drives a play button. False when the content module isn't
-      // installed or that region hasn't been imported yet, in which case the
-      // button is simply absent rather than erroring on click.
+      // hasAudio drives the play button. Absent unless the GM has actually
+      // supplied a clip for that bird, or mapped it to a Syrinscape element.
       birdsongs: BIRDSONGS.map(b => ({
         ...b,
         known: known.has(b.key),
-        hasAudio: !!birdPlaylist(b.key),
+        hasAudio: DarkestAudio.hasBirdsong(b.key),
       })),
       paces: Object.keys(PACE_SPEED).map(p => ({
         key: p,
@@ -1048,23 +1054,26 @@ export class TravelTool extends Application {
       TravelClock.refresh();
     });
 
-    // Play a birdsong recording to the whole table. This is diegetic -- the
-    // party is listening to it -- so playSound() is right: it syncs to every
-    // client natively, no socket needed.
-    html.find('.birdsong-play').click(async (ev) => {
+    // Play a birdsong to the whole table. Diegetic: the party is listening
+    // to the recording, so everyone hears it.
+    //
+    // Emit AND play locally, because game.socket.emit doesn't loop back --
+    // the socket covers other clients, the direct call covers this one. That
+    // is right for a local file, where each browser plays its own copy.
+    //
+    // It would be wrong for a SHARED audio source: routing this to one
+    // Syrinscape account would fire the same sound once per connected
+    // client. Anything added here that isn't per-client must be gated to a
+    // single client first (see isPrimaryGM in darkest-system.mjs).
+    html.find('.birdsong-play').click((ev) => {
       ev.stopPropagation();  // don't toggle the bird as well
       const bird = ev.currentTarget.dataset.bird;
-      const playlist = birdPlaylist(bird);
-      const sound = playlist?.sounds?.contents?.[0];
-      if (!sound) {
-        ui.notifications.warn('That recording has not been imported yet.');
-        return;
+      game.socket.emit('system.darkest-system', { type: 'playBirdsong', bird });
+      if (!DarkestAudio.playBirdsong(bird)) {
+        ui.notifications.warn('No recording found for that birdsong.');
       }
-      // The pack ships these with fade 0, so they'd cut off dead. Give them
-      // a fade here rather than editing the imported playlist.
-      if (!sound.fade) await sound.update({ fade: 800 });
-      await playlist.playSound(sound);
     });
+
 
     // Cross-map planning: work out a route between two arbitrary places.
     html.find('.plan-find').click(() => this._findRoute(html));
@@ -1459,9 +1468,14 @@ export class TravelTool extends Application {
    * covers exactly that. game.socket.emit doesn't loop back, so the GM's
    * own client runs it directly as well.
    */
-  static broadcastVeil(phase) {
-    game.socket.emit('system.darkest-system', { type: 'travelTransition', phase });
-    showTransitionVeil(phase);
+  static broadcastVeil(phase, audio = null) {
+    // Emit then run locally: game.socket.emit doesn't loop back, so the
+    // socket covers other clients and the direct call covers this one. Every
+    // client fades its own screen and plays its own copy of the audio file,
+    // which is what we want. See the note on .birdsong-play about why a
+    // single shared audio source would need gating to one client instead.
+    game.socket.emit('system.darkest-system', { type: 'travelTransition', phase, audio });
+    showTransitionVeil(phase, audio);
   }
 
   async _passTime(minutes, flavour, opts = {}) {
@@ -1588,7 +1602,12 @@ export class TravelTool extends Application {
       let scene = null;
       try {
         if (delay > 0) {
-          TravelTool.broadcastVeil('depart');
+          // Region is the ground being crossed (captured before the scene
+          // change); mode distinguishes poling a pirogue from walking it.
+          TravelTool.broadcastVeil('depart', {
+            region: opts.region ?? null,
+            mode: opts.boating ? 'boat' : (opts.pace === 'drive' ? 'drive' : 'walk'),
+          });
           await new Promise(r => setTimeout(r, delay));
         }
 

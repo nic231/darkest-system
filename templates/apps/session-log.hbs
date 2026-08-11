@@ -29,7 +29,7 @@
 
       <table class="log-table">
         <thead>
-          <tr><th>From</th><th>To</th><th>Route</th><th>Took</th><th>Game time</th></tr>
+          <tr><th>From</th><th>To</th><th>Route</th><th>Took</th><th>Game time</th><th></th></tr>
         </thead>
         <tbody>
           {{#each moves}}
@@ -39,10 +39,18 @@
             <td class="log-dim">{{label}}{{#if pace}} <em>({{pace}})</em>{{/if}}</td>
             <td>{{duration}}</td>
             <td class="log-dim">{{gameTime}}</td>
+            <td class="log-row-actions">
+              <button type="button" class="log-del" data-id="{{id}}"
+                      data-tooltip="Delete this movement"><i class="fas fa-times"></i></button>
+            </td>
           </tr>
           {{/each}}
         </tbody>
       </table>
+
+      <button type="button" class="log-clear-kind" data-kind="move">
+        <i class="fas fa-trash"></i> Clear all movement
+      </button>
 
       {{else}}
       <p class="log-empty">
@@ -126,6 +134,36 @@
       </table>
       {{/if}}
 
+      {{!-- Individual rolls, so a test roll can be dropped without wiping
+            the stats above. --}}
+      <h4 class="log-section-head">
+        Recent rolls{{#if hasMoreRolls}} <span class="log-dim">(last 40)</span>{{/if}}
+      </h4>
+      <table class="log-table">
+        <thead>
+          <tr><th>Who</th><th>Roll</th><th>Total</th><th>DD</th><th>Outcome</th><th></th></tr>
+        </thead>
+        <tbody>
+          {{#each recentRolls}}
+          <tr>
+            <td>{{who}}</td>
+            <td class="log-dim">{{detail}}</td>
+            <td>{{total}}</td>
+            <td class="log-dim">{{darkestDie}}</td>
+            <td class="log-{{outcomeClass}}">{{outcome}}</td>
+            <td class="log-row-actions">
+              <button type="button" class="log-del" data-id="{{id}}"
+                      data-tooltip="Delete this roll"><i class="fas fa-times"></i></button>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      <button type="button" class="log-clear-kind" data-kind="roll">
+        <i class="fas fa-trash"></i> Clear all rolls
+      </button>
+
       {{else}}
       <p class="log-empty">
         <i class="fas fa-dice-d6"></i>
@@ -138,7 +176,7 @@
     <div class="tab" data-tab="transgressions">
       {{#if transgressions.length}}
       <table class="log-table">
-        <thead><tr><th>Region</th><th>Level</th><th>Witch</th><th>At</th></tr></thead>
+        <thead><tr><th>Region</th><th>Level</th><th>Witch</th><th>At</th><th></th></tr></thead>
         <tbody>
           {{#each transgressions}}
           <tr>
@@ -146,10 +184,18 @@
             <td class="log-level">{{level}}</td>
             <td class="log-dim">{{witch}}</td>
             <td class="log-dim">{{when}}</td>
+            <td class="log-row-actions">
+              <button type="button" class="log-del" data-id="{{id}}"
+                      data-tooltip="Delete this entry"><i class="fas fa-times"></i></button>
+            </td>
           </tr>
           {{/each}}
         </tbody>
       </table>
+
+      <button type="button" class="log-clear-kind" data-kind="transgression">
+        <i class="fas fa-trash"></i> Clear all transgressions
+      </button>
       {{else}}
       <p class="log-empty">
         <i class="fas fa-eye"></i>
