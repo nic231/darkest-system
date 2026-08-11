@@ -1,12 +1,16 @@
 # Changelog
 
+## 0.27.1-alpha (2026-08-12)
+
+**Reverted a wrong "fix" from 0.27.0.** A target-armour field was added to the Deal Damage dialog. Targets don't have armour — an NPC has a Rating and nothing else, and the rules put armour on the *defender's* own roll ("when defending: damage die + foe's attack Rating − own defense Rating"). A target's Rating **is** its defence. The field is gone and the dialog says so.
+
+The armour fix on **Take Damage is correct and stays**: that's a player defending on their own sheet, where "Defense Rating = Character Rating + Armor Bonus" genuinely applies and equipment armour was being ignored.
+
 ## 0.27.0-alpha (2026-08-12)
 
 A full review of the codebase. Seven real bugs, two of them affecting every fight.
 
 **Fixed: equipment armour was ignored when taking damage.** The sheet computed armour from equipped items (light +1, heavy +2), displayed it in the defence total, and then the Take Damage dialog read the *raw* armour field instead. A character in heavy armour with no manually-entered number defended at their base rating — **every wound they took was up to 2 points too high**.
-
-**Fixed: no way to account for a target's armour when dealing damage.** The Deal Damage dialog only had "Target Rating", which it used as the full defence. The target's armour is now a separate field with a live defence total. The two are kept apart deliberately: defence is Rating + Armour, but the instant-kill check compares against the base Rating alone.
 
 **Fixed: death checks were easier than the rules for the most cursed characters.** Dooms subtract from the effective rating, but the result was clamped to a minimum of 1 — so a Rating 3 character with 5 Dooms rolled as though they had 1 rather than -2, a three-point discount at the moment of dying.
 

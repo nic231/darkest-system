@@ -767,7 +767,6 @@ export class DarkestActorSheet extends ActorSheet {
           label: game.i18n.localize('DARKEST.Dialog.Roll'),
           callback: async (html) => {
             const targetRating = parseInt(html.find('[name="targetRating"]').val()) || 0;
-            const targetArmor = parseInt(html.find('[name="targetArmor"]').val()) || 0;
             const boons = parseInt(html.find('[name="boons"]').val()) || 0;
             const banes = parseInt(html.find('[name="banes"]').val()) || 0;
             const ratingAdj = parseInt(html.find('[name="ratingAdj"]').val()) || 0;
@@ -797,9 +796,12 @@ export class DarkestActorSheet extends ActorSheet {
               : `${this.actor.name} deals damage`;
 
             await this.actor.rollDamage({
-              // Defence is Rating + Armour; the instant-kill check compares
-              // against the BASE Rating, so the two travel separately.
-              defenseRating: targetRating + targetArmor,
+              // A target's Rating IS its defence -- NPCs have no armour
+              // field, and the rules put armour on the DEFENDER's own roll
+              // ("when defending: damage die + foe's attack - own defense").
+              // So the same number serves as defence and as the instant-kill
+              // threshold here.
+              defenseRating: targetRating,
               targetRating,
               boons,
               banes,
@@ -818,16 +820,6 @@ export class DarkestActorSheet extends ActorSheet {
       render: (html) => {
         this._setupCounterButtons(html, woundBanes);
         this._setupBoonBaneDescriptor(html, true);
-
-        // Live defence total, so the GM can see what the wound is actually
-        // being rolled against rather than doing Rating + Armour in their head.
-        const updateTargetDefense = () => {
-          const r = parseInt(html.find('[name="targetRating"]').val()) || 0;
-          const a = parseInt(html.find('[name="targetArmor"]').val()) || 0;
-          html.find('.target-defense-total').text(r + a);
-        };
-        html.find('[name="targetRating"], [name="targetArmor"]').on('change input', updateTargetDefense);
-        updateTargetDefense();
 
         const modifierSelect = html.find('[name="ratingModifier"]');
         const attackRatingDisplay = html.find('.attack-rating-display');

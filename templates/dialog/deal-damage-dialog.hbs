@@ -10,19 +10,7 @@
       </option>
       {{/each}}
     </select>
-    <small class="hint">Target's base Rating — used for the instant-kill check</small>
-  </div>
-
-  {{!-- Armour is separate from the base Rating because the two are used for
-        different things: defence is Rating + Armour, but the instant-kill
-        threshold compares against the BASE Rating alone. Folding them
-        together made every wound against an armoured target too high. --}}
-  <div class="form-group">
-    <label>Target Armor</label>
-    <input type="number" name="targetArmor" value="0" min="0" max="3" />
-    <small class="hint">
-      Light +1, heavy +2. Defense = <span class="target-defense-total">—</span>
-    </small>
+    <small class="hint">Target's Rating — this IS their defence</small>
   </div>
 
   {{#if ratingModifiers.length}}
