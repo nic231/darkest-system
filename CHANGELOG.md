@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.2-alpha (2026-08-11)
+
+**Fixed:** in the travel tool, the "Preview art" / "Show players" buttons sat hard against "Set day & time" above them, and "Show players" wrapped onto two lines. They now size to their labels rather than inheriting Foundry's full-width button.
+
 ## 0.24.1-alpha (2026-08-11)
 
 **Fixed:** the Boons & Banes empty state ("Nothing helping or hindering right now") sat directly against the Wounds header below it. The populated list gets its spacing from the rows themselves, which a bare line of text doesn't have.

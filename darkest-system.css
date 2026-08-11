@@ -5833,8 +5833,32 @@
   font-style: italic;
 }
 
-/* Travel tool: preview / share pair for location art. */
+/* Travel tool: preview / share pair for location art.
+   Needs its own top margin -- .clock-reset above it only sets margin-top, so
+   without this the art buttons crowd the "Set day & time" button. */
 .location-art-actions {
   display: inline-flex;
   gap: 4px;
+  margin-top: 8px;
+}
+
+/* Size to their labels. Foundry's default button inside .window-content is
+   full-width, which forced "Show players" to wrap onto a second line. */
+.location-art-actions button {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 3px 10px;
+  font-size: 11px;
+  line-height: normal;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--darkest-text-muted, #9a9186);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.location-art-actions button:hover {
+  background: var(--darkest-accent, #8b3a3a);
+  color: #fff;
 }
