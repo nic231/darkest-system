@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.3-alpha (2026-08-11)
+
+**Fixed: unreadable text in the travel tool.** "Hold for roleplay", its explanation, the ambience readout and the travelling-scene row all rendered in a grey meant for the light parchment sheet, not the dark app window — and Foundry's core styles were winning on specificity, so the system's own colour never applied.
+
+A `--darkest-text-dim` variable now exists for muted text on dark surfaces; it had been referenced in several places without ever being defined, silently falling back each time.
+
 ## 0.24.2-alpha (2026-08-11)
 
 **Fixed:** in the travel tool, the "Preview art" / "Show players" buttons sat hard against "Set day & time" above them, and "Show players" wrapped onto two lines. They now size to their labels rather than inheriting Foundry's full-width button.

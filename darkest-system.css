@@ -14,7 +14,12 @@
 
   /* Text — warm off-white like fog, not clinical white */
   --darkest-text: #cec9c0;
+  /* Deep grey for muted text on LIGHT surfaces (the parchment sheet). */
   --darkest-text-muted: #7a7268;
+  /* Muted text on DARK surfaces -- the app windows. --darkest-text-muted is
+     too dark to read against those, so hints and secondary labels in the
+     travel tool, session log and trackers use this instead. */
+  --darkest-text-dim: #b3aa9c;
 
   /* Accent — crimson, matching the app sheet's section labels and borders */
   --darkest-accent: #7a1c1c;       /* dark crimson — borders, dividers */
@@ -4629,6 +4634,42 @@
 .travel-tool .travel-skips-label,
 .travel-tool .travel-no-routes {
   color: var(--darkest-text-muted, #9a9186) !important;
+}
+
+/* The hold, ambience and travelling-scene rows need the same treatment as
+   the labels above: Foundry core wins on specificity inside its own window,
+   so without !important these render dark grey on the dark panel and are
+   effectively unreadable. Explanatory text is dimmer than the controls it
+   explains, but never so dim it can't be read. */
+.app.travel-tool .travel-hold-hint,
+.application.travel-tool .travel-hold-hint,
+.travel-tool .travel-hold-hint,
+.app.travel-tool .travel-hold-note,
+.application.travel-tool .travel-hold-note,
+.travel-tool .travel-hold-note,
+.app.travel-tool .travel-scene-label,
+.application.travel-tool .travel-scene-label,
+.travel-tool .travel-scene-label,
+.app.travel-tool .travel-ambience-status,
+.application.travel-tool .travel-ambience-status,
+.travel-tool .travel-ambience-status,
+.app.travel-tool .travel-scene-name em,
+.application.travel-tool .travel-scene-name em,
+.travel-tool .travel-scene-name em {
+  color: #b3aa9c !important;
+}
+
+/* The things you actually read and act on sit brighter than the hints. */
+.app.travel-tool .travel-hold-check,
+.application.travel-tool .travel-hold-check,
+.travel-tool .travel-hold-check,
+.app.travel-tool .travel-ambience-text,
+.application.travel-tool .travel-ambience-text,
+.travel-tool .travel-ambience-text,
+.app.travel-tool .travel-scene-name,
+.application.travel-tool .travel-scene-name,
+.travel-tool .travel-scene-name {
+  color: var(--darkest-text, #cec9c0) !important;
 }
 
 .travel-row {
