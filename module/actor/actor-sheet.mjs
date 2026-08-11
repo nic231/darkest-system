@@ -767,6 +767,7 @@ export class DarkestActorSheet extends ActorSheet {
           label: game.i18n.localize('DARKEST.Dialog.Roll'),
           callback: async (html) => {
             const targetRating = parseInt(html.find('[name="targetRating"]').val()) || 0;
+            const targetArmor = parseInt(html.find('[name="targetArmor"]').val()) || 0;
             const boons = parseInt(html.find('[name="boons"]').val()) || 0;
             const banes = parseInt(html.find('[name="banes"]').val()) || 0;
             const ratingAdj = parseInt(html.find('[name="ratingAdj"]').val()) || 0;
@@ -796,7 +797,9 @@ export class DarkestActorSheet extends ActorSheet {
               : `${this.actor.name} deals damage`;
 
             await this.actor.rollDamage({
-              defenseRating: targetRating,
+              // Defence is Rating + Armour; the instant-kill check compares
+              // against the BASE Rating, so the two travel separately.
+              defenseRating: targetRating + targetArmor,
               targetRating,
               boons,
               banes,
@@ -815,6 +818,16 @@ export class DarkestActorSheet extends ActorSheet {
       render: (html) => {
         this._setupCounterButtons(html, woundBanes);
         this._setupBoonBaneDescriptor(html, true);
+
+        // Live defence total, so the GM can see what the wound is actually
+        // being rolled against rather than doing Rating + Armour in their head.
+        const updateTargetDefense = () => {
+          const r = parseInt(html.find('[name="targetRating"]').val()) || 0;
+          const a = parseInt(html.find('[name="targetArmor"]').val()) || 0;
+          html.find('.target-defense-total').text(r + a);
+        };
+        html.find('[name="targetRating"], [name="targetArmor"]').on('change input', updateTargetDefense);
+        updateTargetDefense();
 
         const modifierSelect = html.find('[name="ratingModifier"]');
         const attackRatingDisplay = html.find('.attack-rating-display');
@@ -876,7 +889,12 @@ export class DarkestActorSheet extends ActorSheet {
     event.preventDefault();
 
     const ownRating = this.actor.system.rating || 3;
-    const physicalArmor = this.actor.system.armor?.physical || 0;
+    // effectiveArmor, NOT the raw armor field: prepareData() folds equipment
+    // armour (light +1 / heavy +2) into it, and reading the raw value meant a
+    // character in heavy armour with no manually-entered number defended at
+    // their base rating -- inflating every wound they took by up to 2.
+    const physicalArmor = this.actor.system.effectiveArmor?.physical
+      ?? this.actor.system.armor?.physical ?? 0;
     const woundBanes = this.actor.system.banes || 0;
     // Same reasoning as the deal-damage roll: a lasting bane hinders
     // soaking a blow just as much as it hinders throwing one.
@@ -1175,9 +1193,18 @@ export class DarkestActorSheet extends ActorSheet {
       const maxAttr = parseInt(btn.dataset.max);
       const max = !isNaN(maxAttr) ? maxAttr : (parseInt(input.attr('max')) || 5);
       const inputMin = parseInt(input.attr('min'));
-      const min = field === 'banes'
-        ? (parseInt(input.data('wound-banes')) || woundBanes || 0)
-        : (isNaN(inputMin) ? 0 : inputMin);
+      // Both counters honour a locked floor from the template. Boons need one
+      // too, not just banes: a timed boon and a timed bane are the same kind
+      // of thing, and letting the boon be decremented away while the bane
+      // stayed locked meant the UI treated one as advisory and the other as
+      // mandatory -- and a misclick on the boon could not be undone without
+      // over-inflating it past what the effects actually granted.
+      const lockedMin = field === 'banes'
+        ? parseInt(input.data('wound-banes'))
+        : parseInt(input.data('effect-boons'));
+      const min = !isNaN(lockedMin)
+        ? lockedMin
+        : (field === 'banes' ? (woundBanes || 0) : (isNaN(inputMin) ? 0 : inputMin));
       let value = parseInt(input.val()) || 0;
 
       if (btn.classList.contains('increment')) {
@@ -1348,12 +1375,33 @@ export class DarkestActorSheet extends ActorSheet {
    */
   async _onResistUnconscious(event) {
     event.preventDefault();
-    // Use highest wound type to determine check type
-    const highestWoundType = this.actor.system.highestWoundType || 'physical';
-    const highestWoundRating = highestWoundType === 'mental'
-      ? this.actor.system.highestMentalWound || 0
-      : this.actor.system.highestPhysicalWound || 0;
-    await this.actor.rollResistUnconscious(highestWoundRating, highestWoundType);
+
+    // Only a type with MORE THAN ONE wound qualifies -- the check fires when
+    // an already-wounded character takes another of the same kind, which is
+    // the same condition that enables this button.
+    //
+    // Picking the globally highest wound was wrong: a character with two
+    // mental wounds and one big physical wound enabled the button (on the
+    // mental count) and then rolled a PHYSICAL check against a type that
+    // had only one wound and shouldn't have been checked at all.
+    const wounds = this.actor.items.filter(i => i.type === 'wound' && !i.system.healed);
+    const byType = { physical: [], mental: [] };
+    for (const w of wounds) {
+      (byType[w.system.type] ?? byType.physical).push(w.system.rating || 0);
+    }
+
+    const eligible = ['physical', 'mental'].filter(t => byType[t].length > 1);
+    if (!eligible.length) {
+      ui.notifications.warn('No wound type has more than one wound -- no check needed.');
+      return;
+    }
+
+    // More than one type can qualify; take the worse of them, which is the
+    // one that actually threatens the character.
+    const worst = eligible.reduce((a, b) =>
+      Math.max(...byType[b]) > Math.max(...byType[a]) ? b : a);
+
+    await this.actor.rollResistUnconscious(Math.max(...byType[worst]), worst);
   }
 
   /**

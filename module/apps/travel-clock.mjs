@@ -507,8 +507,14 @@ export function showTransitionVeil(phase, audio = null, opts = {}) {
     }
 
     clearTimeout(_veilTimer);
+    // The failsafe has to carry the same audio intent as the transition it
+    // covers. A hold starts a LOOPING bed and lifts its veil with
+    // keepAudio -- if scene.activate() runs long and the failsafe wins the
+    // race, a bare 'arrive' would tear that bed down and the whole roleplay
+    // scene would play out in silence, with no way to restart it.
+    const failsafeOpts = loop ? { keepAudio: true } : {};
     _veilTimer = setTimeout(
-      () => showTransitionVeil('arrive'),
+      () => showTransitionVeil('arrive', null, failsafeOpts),
       Number(coverMs) || (_veilFadeMs + VEIL_FAILSAFE_MARGIN_MS)
     );
     return;
@@ -2281,10 +2287,15 @@ export class TravelTool extends Application {
       console.error('Darkest System | scene activation failed arriving from a hold', err);
       ui.notifications.error('Could not switch to the destination scene -- see the console.');
     } finally {
+      // Cleared FIRST. setHold() below awaits a server round-trip that can
+      // reject (dropped socket, restarting server), and refresh() can throw
+      // on a bad render -- either would skip this line and leave the static
+      // flag stuck true, locking every travel action for the rest of the
+      // session with no way back short of a reload.
+      TravelTool._travelling = false;
       // No keepAudio here: this is the real arrival, so the bed fades out.
       TravelTool.broadcastVeil('arrive', null, { fadeMs });
       await TravelTool.setHold(null);
-      TravelTool._travelling = false;
     }
 
     await TravelTool._postArrival({
@@ -2343,9 +2354,10 @@ export class TravelTool extends Application {
       console.error('Darkest System | could not return to the origin scene', err);
       ui.notifications.error('Could not switch back -- see the console.');
     } finally {
+      // Cleared first, for the same reason as arriveFromHold().
+      TravelTool._travelling = false;
       TravelTool.broadcastVeil('arrive', null, { fadeMs });
       await TravelTool.setHold(null);
-      TravelTool._travelling = false;
     }
 
     await ChatMessage.create({

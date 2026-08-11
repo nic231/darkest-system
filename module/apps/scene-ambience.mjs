@@ -53,12 +53,16 @@ Hooks.once('darkestSystem.registerAmbience', (data) => {
 
 /**
  * What is playing right now.
- *   cue     the soundscape key, so we can tell "same place" from "moved"
- *   ids     Set of Syrinscape ids currently started BY US
- *   region  which region's playlist they came from, so they can be found
- *           again to stop them after the party has already moved on
+ *   cue    the soundscape key, so we can tell "same place" from "moved"
+ *   ids    Map of Syrinscape id -> the uuid of the PlaylistSound WE started
+ *
+ * The uuid is stored per id rather than a single region for the whole set.
+ * The same element can appear in several regions' playlists, so after the
+ * party crosses a border, re-resolving by region would find a DIFFERENT
+ * document than the one actually sounding -- stopping the wrong copy and
+ * leaving the real one playing forever with nothing holding a handle to it.
  */
-let _playing = { cue: null, ids: new Set(), region: null };
+let _playing = { cue: null, ids: new Map() };
 // Serialises apply() calls. Scene change and clock change can land in the
 // same tick, and two interleaved runs would each diff against a stale
 // _playing and fight over what's started.
@@ -198,60 +202,68 @@ export const SceneAmbience = {
     // stops the bed stuttering as the party moves between two locations in
     // the same region.
     const sameCue = resolved?.cue === _playing.cue;
-    if (!force && sameCue && setsEqual(wanted, _playing.ids)) return;
+    if (!force && sameCue && sameIds(wanted, _playing.ids)) return;
 
     // Stop only what WE started and no longer want. Anything the GM launched
     // by hand is untouched -- we never call stopAll() on Syrinscape.
-    for (const id of [..._playing.ids]) {
+    for (const [id, uuid] of [..._playing.ids]) {
       if (wanted.has(id)) continue;
-      await SceneAmbience._stopId(id, _playing.region);
+      await SceneAmbience._stopUuid(uuid);
       _playing.ids.delete(id);
     }
 
     for (const id of wanted) {
       if (_playing.ids.has(id)) continue;   // already running: don't restart
-      const ok = await SceneAmbience._playId(id, resolved.region);
-      if (ok) _playing.ids.add(id);
+      const uuid = await SceneAmbience._playId(id, resolved.region);
+      if (uuid) _playing.ids.set(id, uuid);
     }
 
     _playing.cue = resolved?.cue ?? null;
-    _playing.region = resolved?.region ?? null;
   },
 
+  /** Start an element. Returns the uuid of the sound we started, or null. */
   async _playId(id, region) {
     const sound = SceneAmbience.findSound(id, region);
     if (!sound) {
       console.warn(`Darkest System | no playlist entry for Syrinscape element ${id}`);
-      return false;
+      return null;
     }
     try {
       await sound.update({ playing: true, volume: SceneAmbience.volume() });
-      return true;
+      return sound.uuid;
     } catch (err) {
       console.warn(`Darkest System | could not start Syrinscape element ${id}`, err);
-      return false;
+      return null;
     }
   },
 
-  async _stopId(id, region) {
-    const sound = SceneAmbience.findSound(id, region);
-    if (!sound) return;
+  /**
+   * Stop the exact sound we started, by uuid.
+   *
+   * By uuid rather than by id+region: the party may have moved on since, and
+   * re-resolving would find whichever copy the CURRENT region happens to
+   * hold -- which can be a different document than the one actually playing.
+   */
+  async _stopUuid(uuid) {
+    if (!uuid) return;
     try {
+      const sound = fromUuidSync(uuid);
+      if (!sound) return;
       // pausedTime null because Syrinscape can't resume -- stopping is a
       // stop, not a pause. Its own _preUpdate does this too; being explicit
       // means we behave the same without the module installed.
       await sound.update({ playing: false, pausedTime: null });
     } catch (err) {
-      console.warn(`Darkest System | could not stop Syrinscape element ${id}`, err);
+      console.warn(`Darkest System | could not stop Syrinscape sound ${uuid}`, err);
     }
   },
 
   /** Silence everything this system started. Never touches the GM's own. */
   async stopAll() {
-    for (const id of [..._playing.ids]) {
-      await SceneAmbience._stopId(id, _playing.region);
+    for (const uuid of [..._playing.ids.values()]) {
+      await SceneAmbience._stopUuid(uuid);
     }
-    _playing = { cue: null, ids: new Set(), region: null };
+    _playing = { cue: null, ids: new Map() };
   },
 
   /**
@@ -278,9 +290,17 @@ export const SceneAmbience = {
   },
 };
 
-function setsEqual(a, b) {
-  if (a.size !== b.size) return false;
-  for (const v of a) if (!b.has(v)) return false;
+/**
+ * Do these hold the same ids?
+ *
+ * `wanted` is a Set of ids; `playing` is a Map of id -> sound uuid. Only the
+ * KEYS are compared, which is why iteration is over the Set and lookups go
+ * through .has() -- both work the same on either type, but relying on that
+ * accidentally would break the moment someone iterated the Map instead.
+ */
+function sameIds(wanted, playing) {
+  if (wanted.size !== playing.size) return false;
+  for (const id of wanted) if (!playing.has(id)) return false;
   return true;
 }
 

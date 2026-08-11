@@ -211,9 +211,10 @@ export class DarkestActor extends Actor {
       Hooks.call('darkestSystem.damageDealt', roll);
     }
 
-    // Damage rolls spend a counted effect too. Without this a "next 1 roll"
-    // boon would keep applying to every swing forever, since only the action
-    // roll was ticking it down.
+    // A damage roll IS a roll, so it spends a charge like any other. An
+    // effect reading "next 2 rolls" covers the next two rolls the character
+    // makes, whether those are actions, damage, or one of each -- the
+    // duration counts rolls, not turns or attacks.
     await this.consumeRollEffects();
 
     return roll;
@@ -270,8 +271,9 @@ export class DarkestActor extends Actor {
       }
     }
 
-    // After the wound is applied, so a counted effect is spent on the roll
-    // that actually used it rather than disappearing before the result.
+    // Also a roll, so it also spends a charge. Placed after the wound is
+    // applied, so an effect reading "next 1 roll" is visibly used by the
+    // roll that spends it rather than vanishing before the result.
     await this.consumeRollEffects();
 
     return roll;
@@ -482,8 +484,16 @@ export class DarkestActor extends Actor {
       return true;
     }
 
-    // Dooms subtract from effective rating (making the check harder), not from difficulty
-    const effectiveRatingWithDooms = Math.max(1, characterRating - totalDooms);
+    // Dooms subtract from effective rating (making the check harder), not
+    // from difficulty. The two are arithmetically identical --
+    //   2d6 + R - D >= 7 + W   is the same as   2d6 + R >= 7 + W + D
+    // -- so the rules' "subtract Dooms from the roll" is honoured either way.
+    //
+    // NOT clamped to a minimum of 1. It used to be, which quietly made the
+    // check EASIER than the rules for exactly the character the rule exists
+    // to punish: Rating 3 with 5 Dooms got an effective 1 instead of -2, a
+    // three-point discount at the moment of dying.
+    const effectiveRatingWithDooms = characterRating - totalDooms;
     const diceNeeded = (7 + highestWound) - effectiveRatingWithDooms;
 
     const rawMods = systemData.customModifications;

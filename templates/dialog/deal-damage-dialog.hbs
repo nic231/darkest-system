@@ -10,7 +10,19 @@
       </option>
       {{/each}}
     </select>
-    <small class="hint">Target's base Rating</small>
+    <small class="hint">Target's base Rating — used for the instant-kill check</small>
+  </div>
+
+  {{!-- Armour is separate from the base Rating because the two are used for
+        different things: defence is Rating + Armour, but the instant-kill
+        threshold compares against the BASE Rating alone. Folding them
+        together made every wound against an armoured target too high. --}}
+  <div class="form-group">
+    <label>Target Armor</label>
+    <input type="number" name="targetArmor" value="0" min="0" max="3" />
+    <small class="hint">
+      Light +1, heavy +2. Defense = <span class="target-defense-total">—</span>
+    </small>
   </div>
 
   {{#if ratingModifiers.length}}
@@ -61,7 +73,7 @@
     <label>{{localize "DARKEST.Dialog.NumBoons"}}</label>
     <div class="counter-controls">
       <button type="button" class="counter-btn decrement" data-field="boons"><i class="fas fa-minus"></i></button>
-      <input type="number" name="boons" value="{{boons}}" min="0" max="5" readonly />
+      <input type="number" name="boons" value="{{boons}}" min="{{boons}}" max="5" readonly data-effect-boons="{{boons}}" />
       <button type="button" class="counter-btn increment" data-field="boons"><i class="fas fa-plus"></i></button>
     </div>
   </div>

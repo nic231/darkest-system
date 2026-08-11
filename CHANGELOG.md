@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.27.0-alpha (2026-08-12)
+
+A full review of the codebase. Seven real bugs, two of them affecting every fight.
+
+**Fixed: equipment armour was ignored when taking damage.** The sheet computed armour from equipped items (light +1, heavy +2), displayed it in the defence total, and then the Take Damage dialog read the *raw* armour field instead. A character in heavy armour with no manually-entered number defended at their base rating — **every wound they took was up to 2 points too high**.
+
+**Fixed: no way to account for a target's armour when dealing damage.** The Deal Damage dialog only had "Target Rating", which it used as the full defence. The target's armour is now a separate field with a live defence total. The two are kept apart deliberately: defence is Rating + Armour, but the instant-kill check compares against the base Rating alone.
+
+**Fixed: death checks were easier than the rules for the most cursed characters.** Dooms subtract from the effective rating, but the result was clamped to a minimum of 1 — so a Rating 3 character with 5 Dooms rolled as though they had 1 rather than -2, a three-point discount at the moment of dying.
+
+**Fixed: the Resist Unconsciousness button could roll the wrong wound type.** It used the globally highest wound, so a character with two mental wounds and one larger physical wound rolled a *physical* check — against a type that had only one wound and shouldn't have been checked at all.
+
+**Fixed: travel could lock up permanently.** Arriving from or abandoning a held journey cleared the in-flight guard *after* a server round-trip. If that round-trip failed — a dropped connection, a restarting server — the guard stayed set and every travel action was refused for the rest of the session, recoverable only by reloading.
+
+**Fixed: a long scene load could silence a hold.** The veil's failsafe timer lifted the screen without preserving the looping travel bed, so if the travelling scene took longer to activate than the failsafe allowed, the roleplay played out in silence with no way to restart it.
+
+**Fixed: ambience could become unstoppable after crossing a region border.** Sounds were tracked by id and a single current region, but the same element can appear in several regions' playlists. After moving on, stopping it resolved to a *different* copy — silencing the wrong document and leaving the real one playing forever. Sounds are now tracked by the exact document that was started.
+
+**Also:** timed boons now have the same locked floor timed banes do, so the two are treated consistently rather than one being advisory and the other mandatory.
+
 ## 0.26.0-alpha (2026-08-12)
 
 **Boons and banes now apply to damage rolls.** Timed effects pre-filled the action roll dialog but were ignored entirely by Deal Damage and Take Damage — the boons counter there was hardcoded to zero. The rules are explicit that *"Damage CAN have Boon/Bane"*, so a boon lasting "the rest of the day" now helps the swing as much as it helps the action.
