@@ -4530,11 +4530,27 @@
 /* ----------------------------------------
    Travel & Time — the GM tool
 ---------------------------------------- */
+/* The window itself is dark.
+   This had no background of its own, so it inherited Foundry's light
+   parchment while every text colour in here assumed a dark panel -- light
+   text on a light ground, which is why the hints were unreadable. Painting
+   the surface is the fix; the text colours were right all along. */
 .travel-tool-container {
   padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  background: var(--darkest-bg-dark, #1e1c19);
+  color: var(--darkest-text, #cec9c0);
+}
+
+/* Foundry paints the window content behind our container, so the corners
+   and any margin would still show parchment without this. */
+.app.travel-tool .window-content,
+.application.travel-tool .window-content,
+.travel-tool .window-content {
+  padding: 0;
+  background: var(--darkest-bg-dark, #1e1c19);
 }
 
 .travel-now {

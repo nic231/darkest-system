@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.4-alpha (2026-08-11)
+
+**Fixed: the travel tool now has a dark background.** It never set one, so it inherited Foundry's light parchment while every text colour in it assumed a dark panel — light text on a light ground. That was the real reason the hints were unreadable, and why brightening the text in 0.24.3 didn't help.
+
 ## 0.24.3-alpha (2026-08-11)
 
 **Fixed: unreadable text in the travel tool.** "Hold for roleplay", its explanation, the ambience readout and the travelling-scene row all rendered in a grey meant for the light parchment sheet, not the dark app window — and Foundry's core styles were winning on specificity, so the system's own colour never applied.
