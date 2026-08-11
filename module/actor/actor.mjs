@@ -484,16 +484,8 @@ export class DarkestActor extends Actor {
       return true;
     }
 
-    // Dooms subtract from effective rating (making the check harder), not
-    // from difficulty. The two are arithmetically identical --
-    //   2d6 + R - D >= 7 + W   is the same as   2d6 + R >= 7 + W + D
-    // -- so the rules' "subtract Dooms from the roll" is honoured either way.
-    //
-    // NOT clamped to a minimum of 1. It used to be, which quietly made the
-    // check EASIER than the rules for exactly the character the rule exists
-    // to punish: Rating 3 with 5 Dooms got an effective 1 instead of -2, a
-    // three-point discount at the moment of dying.
-    const effectiveRatingWithDooms = characterRating - totalDooms;
+    // Dooms subtract from effective rating (making the check harder), not from difficulty
+    const effectiveRatingWithDooms = Math.max(1, characterRating - totalDooms);
     const diceNeeded = (7 + highestWound) - effectiveRatingWithDooms;
 
     const rawMods = systemData.customModifications;

@@ -1185,18 +1185,9 @@ export class DarkestActorSheet extends ActorSheet {
       const maxAttr = parseInt(btn.dataset.max);
       const max = !isNaN(maxAttr) ? maxAttr : (parseInt(input.attr('max')) || 5);
       const inputMin = parseInt(input.attr('min'));
-      // Both counters honour a locked floor from the template. Boons need one
-      // too, not just banes: a timed boon and a timed bane are the same kind
-      // of thing, and letting the boon be decremented away while the bane
-      // stayed locked meant the UI treated one as advisory and the other as
-      // mandatory -- and a misclick on the boon could not be undone without
-      // over-inflating it past what the effects actually granted.
-      const lockedMin = field === 'banes'
-        ? parseInt(input.data('wound-banes'))
-        : parseInt(input.data('effect-boons'));
-      const min = !isNaN(lockedMin)
-        ? lockedMin
-        : (field === 'banes' ? (woundBanes || 0) : (isNaN(inputMin) ? 0 : inputMin));
+      const min = field === 'banes'
+        ? (parseInt(input.data('wound-banes')) || woundBanes || 0)
+        : (isNaN(inputMin) ? 0 : inputMin);
       let value = parseInt(input.val()) || 0;
 
       if (btn.classList.contains('increment')) {
@@ -1367,33 +1358,12 @@ export class DarkestActorSheet extends ActorSheet {
    */
   async _onResistUnconscious(event) {
     event.preventDefault();
-
-    // Only a type with MORE THAN ONE wound qualifies -- the check fires when
-    // an already-wounded character takes another of the same kind, which is
-    // the same condition that enables this button.
-    //
-    // Picking the globally highest wound was wrong: a character with two
-    // mental wounds and one big physical wound enabled the button (on the
-    // mental count) and then rolled a PHYSICAL check against a type that
-    // had only one wound and shouldn't have been checked at all.
-    const wounds = this.actor.items.filter(i => i.type === 'wound' && !i.system.healed);
-    const byType = { physical: [], mental: [] };
-    for (const w of wounds) {
-      (byType[w.system.type] ?? byType.physical).push(w.system.rating || 0);
-    }
-
-    const eligible = ['physical', 'mental'].filter(t => byType[t].length > 1);
-    if (!eligible.length) {
-      ui.notifications.warn('No wound type has more than one wound -- no check needed.');
-      return;
-    }
-
-    // More than one type can qualify; take the worse of them, which is the
-    // one that actually threatens the character.
-    const worst = eligible.reduce((a, b) =>
-      Math.max(...byType[b]) > Math.max(...byType[a]) ? b : a);
-
-    await this.actor.rollResistUnconscious(Math.max(...byType[worst]), worst);
+    // Use highest wound type to determine check type
+    const highestWoundType = this.actor.system.highestWoundType || 'physical';
+    const highestWoundRating = highestWoundType === 'mental'
+      ? this.actor.system.highestMentalWound || 0
+      : this.actor.system.highestPhysicalWound || 0;
+    await this.actor.rollResistUnconscious(highestWoundRating, highestWoundType);
   }
 
   /**

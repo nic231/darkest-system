@@ -27,6 +27,9 @@ export class TransgressionTracker extends Application {
 
   /** Serialises damping-state writes; see _checkDamping(). */
   static _dampingQueue = Promise.resolve();
+  // Separate from _dampingQueue: different setting, different critical
+  // section. See _advanceLevel().
+  static _levelQueue = Promise.resolve();
 
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
@@ -327,6 +330,55 @@ export class TransgressionTracker extends Application {
       .forEach(w => w.render(false));
   }
 
+  /**
+   * The level read-modify-write, serialised.
+   *
+   * Returns the region's state AFTER the advance, so the caller can tier its
+   * chat messages off the new level without re-reading (a re-read could see
+   * a later transgression's value and describe the wrong tier).
+   */
+  static async _advanceLevel(regionSlug, ALL) {
+    TransgressionTracker._levelQueue = TransgressionTracker._levelQueue
+      .catch(() => {})  // a failed write must not wedge the queue
+      .then(() => TransgressionTracker._advanceLevelUnsafe(regionSlug, ALL));
+    return TransgressionTracker._levelQueue;
+  }
+
+  static async _advanceLevelUnsafe(regionSlug, ALL) {
+    const transgressions = TransgressionTracker.getTransgressions();
+    if (!transgressions[regionSlug]) transgressions[regionSlug] = { level: 0, loops: 0 };
+    const region = transgressions[regionSlug];
+    const antagonist = ALL[regionSlug].witch || ALL[regionSlug].name;
+
+    region.level++;
+    SessionLog.recordTransgression({
+      region: ALL[regionSlug].name,
+      level: region.level,
+      witch: ALL[regionSlug].witch,
+    });
+    if (region.level > 10) {
+      region.level = 1;
+      region.loops++;
+
+      if (region.loops >= 3) {
+        ui.notifications.error(
+          `CRITICAL: ${antagonist} has completed 3 transgression cycles! ` +
+          `They can now open the door to the Dark Forest!`,
+          { permanent: true }
+        );
+      } else {
+        ui.notifications.warn(
+          `${antagonist} has completed a transgression cycle! Loop ${region.loops}/3`
+        );
+      }
+    }
+
+    await TransgressionTracker.setTransgressions(transgressions);
+    // A copy: the caller only reads it, and handing back the live object
+    // would let a later queued advance mutate it mid-message.
+    return { level: region.level, loops: region.loops };
+  }
+
   static async incrementTransgression(regionSlug) {
     if (this.getGameMode() === 'darkest-house') {
       return this._incrementHouseAction();
@@ -372,35 +424,18 @@ export class TransgressionTracker extends Application {
       return current;
     }
 
-    const transgressions = this.getTransgressions();
-    if (!transgressions[regionSlug]) transgressions[regionSlug] = { level: 0, loops: 0 };
-    const region = transgressions[regionSlug];
-    const antagonist = ALL[regionSlug].witch || ALL[regionSlug].name;
-
-    region.level++;
-    SessionLog.recordTransgression({
-      region: ALL[regionSlug].name,
-      level: region.level,
-      witch: ALL[regionSlug].witch,
-    });
-    if (region.level > 10) {
-      region.level = 1;
-      region.loops++;
-
-      if (region.loops >= 3) {
-        ui.notifications.error(
-          `CRITICAL: ${antagonist} has completed 3 transgression cycles! ` +
-          `They can now open the door to the Dark Forest!`,
-          { permanent: true }
-        );
-      } else {
-        ui.notifications.warn(
-          `${antagonist} has completed a transgression cycle! Loop ${region.loops}/3`
-        );
-      }
-    }
-
-    await this.setTransgressions(transgressions);
+    // The level advance is a read-modify-write on one setting, so it is
+    // queued -- two transgressions landing together would otherwise both
+    // read the same level and one increment would vanish, advancing the
+    // witch's track slower than play warrants.
+    //
+    // ONLY this part is queued. Damping has its own _dampingQueue and has
+    // already returned its decision above; wrapping the whole method would
+    // put two independent queues across overlapping work for no benefit.
+    // The chat messages below stay outside it -- they don't touch the
+    // setting, and holding the queue open across ChatMessage.create() would
+    // serialise every transgression behind a chat round-trip.
+    const region = await TransgressionTracker._advanceLevel(regionSlug, ALL);
 
     // Public ominous message, tiered by the new level -- everyone sees this,
     // GM included; it never names the witch's actual scripted action (only

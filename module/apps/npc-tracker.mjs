@@ -21,6 +21,25 @@ const QUICK_FLAG = 'quickNpc';
 
 export class NpcTracker extends Application {
 
+  /**
+   * Serialises damage writes.
+   *
+   * applyDamage() is a read-modify-write on a world setting, and
+   * game.settings.get() hands back a freshly deserialised object every call
+   * -- so two hits landing inside the same write window both read the same
+   * starting total and the second silently discards the first. Rare at a
+   * real table (it needs two damage rolls within ~10ms) but it loses a
+   * player's hit outright when it happens, and the NPC survives longer than
+   * it should.
+   *
+   * Queuing here also fixes a smaller thing: two concurrent hits could both
+   * see !slot.defeated and post the "defeated!" message twice.
+   *
+   * Same shape as SessionLog._writeQueue -- the .catch() first is load
+   * bearing, so one failed write can't wedge the queue for the session.
+   */
+  static _writeQueue = Promise.resolve();
+
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: 'npc-tracker',
@@ -229,6 +248,14 @@ export class NpcTracker extends Application {
    * Applies woundRating to the active NPC slot.
    */
   static async applyDamage(woundRating) {
+    NpcTracker._writeQueue = NpcTracker._writeQueue
+      .catch(() => {})  // one failed write must not wedge the queue
+      .then(() => NpcTracker._applyDamageUnsafe(woundRating));
+    return NpcTracker._writeQueue;
+  }
+
+  /** The actual read-modify-write. Only ever called through the queue. */
+  static async _applyDamageUnsafe(woundRating) {
     const data = NpcTracker.getData_();
     if (data.activeSlot === null || data.activeSlot === undefined) return;
     const slot = data.slots[data.activeSlot];

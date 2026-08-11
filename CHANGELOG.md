@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.28.0-alpha (2026-08-12)
+
+**Reverted three changes from 0.27.0** that were made on rules readings that didn't hold up:
+
+- The **death check** clamp is back. Removing it made death mathematically certain (a needed 14 on 2d6) at high Doom counts — a real change to how lethal the game is, and not one to make quietly.
+- **Timed boons** can be dialled down again. A wound bane is unavoidable so locking it is right; a boon "for the rest of the day" is a judgement call the GM should keep.
+- **Resist Unconsciousness** uses the highest wound again, as the rules say ("Roll against the Rating of their MOST GRIEVOUS wound").
+
+The two fixes that survived review are kept: equipment armour is still honoured when taking damage, and the travel/ambience state fixes stand.
+
+**Fixed: NPC damage could be silently lost.** Two hits landing within the same write window both read the same starting total and the second overwrote the first — 4 and 5 together recorded 5, not 9, and the NPC survived longer than it should. Rare, but it discarded a player's hit outright. Also stops a duplicate "defeated!" message.
+
+**Fixed: transgression increments could be lost the same way**, advancing the witch's track slower than play warranted. Only the level write is serialised — the damping cooldown keeps its own separate queue and still counts every roll, so the pacing options behave exactly as before.
+
 ## 0.27.1-alpha (2026-08-12)
 
 **Reverted a wrong "fix" from 0.27.0.** A target-armour field was added to the Deal Damage dialog. Targets don't have armour — an NPC has a Rating and nothing else, and the rules put armour on the *defender's* own roll ("when defending: damage die + foe's attack Rating − own defense Rating"). A target's Rating **is** its defence. The field is gone and the dialog says so.
