@@ -716,6 +716,13 @@ export class DarkestActorSheet extends ActorSheet {
 
     const characterRating = this.actor.system.rating || 3;
     const woundBanes = this.actor.system.banes || 0;
+    // Timed boons/banes apply here too. The rules say plainly that "Damage
+    // CAN have Boon/Bane" and that a wounded character ALWAYS has a Bane,
+    // with no exemption for damage rolls -- so a boon lasting "the rest of
+    // the day" helps the swing as much as it helps the action.
+    const effectBoons = this.actor.system.effectBoons || 0;
+    const effectBanes = this.actor.system.effectBanes || 0;
+    const activeEffects = this.actor.system.activeEffects || [];
 
     const rawMods = this.actor.system.customModifications;
     const modsArray = Array.isArray(rawMods) ? rawMods : Object.values(rawMods || {});
@@ -740,8 +747,11 @@ export class DarkestActorSheet extends ActorSheet {
         characterRating: characterRating,
         ratingModifiers: ratingModifiers,
         taskDifficulty: Object.values(DARKEST.taskDifficulty),
-        banes: woundBanes,
-        woundBanes: woundBanes,
+        boons: effectBoons,
+        banes: woundBanes + effectBanes,
+        woundBanes: woundBanes + effectBanes,
+        activeEffects,
+        hasActiveEffects: activeEffects.length > 0,
         damageEquipment: damageEquipment,
         otherEquipment: otherEquipment
       }
@@ -868,6 +878,11 @@ export class DarkestActorSheet extends ActorSheet {
     const ownRating = this.actor.system.rating || 3;
     const physicalArmor = this.actor.system.armor?.physical || 0;
     const woundBanes = this.actor.system.banes || 0;
+    // Same reasoning as the deal-damage roll: a lasting bane hinders
+    // soaking a blow just as much as it hinders throwing one.
+    const effectBoons = this.actor.system.effectBoons || 0;
+    const effectBanes = this.actor.system.effectBanes || 0;
+    const activeEffects = this.actor.system.activeEffects || [];
 
     const rawMods = this.actor.system.customModifications;
     const modsArray = Array.isArray(rawMods) ? rawMods : Object.values(rawMods || {});
@@ -886,8 +901,11 @@ export class DarkestActorSheet extends ActorSheet {
         physicalArmor: physicalArmor,
         physicalDefense: ownRating + physicalArmor,
         taskDifficulty: Object.values(DARKEST.taskDifficulty),
-        banes: woundBanes,
-        woundBanes: woundBanes,
+        boons: effectBoons,
+        banes: woundBanes + effectBanes,
+        woundBanes: woundBanes + effectBanes,
+        activeEffects,
+        hasActiveEffects: activeEffects.length > 0,
         characterRating: ownRating,
         ratingModifiers: ratingModifiers,
         equipment: equipment

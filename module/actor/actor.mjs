@@ -211,6 +211,11 @@ export class DarkestActor extends Actor {
       Hooks.call('darkestSystem.damageDealt', roll);
     }
 
+    // Damage rolls spend a counted effect too. Without this a "next 1 roll"
+    // boon would keep applying to every swing forever, since only the action
+    // roll was ticking it down.
+    await this.consumeRollEffects();
+
     return roll;
   }
 
@@ -264,6 +269,10 @@ export class DarkestActor extends Actor {
         });
       }
     }
+
+    // After the wound is applied, so a counted effect is spent on the roll
+    // that actually used it rather than disappearing before the result.
+    await this.consumeRollEffects();
 
     return roll;
   }

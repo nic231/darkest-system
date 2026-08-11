@@ -77,7 +77,7 @@
     <label>{{localize "DARKEST.Dialog.NumBoons"}}</label>
     <div class="counter-controls">
       <button type="button" class="counter-btn decrement" data-field="boons"><i class="fas fa-minus"></i></button>
-      <input type="number" name="boons" value="0" min="0" max="5" readonly />
+      <input type="number" name="boons" value="{{boons}}" min="0" max="5" readonly />
       <button type="button" class="counter-btn increment" data-field="boons"><i class="fas fa-plus"></i></button>
     </div>
   </div>
@@ -90,9 +90,26 @@
       <button type="button" class="counter-btn increment" data-field="banes"><i class="fas fa-plus"></i></button>
     </div>
     {{#if woundBanes}}
-    <small class="hint locked-banes"><i class="fas fa-lock"></i> {{woundBanes}} from wounds (cannot reduce)</small>
+    <small class="hint locked-banes"><i class="fas fa-lock"></i> {{woundBanes}} already applied (cannot reduce)</small>
     {{/if}}
   </div>
+
+  {{!-- Why the counters start where they do -- same note as the action roll
+        dialog. A number with no explanation can't be told apart from a
+        stale effect the GM forgot to clear. --}}
+  {{#if hasActiveEffects}}
+  <div class="form-group active-effects-note">
+    <label>In effect</label>
+    <ul class="active-effects-list">
+      {{#each activeEffects}}
+      <li class="effect-{{kind}}">
+        <i class="fas {{#if (eq kind "boon")}}fa-plus{{else}}fa-minus{{/if}}"></i>
+        {{name}} <span class="effect-duration">({{label}})</span>
+      </li>
+      {{/each}}
+    </ul>
+  </div>
+  {{/if}}
 
   <div class="boon-bane-descriptor" style="display:none;">
     <small class="boon-bane-text"></small>

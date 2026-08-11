@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.26.0-alpha (2026-08-12)
+
+**Boons and banes now apply to damage rolls.** Timed effects pre-filled the action roll dialog but were ignored entirely by Deal Damage and Take Damage — the boons counter there was hardcoded to zero. The rules are explicit that *"Damage CAN have Boon/Bane"*, so a boon lasting "the rest of the day" now helps the swing as much as it helps the action.
+
+Both damage dialogs also list which effects are applying and why, the same way the action roll does.
+
+**Wound banes were already working** on both damage rolls — they pre-filled and locked the minimum. Unchanged.
+
+**Fixed: counted effects were never spent by damage rolls.** Only the action roll ticked down "next N rolls", so a one-roll boon would have kept applying to every swing indefinitely. Damage rolls now consume them too, after the roll resolves.
+
 ## 0.25.0-alpha (2026-08-11)
 
 **Invalid paces are now greyed out, and say why.** Picking "By pirogue" on a dry forest trail used to be accepted, then silently fall back to walking — correct behaviour, invisibly applied. The dropdown's old "road only" / "swamp only" hints made this worse: they checked the *region* the party was standing in, while travel gates on the chosen *route*, so a boat looked available anywhere in the swamp.
