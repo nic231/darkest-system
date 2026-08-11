@@ -35,6 +35,20 @@ export class DarkestActor extends Actor {
     systemData.totalWounds = wounds.length;
     systemData.banes = wounds.length > 0 ? 1 : 0; // Wounded = 1 bane total
 
+    // Timed boons and banes -- "a Boon on the next two rolls", "a Bane for a
+    // day", "until the character cleans off the oil". These are separate
+    // from the wound bane and DO stack with it: the rules only say banes
+    // don't stack from multiple *wounds*.
+    const effects = this.items.filter(i => i.type === 'effect' && !DarkestActor.isEffectExpired(i));
+    systemData.effectBoons = effects.filter(e => e.system.kind === 'boon').length;
+    systemData.effectBanes = effects.filter(e => e.system.kind === 'bane').length;
+    systemData.activeEffects = effects.map(e => ({
+      id: e.id,
+      name: e.name,
+      kind: e.system.kind,
+      label: DarkestActor.effectDurationLabel(e),
+    }));
+
     // Find highest wound rating and type (per-type tracking for unconscious/catatonia)
     const physicalWounds = wounds.filter(w => w.system.type === 'physical');
     const mentalWounds = wounds.filter(w => w.system.type === 'mental');
@@ -149,6 +163,11 @@ export class DarkestActor extends Actor {
 
     // Note: darkestSystem.transgression and darkestSystem.doomGained hooks are fired
     // inside DarkestRoll.toMessage() — do not duplicate them here.
+
+    // Spend a use from any "next N rolls" effect. After the roll, so the
+    // effect that reads "next 1 roll" is visibly applied to the roll that
+    // uses it up rather than vanishing beforehand.
+    await this.consumeRollEffects();
 
     return roll;
   }
@@ -694,6 +713,75 @@ export class DarkestActor extends Actor {
    * @param {string} description - Doom description
    * @param {string} source - Source of the doom
    */
+  /**
+   * Has a timed boon/bane run out?
+   *
+   * Read-only -- prepareData() must not write documents, so expired effects
+   * are filtered out here and deleted separately by sweepExpiredEffects().
+   */
+  static isEffectExpired(item) {
+    const s = item.system;
+    if (s.duration === 'rolls') return (s.rollsRemaining ?? 0) <= 0;
+    if (s.duration === 'until-time') {
+      if (s.expiresDay == null) return false;
+      const clock = DarkestActor._clock();
+      if (!clock) return false;  // no clock: treat as still running
+      if (clock.day > s.expiresDay) return true;
+      return clock.day === s.expiresDay && clock.minutes >= (s.expiresMinutes ?? 0);
+    }
+    return false;  // until-removed
+  }
+
+  /** Current world clock, or null if the travel clock isn't available. */
+  static _clock() {
+    try {
+      return game.settings.get('darkest-system', 'travelClock') || null;
+    } catch {
+      return null;
+    }
+  }
+
+  static effectDurationLabel(item) {
+    const s = item.system;
+    if (s.duration === 'rolls') {
+      const n = s.rollsRemaining ?? 0;
+      return `next ${n} roll${n === 1 ? '' : 's'}`;
+    }
+    if (s.duration === 'until-time' && s.expiresDay != null) {
+      const h = Math.floor((s.expiresMinutes ?? 0) / 60);
+      const m = (s.expiresMinutes ?? 0) % 60;
+      return `until Day ${s.expiresDay}, ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+    return 'until removed';
+  }
+
+  /** Delete effects that have run out. Owner-side, so it can write. */
+  async sweepExpiredEffects() {
+    const dead = this.items
+      .filter(i => i.type === 'effect' && DarkestActor.isEffectExpired(i))
+      .map(i => i.id);
+    if (dead.length) await this.deleteEmbeddedDocuments('Item', dead);
+    return dead.length;
+  }
+
+  /**
+   * Spend one roll from every counted effect.
+   *
+   * Called after a roll resolves. Effects that hit zero are removed by the
+   * sweep rather than here, so "next 1 roll" is still visibly applied to the
+   * roll that consumes it.
+   */
+  async consumeRollEffects() {
+    const counted = this.items.filter(i =>
+      i.type === 'effect' && i.system.duration === 'rolls' && (i.system.rollsRemaining ?? 0) > 0);
+    if (!counted.length) return;
+    await this.updateEmbeddedDocuments('Item', counted.map(i => ({
+      _id: i.id,
+      'system.rollsRemaining': i.system.rollsRemaining - 1,
+    })));
+    await this.sweepExpiredEffects();
+  }
+
   async addDoom(description = 'A nameless dread', source = 'The Woods') {
     const doomData = {
       name: `Doom: ${description.substring(0, 30)}...`,

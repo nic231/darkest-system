@@ -34,30 +34,66 @@ export class GmWhisperTool extends Application {
   }
 
   getData() {
-    const players = GmWhisperTool.getPlayerUsers().map(u => ({
+    // Selection survives a re-render, and drops anyone who has since
+    // disconnected so a stale id can't be whispered into the void.
+    this._selected ??= new Set();
+    const users = GmWhisperTool.getPlayerUsers();
+    const live = new Set(users.map(u => u.id));
+    for (const id of this._selected) if (!live.has(id)) this._selected.delete(id);
+
+    const players = users.map(u => ({
       id: u.id,
       name: u.character?.name || u.name,
-      color: u.color
+      color: u.color,
+      selected: this._selected.has(u.id)
     }));
     return {
       players,
-      hasPlayers: players.length > 0
+      hasPlayers: players.length > 0,
+      selectedCount: this._selected.size,
+      sendLabel: this._selected.size > 1
+        ? `Whisper to ${this._selected.size} players`
+        : 'Whisper'
     };
   }
 
   activateListeners(html) {
     super.activateListeners(html);
 
+    // Re-render swaps the DOM out, so preserve what's being typed.
+    const keepText = () => html.find('[name="whisperText"]').val();
+
     html.find('[name="whisperText"]').on('keydown', (ev) => {
       if (ev.key === 'Enter' && !ev.shiftKey) {
         ev.preventDefault();
-        html.find('.whisper-random-btn').trigger('click');
+        html.find('.whisper-send-btn').trigger('click');
       }
     });
 
+    // Clicking a name selects rather than sends -- otherwise there's no way
+    // to build a group without firing off a whisper per click.
     html.find('.whisper-player-btn').click((ev) => {
       const userId = ev.currentTarget.dataset.userId;
-      this._sendWhisper(userId, html);
+      if (this._selected.has(userId)) this._selected.delete(userId);
+      else this._selected.add(userId);
+      this._draft = keepText();
+      this.render();
+    });
+
+    html.find('.whisper-select-all').click(() => {
+      for (const u of GmWhisperTool.getPlayerUsers()) this._selected.add(u.id);
+      this._draft = keepText();
+      this.render();
+    });
+
+    html.find('.whisper-select-none').click(() => {
+      this._selected.clear();
+      this._draft = keepText();
+      this.render();
+    });
+
+    html.find('.whisper-send-btn').click(() => {
+      this._sendWhispers([...this._selected], html);
     });
 
     html.find('.whisper-random-btn').click(() => {
@@ -67,32 +103,60 @@ export class GmWhisperTool extends Application {
         return;
       }
       const chosen = players[Math.floor(Math.random() * players.length)];
-      this._sendWhisper(chosen.id, html);
+      this._sendWhispers([chosen.id], html);
     });
+
+    // Restore a draft that survived a selection re-render.
+    if (this._draft) {
+      html.find('[name="whisperText"]').val(this._draft);
+      this._draft = null;
+    }
   }
 
-  async _sendWhisper(userId, html) {
+  /**
+   * One private whisper per recipient.
+   *
+   * Deliberately NOT a single message addressed to several people: separate
+   * copies mean nobody learns who else was told, which is the right default
+   * when the party is each noticing something independently.
+   */
+  async _sendWhispers(userIds, html) {
     const text = html.find('[name="whisperText"]').val()?.trim();
     if (!text) {
       ui.notifications.warn('Enter a message to whisper first.');
       return;
     }
-    const targetUser = game.users.get(userId);
-    if (!targetUser) return;
+    const targets = userIds.map(id => game.users.get(id)).filter(Boolean);
+    if (!targets.length) {
+      ui.notifications.warn('Select at least one player to whisper to.');
+      return;
+    }
 
-    await ChatMessage.create({
-      content: `<div class="darkest-gm-whisper"><i class="fas fa-eye"></i> ${text}</div>`,
-      whisper: [userId],
-      speaker: { alias: 'GM' }
-    });
+    for (const user of targets) {
+      await ChatMessage.create({
+        content: `<div class="darkest-gm-whisper"><i class="fas fa-eye"></i> ${text}</div>`,
+        whisper: [user.id],
+        speaker: { alias: 'GM' }
+      });
 
-    game.socket.emit('system.darkest-system', {
-      type: 'gmWhisperAlert',
-      userId,
-      content: text
-    });
+      // The socket handler filters on userId, so one emit per recipient
+      // pops the dialog only on that player's client.
+      game.socket.emit('system.darkest-system', {
+        type: 'gmWhisperAlert',
+        userId: user.id,
+        content: text
+      });
+    }
 
-    ui.notifications.info(`Whispered to ${targetUser.character?.name || targetUser.name}.`);
-    html.find('[name="whisperText"]').val('').focus();
+    const names = targets.map(u => u.character?.name || u.name);
+    ui.notifications.info(
+      names.length === 1
+        ? `Whispered to ${names[0]}.`
+        : `Whispered to ${names.length} players: ${names.join(', ')}.`
+    );
+
+    this._selected.clear();
+    this._draft = null;
+    this.render();
   }
 }

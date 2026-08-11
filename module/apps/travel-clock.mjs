@@ -306,6 +306,42 @@ const BOAT_FLAVOUR = {
 };
 
 /**
+ * The key artwork for the scene the party is standing in, if the content
+ * module supplied one.
+ *
+ * Resolves through the location's journal entry rather than guessing a
+ * filename from the slug: the naming is inconsistent enough that matching
+ * by name only resolves about half of them, whereas the build script has
+ * already wired an "Artwork" image page onto 91 of the 131 locations.
+ */
+export function currentLocationArt() {
+  const slug = canvas?.scene?.getFlag('darkest-woods', 'locationSlug');
+  if (!slug) return null;
+  const entry = game.journal?.find(j => j.getFlag('darkest-woods', 'slug') === slug);
+  if (!entry) return null;
+  const page = entry.pages?.contents?.find(p => p.type === 'image' && p.src
+    && /artwork/i.test(p.name || ''));
+  if (!page?.src) return null;
+  return { src: page.src, title: entry.name, uuid: page.uuid };
+}
+
+/**
+ * How far a route actually is, for the session log's distance total.
+ *
+ * Most routes carry a real km figure. Thirty give a duration instead, and
+ * the book quotes those as WALKING times -- so convert at walking speed,
+ * the same assumption routeMinutes() already makes. Returns null where the
+ * book gives neither ("a few steps", unmeasured trails): those are excluded
+ * from the total and counted separately rather than guessed at.
+ */
+function routeKm(route) {
+  if (!route) return null;
+  if (typeof route.km === 'number') return route.km;
+  if (route.hours) return route.hours * PACE_SPEED.normal;
+  return null;
+}
+
+/**
  * A random atmospheric line for a region, or null if we have none.
  *
  * `boating` swaps in the on-the-water set where one exists -- a party in a
@@ -795,6 +831,9 @@ export class TravelClock {
 
   static broadcastUpdate() {
     game.socket.emit('system.darkest-system', { type: 'travelClockUpdate' });
+    // Local listeners (scene darkness) need to know the clock moved even
+    // though the socket doesn't loop back to this client.
+    Hooks.callAll('darkestSystem.clockChanged', TravelClock.displayState());
   }
 
   static refresh() {
@@ -957,6 +996,7 @@ export class TravelTool extends Application {
         known: known.has(b.key),
         hasAudio: DarkestAudio.hasBirdsong(b.key),
       })),
+      hasLocationArt: !!currentLocationArt(),
       paces: Object.keys(PACE_SPEED).map(p => ({
         key: p,
         label: PACE_LABEL[p],
@@ -1047,6 +1087,45 @@ export class TravelTool extends Application {
     });
 
     html.find('.clock-reset').click(() => this._promptReset());
+
+    // Show this location's key art to the players. Deliberately manual --
+    // some locations ARE their own reveal, so popping art automatically on
+    // arrival would spoil them.
+    // Preview on the GM's screen first, with a Share button on the popup.
+    // Sharing straight away would mean showing the players an image the GM
+    // hasn't seen -- and some of this art is a reveal in itself.
+    html.find('.show-location-art').click(() => {
+      const art = currentLocationArt();
+      if (!art) {
+        ui.notifications.warn('No artwork for this location.');
+        return;
+      }
+      // v14 takes a single options object -- the older (src, options) form
+      // silently fails. Fall back to it for older cores.
+      let popout;
+      try {
+        popout = new ImagePopout({
+          src: art.src,
+          uuid: art.uuid,
+          window: { title: art.title },
+        });
+      } catch {
+        popout = new ImagePopout(art.src, { title: art.title, uuid: art.uuid });
+      }
+      popout.render(true);
+    });
+
+    // Separate, explicit share. Keeping it out of the preview means the
+    // handover is always a deliberate second action.
+    html.find('.share-location-art').click(() => {
+      const art = currentLocationArt();
+      if (!art) {
+        ui.notifications.warn('No artwork for this location.');
+        return;
+      }
+      ImagePopout.shareImage({ image: art.src, title: art.title, uuid: art.uuid });
+      ui.notifications.info(`Showed the ${art.title} artwork to players.`);
+    });
 
     // Birdsong toggles -- shared state with the Transgression Tracker.
     html.find('.birdsong-toggle').click(async (ev) => {
@@ -1290,6 +1369,7 @@ export class TravelTool extends Application {
         toTitle: leg.route?.toTitle,
         label: leg.route?.label,
         minutes: leg.minutes,
+        km: routeKm(leg.route),
         region: TravelClock.currentRegion(),
         pace: this._lastPace,
       });
@@ -1583,6 +1663,7 @@ export class TravelTool extends Application {
         toTitle: opts.route.toTitle,
         label: opts.route.label,
         minutes,
+        km: routeKm(opts.route),
         region: opts.region,
         day: result.day,
         time: state.fixed ? state.phaseLabel : state.time,

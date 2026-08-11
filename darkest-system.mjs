@@ -33,6 +33,12 @@ import {
 } from './module/apps/travel-clock.mjs';
 import { SessionLog, registerSessionLog } from './module/apps/session-log.mjs';
 import { DarkestAudio, registerAudioSettings } from './module/apps/audio.mjs';
+import { isPrimaryGM } from './module/helpers/gm.mjs';
+import {
+  SceneDarkness,
+  registerSceneDarknessSettings,
+  registerSceneDarknessHooks,
+} from './module/apps/scene-darkness.mjs';
 
 /* ----------------------------------------
    Initialize System
@@ -87,6 +93,8 @@ Hooks.once('init', function() {
   registerSessionLog();
 
   registerAudioSettings();
+
+  registerSceneDarknessSettings();
 
   // Register travel clock settings
   registerTravelClockSettings();
@@ -210,6 +218,7 @@ async function _preloadHandlebarsTemplates() {
     'systems/darkest-system/templates/item/item-doom-sheet.hbs',
     'systems/darkest-system/templates/item/item-ability-sheet.hbs',
     'systems/darkest-system/templates/item/item-equipment-sheet.hbs',
+    'systems/darkest-system/templates/item/item-effect-sheet.hbs',
 
     // Chat
     'systems/darkest-system/templates/chat/roll-result.hbs',
@@ -254,6 +263,17 @@ Hooks.once('ready', function() {
 
   // Register travel clock hooks and draw the dial
   registerTravelClockHooks();
+  registerSceneDarknessHooks();
+
+  // Sweep expired boons/banes when time passes. Effects are filtered out of
+  // the totals the moment they lapse, so this is only tidying the sheet --
+  // but a stale row the GM has to mentally ignore defeats the point.
+  Hooks.on('darkestSystem.clockChanged', async () => {
+    if (!isPrimaryGM()) return;
+    for (const actor of game.actors.filter(a => a.type === 'character')) {
+      if (actor.items.some(i => i.type === 'effect')) await actor.sweepExpiredEffects();
+    }
+  });
   renderDial();
 
   // Socket handler for GM actions (player-to-GM delegation).
@@ -264,11 +284,6 @@ Hooks.once('ready', function() {
   // advance the transgression track twice, post two stir messages, and
   // double-count in the session log. Elect the lowest-id active GM instead;
   // every client computes the same answer from the same user list.
-  const isPrimaryGM = () => {
-    if (!game.user.isGM) return false;
-    const gms = game.users.filter(u => u.isGM && u.active).sort((a, b) => a.id.localeCompare(b.id));
-    return gms.length === 0 || gms[0].id === game.user.id;
-  };
   game.socket.on('system.darkest-system', (data) => {
     if (!data?.type) return;
     switch (data.type) {

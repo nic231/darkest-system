@@ -1,6 +1,9 @@
 {
   "Actor": {
-    "types": ["character", "npc"],
+    "types": [
+      "character",
+      "npc"
+    ],
     "templates": {
       "base": {
         "rating": 3,
@@ -9,7 +12,9 @@
       }
     },
     "character": {
-      "templates": ["base"],
+      "templates": [
+        "base"
+      ],
       "ratingModifications": {
         "physical": 0,
         "mental": 0,
@@ -27,34 +32,48 @@
       "dead": false
     },
     "npc": {
-      "templates": ["base"],
+      "templates": [
+        "base"
+      ],
       "description": "",
       "tactics": "",
       "abilities": ""
     }
   },
   "Item": {
-    "types": ["wound", "doom", "ability", "equipment"],
+    "types": [
+      "wound",
+      "doom",
+      "ability",
+      "equipment",
+      "effect"
+    ],
     "templates": {
       "base": {
         "description": ""
       }
     },
     "wound": {
-      "templates": ["base"],
+      "templates": [
+        "base"
+      ],
       "rating": 1,
       "type": "physical",
       "healed": false,
       "restFailedAt": null
     },
     "doom": {
-      "templates": ["base"],
+      "templates": [
+        "base"
+      ],
       "effect": "",
       "resolved": false,
       "source": ""
     },
     "ability": {
-      "templates": ["base"],
+      "templates": [
+        "base"
+      ],
       "grantsBoon": false,
       "grantsRatingMod": 0,
       "usesPerDay": 0,
@@ -63,13 +82,26 @@
       "abilityType": "passive"
     },
     "equipment": {
-      "templates": ["base"],
+      "templates": [
+        "base"
+      ],
       "quantity": 1,
       "armorType": "none",
       "grantsBoon": false,
       "grantsBane": false,
       "combatNote": "",
       "damageRatingBonus": 0
+    },
+    "effect": {
+      "templates": [
+        "base"
+      ],
+      "kind": "boon",
+      "duration": "until-removed",
+      "rollsRemaining": 0,
+      "expiresDay": null,
+      "expiresMinutes": null,
+      "source": ""
     }
   }
 }

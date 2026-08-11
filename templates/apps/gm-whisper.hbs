@@ -2,18 +2,35 @@
   <div class="whisper-message-group">
     <label>Message</label>
     <textarea name="whisperText" rows="4" placeholder="What do they see, hear, or feel that no one else does..."></textarea>
-    <small class="hint">Enter sends to a random player. Shift+Enter for a new line.</small>
+    <small class="hint">Enter sends to whoever is selected. Shift+Enter for a new line.</small>
   </div>
+
+  {{#if hasPlayers}}
+  <div class="whisper-select-row">
+    <span class="whisper-select-label">
+      {{#if selectedCount}}{{selectedCount}} selected{{else}}Select who hears this{{/if}}
+    </span>
+    <button type="button" class="whisper-select-all">All</button>
+    <button type="button" class="whisper-select-none">None</button>
+  </div>
+  {{/if}}
 
   <div class="whisper-player-list">
     {{#each players}}
-    <button type="button" class="whisper-player-btn" data-user-id="{{id}}" style="border-left-color: {{color}}">
-      <i class="fas fa-user"></i> {{name}}
+    <button type="button" class="whisper-player-btn{{#if selected}} selected{{/if}}"
+            data-user-id="{{id}}" style="border-left-color: {{color}}">
+      <i class="fas {{#if selected}}fa-check{{else}}fa-user{{/if}}"></i> {{name}}
     </button>
     {{else}}
     <div class="no-players">No connected players with a character.</div>
     {{/each}}
   </div>
+
+  {{#if hasPlayers}}
+  <button type="button" class="whisper-send-btn{{#unless selectedCount}} disabled{{/unless}}">
+    <i class="fas fa-eye"></i> {{sendLabel}}
+  </button>
+  {{/if}}
 
   <button type="button" class="whisper-random-btn">
     <i class="fas fa-dice"></i> Whisper to Random Player

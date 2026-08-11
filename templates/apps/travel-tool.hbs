@@ -15,6 +15,18 @@
     <button type="button" class="clock-reset" title="Set the day and time directly">
       <i class="fas fa-pen"></i> Set day &amp; time
     </button>
+    {{#if hasLocationArt}}
+    <span class="location-art-actions">
+      <button type="button" class="show-location-art"
+              data-tooltip="Open this location's artwork on your screen only.">
+        <i class="fas fa-eye"></i> Preview art
+      </button>
+      <button type="button" class="share-location-art"
+              data-tooltip="Show it to the players. Your call when — some places are their own reveal.">
+        <i class="fas fa-share"></i> Show players
+      </button>
+    </span>
+    {{/if}}
   </div>
 
   {{!-- The common case: step out of where the party already is. --}}

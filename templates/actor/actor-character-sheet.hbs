@@ -153,6 +153,35 @@
         </div>
       </section>
 
+      {{!-- Boons & Banes in effect. Timed ones from the fiction: "a Boon on
+            the next two rolls", "a Bane for a day", "until you clean the
+            oil off". They pre-fill the roll dialog. --}}
+      <section class="effects-section">
+        <div class="section-header">
+          <h3>Boons &amp; Banes</h3>
+          <button type="button" class="effect-add-btn" data-tooltip="Add a boon or bane">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
+        {{#if system.activeEffects.length}}
+        <ul class="effect-list">
+          {{#each system.activeEffects}}
+          <li class="effect-row effect-{{kind}}">
+            <span class="effect-badge">
+              <i class="fas {{#if (eq kind "boon")}}fa-arrow-up{{else}}fa-arrow-down{{/if}}"></i>
+            </span>
+            <span class="effect-name">{{name}}</span>
+            <span class="effect-duration">{{label}}</span>
+            <button type="button" class="effect-delete-btn" data-item-id="{{id}}"
+                    data-tooltip="Remove"><i class="fas fa-times"></i></button>
+          </li>
+          {{/each}}
+        </ul>
+        {{else}}
+        <p class="effects-empty">Nothing helping or hindering right now.</p>
+        {{/if}}
+      </section>
+
       {{!-- Wounds --}}
       <section class="wounds-section">
         <div class="section-header">

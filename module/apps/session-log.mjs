@@ -138,9 +138,9 @@ export class SessionLog extends Application {
   // ── Recording helpers, called from the rest of the system ─────────────
 
   /** The party moved. Records real names -- this is the map data. */
-  static recordMove({ fromTitle, toTitle, label, minutes, region, day, time, pace }) {
+  static recordMove({ fromTitle, toTitle, label, minutes, km, region, day, time, pace }) {
     return SessionLog.record({
-      kind: 'move', fromTitle, toTitle, label, minutes, region, day, time, pace
+      kind: 'move', fromTitle, toTitle, label, minutes, km, region, day, time, pace
     });
   }
 
@@ -168,6 +168,7 @@ export class SessionLog extends Application {
       hasAny: entries.length > 0,
       moves: SessionLog._formatMoves(moves),
       moveCount: moves.length,
+      totals: SessionLog._travelTotals(moves),
       route: SessionLog._routeSummary(moves),
       stats: SessionLog._rollStats(rolls),
       rollCount: rolls.length,
@@ -200,6 +201,32 @@ export class SessionLog extends Application {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
+  /**
+   * How far and how long the party has travelled.
+   *
+   * Time is exact -- every leg records its minutes. Distance is not: some
+   * routes the book never measured, and entries recorded before distance
+   * was logged have none either. Those are counted and reported rather than
+   * estimated, so the figure is honest about what it doesn't know.
+   */
+  static _travelTotals(moves) {
+    if (!moves.length) return null;
+    let km = 0, minutes = 0, unmeasured = 0;
+    for (const m of moves) {
+      minutes += m.minutes || 0;
+      if (typeof m.km === 'number' && m.km > 0) km += m.km;
+      else unmeasured++;
+    }
+    return {
+      km: km > 0 ? (Math.round(km * 10) / 10).toLocaleString() : null,
+      duration: SessionLog._dur(minutes),
+      legs: moves.length,
+      unmeasured,
+      // Only distance is approximate; the clock is exact.
+      approx: unmeasured > 0,
+    };
+  }
+
   static _formatMoves(moves) {
     return moves.map((m, i) => ({
       id: m.id,
@@ -208,6 +235,8 @@ export class SessionLog extends Application {
       to: m.toTitle || '—',
       label: m.label || '',
       duration: m.minutes ? SessionLog._dur(m.minutes) : '—',
+      distance: (typeof m.km === 'number' && m.km > 0)
+        ? `${Math.round(m.km * 10) / 10} km` : '—',
       gameTime: m.day ? `Day ${m.day}, ${m.time}` : '',
       pace: m.pace && m.pace !== 'normal' ? m.pace : '',
       when: SessionLog._clock(m)

@@ -5446,3 +5446,210 @@
   color: #c56b5c;
   border-color: #c56b5c;
 }
+
+/* Whisper tool: multi-select. Clicking a name toggles it rather than
+   sending, so a group can be built before dispatching. */
+.gm-whisper-tool .whisper-select-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: var(--darkest-text-muted, #9a9186);
+}
+
+.gm-whisper-tool .whisper-select-label {
+  flex: 1 1 auto;
+}
+
+.gm-whisper-tool .whisper-select-all,
+.gm-whisper-tool .whisper-select-none {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 1px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--darkest-text-muted, #9a9186);
+  background: var(--darkest-bg-medium, #2a2a2a);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 3px;
+}
+
+.gm-whisper-tool .whisper-player-btn.selected {
+  background: var(--darkest-purple, #4e3f6e);
+  color: var(--darkest-text, #e8dcc8);
+  border-color: var(--darkest-accent-light, #b9a6e0);
+}
+
+.gm-whisper-tool .whisper-send-btn {
+  margin-top: 6px;
+  cursor: pointer;
+  color: var(--darkest-text, #e8dcc8);
+  background: var(--darkest-purple, #4e3f6e);
+  border: 1px solid var(--darkest-accent-light, #b9a6e0);
+  border-radius: 4px;
+}
+
+.gm-whisper-tool .whisper-send-btn:hover {
+  background: var(--darkest-accent-light, #b9a6e0);
+  color: var(--darkest-bg-dark, #1e1c19);
+}
+
+/* Nothing selected: still clickable (it warns), just visibly inert. */
+.gm-whisper-tool .whisper-send-btn.disabled {
+  opacity: 0.45;
+}
+
+/* Session log: distance/time totals above the movement table. */
+.session-log-container .log-totals {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.session-log-container .log-total {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.session-log-container .log-total-value {
+  font-size: 17px;
+  font-weight: bold;
+  line-height: 1.1;
+  color: var(--darkest-accent-light, #b9a6e0);
+}
+
+.session-log-container .log-total-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--darkest-text-muted, #9a9186);
+  margin-top: 2px;
+}
+
+.session-log-container .log-totals-note {
+  margin: -4px 0 8px;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--darkest-text-muted, #9a9186);
+  cursor: help;
+}
+
+/* ============================================================
+   Boons & Banes in effect (character sheet)
+   ============================================================ */
+
+.effects-section .effect-add-btn {
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--darkest-text-muted, #9a9186);
+  background: var(--darkest-bg-medium, #2a2a2a);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 3px;
+}
+
+.effects-section .effect-add-btn:hover {
+  color: var(--darkest-accent-light, #b9a6e0);
+  border-color: var(--darkest-accent-light, #b9a6e0);
+}
+
+.effects-section .effect-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+.effects-section .effect-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  margin-bottom: 3px;
+  border-radius: 3px;
+  border-left: 3px solid transparent;
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 12px;
+}
+
+.effects-section .effect-row.effect-boon {
+  border-left-color: #7fb069;
+}
+
+.effects-section .effect-row.effect-bane {
+  border-left-color: #c56b5c;
+}
+
+.effects-section .effect-badge {
+  flex: 0 0 auto;
+  width: 16px;
+  text-align: center;
+}
+
+.effect-row.effect-boon .effect-badge { color: #7fb069; }
+.effect-row.effect-bane .effect-badge { color: #c56b5c; }
+
+.effects-section .effect-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.effects-section .effect-duration {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--darkest-text-muted, #9a9186);
+}
+
+.effects-section .effect-delete-btn {
+  flex: 0 0 auto;
+  width: 18px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--darkest-text-muted, #9a9186);
+  opacity: 0.5;
+}
+
+.effects-section .effect-row:hover .effect-delete-btn { opacity: 1; }
+.effects-section .effect-delete-btn:hover { color: #c56b5c; }
+
+.effects-section .effects-empty {
+  margin: 4px 0 0;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--darkest-text-muted, #9a9186);
+}
+
+/* Why the roll dialog's counters start where they do. */
+.active-effects-note .active-effects-list {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  font-size: 11px;
+}
+
+.active-effects-note .active-effects-list li {
+  padding: 1px 0;
+}
+
+.active-effects-note .effect-boon { color: #7fb069; }
+.active-effects-note .effect-bane { color: #c56b5c; }
+
+.active-effects-note .effect-duration {
+  color: var(--darkest-text-muted, #9a9186);
+  font-style: italic;
+}
+
+/* Travel tool: preview / share pair for location art. */
+.location-art-actions {
+  display: inline-flex;
+  gap: 4px;
+}

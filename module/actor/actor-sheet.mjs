@@ -242,6 +242,12 @@ export class DarkestActorSheet extends ActorSheet {
     if (!this.isEditable) return;
 
     // Rating dots click handler
+    html.find('.effect-add-btn').click(this._onAddEffect.bind(this));
+    html.find('.effect-delete-btn').click(async (ev) => {
+      const id = ev.currentTarget.dataset.itemId;
+      if (id) await this.actor.deleteEmbeddedDocuments('Item', [id]);
+    });
+
     html.find('.rating-dot').click(this._onRatingClick.bind(this));
 
     // Ability use-pip click handler (Main-tab summary and Abilities tab both)
@@ -400,12 +406,116 @@ export class DarkestActorSheet extends ActorSheet {
   }
 
   /**
+   * Add a timed boon or bane.
+   *
+   * The three durations map to how the book actually phrases them: "a Boon
+   * on the next two rolls", "a Bane for a day", and open-ended ones like
+   * "until the character cleans all the oil off".
+   */
+  async _onAddEffect(event) {
+    event.preventDefault();
+
+    const content = `<div class="darkest-dialog effect-dialog">
+      <div class="form-group">
+        <label>What is it?</label>
+        <input type="text" name="effectName" placeholder="e.g. Blessing of the Lookin' Pool" />
+      </div>
+      <div class="form-group">
+        <label>Helping or hindering?</label>
+        <select name="effectKind">
+          <option value="boon">Boon — makes tasks easier</option>
+          <option value="bane">Bane — makes tasks harder</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>How long?</label>
+        <select name="effectDuration">
+          <option value="rolls">For the next few rolls</option>
+          <option value="until-time">For a set time</option>
+          <option value="until-removed" selected>Until something changes it</option>
+        </select>
+      </div>
+      <div class="form-group effect-rolls-field" style="display:none">
+        <label>How many rolls?</label>
+        <input type="number" name="effectRolls" value="2" min="1" max="20" />
+      </div>
+      <div class="form-group effect-hours-field" style="display:none">
+        <label>How many hours?</label>
+        <input type="number" name="effectHours" value="24" min="1" max="240" />
+        <small class="hint">Measured on the travel clock, so it clears itself as time passes.</small>
+      </div>
+    </div>`;
+
+    new Dialog({
+      title: 'Add a Boon or Bane',
+      content,
+      buttons: {
+        add: {
+          icon: '<i class="fas fa-plus"></i>',
+          label: 'Add',
+          callback: async (html) => {
+            const name = html.find('[name="effectName"]').val()?.trim();
+            const kind = html.find('[name="effectKind"]').val();
+            const duration = html.find('[name="effectDuration"]').val();
+            if (!name) {
+              ui.notifications.warn('Give it a name so you know what it is later.');
+              return;
+            }
+
+            const system = { kind, duration, source: '' };
+            if (duration === 'rolls') {
+              system.rollsRemaining = Math.max(1, parseInt(html.find('[name="effectRolls"]').val()) || 1);
+            } else if (duration === 'until-time') {
+              const hours = Math.max(1, parseInt(html.find('[name="effectHours"]').val()) || 24);
+              const clock = (() => {
+                try { return game.settings.get('darkest-system', 'travelClock'); }
+                catch { return null; }
+              })();
+              if (!clock) {
+                ui.notifications.warn('No travel clock available — adding it as open-ended instead.');
+                system.duration = 'until-removed';
+              } else {
+                const total = clock.minutes + hours * 60;
+                system.expiresDay = clock.day + Math.floor(total / 1440);
+                system.expiresMinutes = total % 1440;
+              }
+            }
+
+            await this.actor.createEmbeddedDocuments('Item', [{
+              name, type: 'effect', system,
+            }]);
+          }
+        },
+        cancel: { icon: '<i class="fas fa-times"></i>', label: 'Cancel' }
+      },
+      default: 'add',
+      render: (html) => {
+        // Only show the field the chosen duration actually needs.
+        const sync = () => {
+          const d = html.find('[name="effectDuration"]').val();
+          html.find('.effect-rolls-field').toggle(d === 'rolls');
+          html.find('.effect-hours-field').toggle(d === 'until-time');
+        };
+        html.find('[name="effectDuration"]').on('change', sync);
+        sync();
+        html.find('[name="effectName"]').focus();
+      }
+    }, { width: 420 }).render(true);
+  }
+
+  /**
    * Show the Action Roll dialog, optionally pre-selecting a named skill/talent
    * (from a Modified Ratings badge) instead of defaulting to Base Rating.
    */
   async _showActionRollDialog(preselectModifierName = null) {
     const characterRating = this.actor.system.rating || 3;
     const woundBanes = this.actor.system.banes || 0;
+    // Timed boons/banes pre-fill the counters the same way the wound bane
+    // does, and are listed by name so the GM can see WHY the numbers are
+    // what they are -- and still override them before rolling.
+    const effectBoons = this.actor.system.effectBoons || 0;
+    const effectBanes = this.actor.system.effectBanes || 0;
+    const activeEffects = this.actor.system.activeEffects || [];
 
     // Prepare rating modifiers with effective values
     const rawMods = this.actor.system.customModifications;
@@ -425,8 +535,11 @@ export class DarkestActorSheet extends ActorSheet {
         taskDifficulty: Object.values(DARKEST.taskDifficulty),
         defaultTaskRating: 4,
         defaultTargetNeed: Math.max(2, 7 + 4 - characterRating),
-        banes: woundBanes,
-        woundBanes: woundBanes,
+        boons: effectBoons,
+        banes: woundBanes + effectBanes,
+        woundBanes: woundBanes + effectBanes,
+        activeEffects,
+        hasActiveEffects: activeEffects.length > 0,
         characterRating: characterRating,
         ratingModifiers: ratingModifiers,
         equipment: equipment,

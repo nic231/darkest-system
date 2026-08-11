@@ -1,0 +1,68 @@
+{{!-- A timed boon or bane. Normally created and cleared from the character
+      sheet; this exists so opening one directly still works, and so a GM can
+      correct a duration without deleting and re-adding it. --}}
+<form class="darkest-sheet item-sheet effect-sheet" autocomplete="off">
+
+  <header class="sheet-header">
+    <img class="profile-img" src="{{item.img}}" data-edit="img" title="{{item.name}}" />
+    <div class="header-fields">
+      <input name="name" type="text" value="{{item.name}}" placeholder="What is it?" />
+      <span class="item-type-label {{#if (eq system.kind "boon")}}effect-boon{{else}}effect-bane{{/if}}">
+        {{#if (eq system.kind "boon")}}Boon{{else}}Bane{{/if}}
+      </span>
+    </div>
+  </header>
+
+  <section class="sheet-body">
+
+    <div class="form-group">
+      <label>Helping or hindering?</label>
+      <select name="system.kind">
+        <option value="boon" {{#if (eq system.kind "boon")}}selected{{/if}}>Boon — makes tasks easier</option>
+        <option value="bane" {{#if (eq system.kind "bane")}}selected{{/if}}>Bane — makes tasks harder</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>How long?</label>
+      <select name="system.duration">
+        <option value="rolls" {{#if (eq system.duration "rolls")}}selected{{/if}}>For a number of rolls</option>
+        <option value="until-time" {{#if (eq system.duration "until-time")}}selected{{/if}}>Until a time on the clock</option>
+        <option value="until-removed" {{#if (eq system.duration "until-removed")}}selected{{/if}}>Until something changes it</option>
+      </select>
+    </div>
+
+    {{#if (eq system.duration "rolls")}}
+    <div class="form-group">
+      <label>Rolls remaining</label>
+      <input type="number" name="system.rollsRemaining" value="{{system.rollsRemaining}}" min="0" max="20" />
+      <small class="hint">Counts down with each action roll, then clears itself.</small>
+    </div>
+    {{/if}}
+
+    {{#if (eq system.duration "until-time")}}
+    <div class="form-row">
+      <div class="form-group">
+        <label>Expires on day</label>
+        <input type="number" name="system.expiresDay" value="{{system.expiresDay}}" min="1" />
+      </div>
+      <div class="form-group">
+        <label>At (minutes past midnight)</label>
+        <input type="number" name="system.expiresMinutes" value="{{system.expiresMinutes}}" min="0" max="1439" />
+      </div>
+    </div>
+    <small class="hint">Measured on the travel clock — 840 is 14:00.</small>
+    {{/if}}
+
+    <div class="form-group">
+      <label>Where it came from</label>
+      <input type="text" name="system.source" value="{{system.source}}" placeholder="e.g. The Lookin' Pool" />
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "DARKEST.Item.Description"}}</label>
+      {{editor enrichedDescription target="system.description" button=true editable=true}}
+    </div>
+
+  </section>
+</form>

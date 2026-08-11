@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.22.0-alpha (2026-08-10)
+
+**Boons and banes that last.** The rules give effects durations — *"a Boon to all actions for the rest of the day"*, *"a Bane for a day from loss of blood"*, *"the Bane lasts until the character cleans all the oil off"* — but the system only had per-roll counters, so anything lasting had to be held in the GM's head.
+
+A new **Boons & Banes** section on the character sheet tracks them in three shapes:
+
+| Duration | Behaviour |
+|---|---|
+| For the next N rolls | Counts down as you roll, clears itself |
+| For a set time | Expires against the travel clock |
+| Until something changes it | Cleared by hand |
+
+They **pre-fill the roll dialog** the way wound banes already did, and the dialog now lists which effects are applying and why — a number never appears unexplained, and you can still override before rolling. Counted effects tick down *after* the roll, so one reading "next 1 roll" is visibly applied to the roll that spends it. Effect banes stack with the wound bane, since the rules only say banes don't stack from multiple *wounds*.
+
+Players can add and clear their own.
+
+**Whisper to several players at once.** Clicking a name now selects rather than sends, with All/None and a Send button. Each recipient gets their **own private copy**, so nobody learns who else was told.
+
+**Travel distance and time totals** in the session log's Movement tab, with a per-leg Distance column. Distance is honest about what the book doesn't record: routes quoted only in hours are converted at walking pace, and unmeasured ones are excluded *and counted* ("3 legs had no recorded distance") rather than guessed at. Time is always exact.
+
+**Scene darkness follows the clock** — new, and **off by default**. Scenes dim through dawn, dusk and night, and as the daylight-decay rule shrinks the day, midday itself stops reaching full light: by day 4 the brightest hour is already dusk-level. There's a 0–1 intensity dial, and it will never touch a scene you have lit by hand — it only manages scenes it has claimed.
+
+**Location artwork, on your cue.** A **Preview art** button in the travel tool opens the current location's key art on your screen; a separate **Show players** hands it over. Deliberately two actions — some locations are their own reveal. 126 pieces of art shipped in the module and were never shown to anyone.
+
+**Also:**
+
+- The **Player Reference** compendium (birdsong symbols, tarot) is finally readable by players. It shipped GM-only despite the label, so nobody could look up a birdsong they had learned.
+- **Weather now covers 10 regions instead of 4.** The Lost — where most parties spend their first sessions — had none at all. The Road and the Temple are deliberately left clear.
+- Delegated GM actions elect a single GM properly, in a shared helper rather than a closure, so a co-GM can't double-fire them.
+
 ## 0.21.0-alpha (2026-08-10)
 
 **Session log entries can be deleted individually.** Clearing the whole log was the only option, which is no use when you're testing inside a live campaign — you'd lose the real session record along with the junk.

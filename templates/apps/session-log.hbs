@@ -27,9 +27,33 @@
         {{/if}}
       </div>
 
+      {{#if totals}}
+      <div class="log-totals">
+        <div class="log-total">
+          <div class="log-total-value">{{#if totals.km}}{{#if totals.approx}}~{{/if}}{{totals.km}} km{{else}}—{{/if}}</div>
+          <div class="log-total-label">travelled</div>
+        </div>
+        <div class="log-total">
+          <div class="log-total-value">{{totals.duration}}</div>
+          <div class="log-total-label">on the move</div>
+        </div>
+        <div class="log-total">
+          <div class="log-total-value">{{totals.legs}}</div>
+          <div class="log-total-label">legs</div>
+        </div>
+      </div>
+      {{#if totals.unmeasured}}
+      <p class="log-totals-note"
+         data-tooltip="Some routes have no distance in the book — short hops between adjacent places, and trails that were never measured. They count toward time and legs, but not distance.">
+        <i class="fas fa-circle-info"></i>
+        {{totals.unmeasured}} leg{{#unless (eq totals.unmeasured 1)}}s{{/unless}} had no recorded distance.
+      </p>
+      {{/if}}
+      {{/if}}
+
       <table class="log-table">
         <thead>
-          <tr><th>From</th><th>To</th><th>Route</th><th>Took</th><th>Game time</th><th></th></tr>
+          <tr><th>From</th><th>To</th><th>Route</th><th>Distance</th><th>Took</th><th>Game time</th><th></th></tr>
         </thead>
         <tbody>
           {{#each moves}}
@@ -37,6 +61,7 @@
             <td>{{from}}</td>
             <td class="log-to">{{to}}</td>
             <td class="log-dim">{{label}}{{#if pace}} <em>({{pace}})</em>{{/if}}</td>
+            <td class="log-dim">{{distance}}</td>
             <td>{{duration}}</td>
             <td class="log-dim">{{gameTime}}</td>
             <td class="log-row-actions">
