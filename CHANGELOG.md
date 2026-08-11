@@ -1,5 +1,51 @@
 # Changelog
 
+## 0.24.1-alpha (2026-08-11)
+
+**Fixed:** the Boons & Banes empty state ("Nothing helping or hindering right now") sat directly against the Wounds header below it. The populated list gets its spacing from the rows themselves, which a bare line of text doesn't have.
+
+## 0.24.0-alpha (2026-08-11)
+
+**Syrinscape scene ambience.** Every location now has a soundscape that plays automatically as the party moves and as the day turns — 12 region beds and 84 per-location overrides, each chosen against what the book actually says about the place. A Gathering of Crows gets crows because *"the dead trees are filled with crows"*; the Stone Circle gets almost nothing because it is *"devoid of birds, insects, or other natural sounds"*.
+
+Each place has up to four layers:
+
+| Layer | When |
+|---|---|
+| `core` | always — the terrain itself |
+| `light` | dawn, day **and** dusk — any light at all |
+| `dark` | night |
+| `sunless` | *added* once dusk and night merge on day 6 |
+
+Only the layers that change are touched, so **the core never restarts** — the woods keep creaking while the birds hand over to the crickets. Moving between two places that share a bed leaves it running untouched, so travel within a region has no seam.
+
+Because `light` covers dusk, and dusk expands as the days shorten, birdsong doesn't vanish as the light fails — it goes from 63% of the day to 42% and stays there. The sun stops rising and the woods carry on as though nothing has happened. The `sunless` layer is what makes that wrong.
+
+It works through **Foundry Playlists**, not the Syrinscape API directly: one playlist per region, each sound flagged for Syrinscape Controller. That means individual stop (the raw API only offers a global one), per-sound volume, and every element auditionable from the Playlists sidebar without a rebuild. **Sounds you start yourself are never stopped by this.** Off by default; needs the Syrinscape Controller module.
+
+The travel tool shows what's playing and why, so silence can be diagnosed without opening a console.
+
+**A travelling scene ships with the module** — a woodcut treeline, deliberately anonymous so it serves every region. Set it once in the travel tool and the hold-for-roleplay mode has somewhere to hold.
+
+## 0.23.0-alpha (2026-08-11)
+
+**The transition now knows how far they went.** Every journey used to get the same fade, whether it was a few steps between two clearings or a full day's march. The configured pause is now the *floor*, and longer journeys stretch towards a new ceiling (default 4s), reached at eight hours on the move. The curve is a square root, so the difference between a hop and a hike is felt while the difference between eight hours and ten isn't.
+
+The fade is deliberately only part of the pause — the screen sits fully black for the remainder rather than spending the whole transition easing, which also means the scene never swaps at the exact instant the veil finishes.
+
+**Hold for roleplay.** A new checkbox on the travel tool. The party sets out, moves to a generic **travelling scene**, and stays there — ambience looping — until the GM presses **Arrive**. Room to talk on the road, instead of setting out and arriving in the same breath.
+
+- Arrive and Turn back sit on the chat card *and* the travel tool, since the GM is usually watching chat during roleplay.
+- The journey's time passes when they set out, so the conversation is free. The time-skip buttons still work during a hold if you want it to cost something.
+- Turning back returns them to where they set out from and does **not** rewind the clock — they walked out and walked back.
+- The hold is stored in world settings, so a browser refresh mid-scene recovers instead of stranding the party.
+- Pick the travelling scene from the foot of the travel tool. Without one set, the checkbox stays hidden.
+- The travelling scene is never dimmed by the clock — it's a transition, not a place.
+
+**Fixed: travel ambience never stopped.** The bed under a transition was meant to fade out on arrival and instead played on over the destination until the file ran out. `playTravelAmbience()` returned a boolean rather than the sound, so the fade-out had nothing to act on — and because Foundry's `AudioHelper.play` resolves asynchronously despite its documentation, the handle has to be awaited before it can be faded at all.
+
+**Fixed: the veil could be removed mid-fade**, snapping the screen back instead of easing it, when the fade ran longer than a hardcoded 900ms.
+
 ## 0.22.0-alpha (2026-08-10)
 
 **Boons and banes that last.** The rules give effects durations — *"a Boon to all actions for the rest of the day"*, *"a Bane for a day from loss of blood"*, *"the Bane lasts until the character cleans all the oil off"* — but the system only had per-roll counters, so anything lasting had to be held in the GM's head.

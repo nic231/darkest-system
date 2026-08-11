@@ -30,6 +30,7 @@ import {
   registerTravelClockSettings,
   registerTravelClockHooks,
   showTransitionVeil,
+  setTravelBed,
 } from './module/apps/travel-clock.mjs';
 import { SessionLog, registerSessionLog } from './module/apps/session-log.mjs';
 import { DarkestAudio, registerAudioSettings } from './module/apps/audio.mjs';
@@ -39,6 +40,11 @@ import {
   registerSceneDarknessSettings,
   registerSceneDarknessHooks,
 } from './module/apps/scene-darkness.mjs';
+import {
+  SceneAmbience,
+  registerSceneAmbienceSettings,
+  registerSceneAmbienceHooks,
+} from './module/apps/scene-ambience.mjs';
 
 /* ----------------------------------------
    Initialize System
@@ -95,6 +101,8 @@ Hooks.once('init', function() {
   registerAudioSettings();
 
   registerSceneDarknessSettings();
+
+  registerSceneAmbienceSettings();
 
   // Register travel clock settings
   registerTravelClockSettings();
@@ -257,6 +265,9 @@ Hooks.once('ready', function() {
   game.darkestSystem.SessionLog = SessionLog;
   game.darkestSystem.TravelTool = TravelTool;
   game.darkestSystem.TravelClock = TravelClock;
+  // Ambience.preview([ids]) auditions an assignment from a macro before
+  // committing it to the markdown.
+  game.darkestSystem.Ambience = SceneAmbience;
 
   // Register doom tally hooks
   registerDoomTallyHooks();
@@ -264,6 +275,7 @@ Hooks.once('ready', function() {
   // Register travel clock hooks and draw the dial
   registerTravelClockHooks();
   registerSceneDarknessHooks();
+  registerSceneAmbienceHooks();
 
   // Sweep expired boons/banes when time passes. Effects are filtered out of
   // the totals the moment they lapse, so this is only tidying the sheet --
@@ -335,7 +347,22 @@ Hooks.once('ready', function() {
         // hard canvas swap when scene.activate() reaches them; this covers it.
         // The audio payload starts the ambience bed on each client locally,
         // so it begins in step with the fade rather than only for the GM.
-        showTransitionVeil(data.phase, data.audio ?? null);
+        // opts carries the fade duration, which scales with journey length --
+        // without it every client would fall back to the stylesheet default
+        // and drift out of step with the GM.
+        showTransitionVeil(data.phase, data.audio ?? null, data.opts ?? {});
+        break;
+
+      case 'travelBed':
+        // The looping bed on its own, for a hold with transitions switched
+        // off. null stops it.
+        setTravelBed(data.audio ?? null);
+        break;
+
+      case 'travelHoldChanged':
+        // A journey paused for roleplay, or released. Re-render any open
+        // travel tool so its banner matches, on every GM's client.
+        TravelClock.refresh();
         break;
 
       case 'playBirdsong':
@@ -708,8 +735,39 @@ Hooks.on('darkestSystem.doomGained', async (actor, roll) => {
 });
 
 /* ----------------------------------------
+   Travel hold — strip the GM's buttons for players
+---------------------------------------- */
+// The Arrive / Turn back buttons are the GM's call alone. The handlers below
+// check isGM anyway, but a player shouldn't be looking at a button that does
+// nothing when they press it.
+Hooks.on('renderChatMessage', (message, html) => {
+  if (game.user.isGM) return;
+  const root = html instanceof HTMLElement ? html : html[0];
+  root?.querySelector('.travel-hold-actions')?.remove();
+});
+
+/* ----------------------------------------
    Chat Button Handlers
 ---------------------------------------- */
+
+// Finish or call off a journey paused for roleplay. Both re-read the hold
+// from world settings, so a button on a stale card from an earlier journey
+// simply reports that nobody is on the road.
+//
+// Not gated on isPrimaryGM: an assistant GM should be able to press Arrive.
+// Two GMs pressing it at the same instant would double-fade, which is a race
+// not worth more machinery than the null check inside.
+$(document).on('click', '.travel-arrive-btn', async function(event) {
+  event.preventDefault();
+  if (!game.user.isGM) return;
+  await TravelTool.arriveFromHold();
+});
+
+$(document).on('click', '.travel-abandon-btn', async function(event) {
+  event.preventDefault();
+  if (!game.user.isGM) return;
+  await TravelTool.abandonHold();
+});
 
 // Handle "Resist Unconsciousness / Catatonia" button clicks in chat
 $(document).on('click', '.resist-unconscious-btn', async function(event) {

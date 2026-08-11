@@ -50,6 +50,14 @@ const SETTING_BIRDSONG_VOLUME = 'birdsongVolume';
  *
  * Namespaced `foundry.audio.AudioHelper` is preferred; the bare global is
  * deprecated in v13+ but kept as a fallback for older cores.
+ *
+ * RETURNS A PROMISE, despite the core docblock claiming `{Sound|void}`.
+ * `AudioHelper.play` is static and not itself async, but its last statement
+ * is `return game.audio.play(...)` -- the INSTANCE method, which is async.
+ * So anything that wants to fade or stop this sound later has to resolve it
+ * first; calling .fade() on the return value directly silently does nothing.
+ *
+ * @returns {Promise<Sound>|null} The pending sound, or null if it can't play.
  */
 function playLocal(src, volume, { loop = false } = {}) {
   if (!src || volume <= 0) return null;
@@ -100,7 +108,14 @@ export const DarkestAudio = {
     return !!DarkestAudio.findSound('birdsong', birdKey);
   },
 
-  /** A birdsong, played for everyone. Returns true if anything played. */
+  /**
+   * A birdsong, played for everyone. Returns true if anything played.
+   *
+   * The `!!` is deliberate here, unlike in playTravelAmbience: a birdsong is
+   * fire-and-forget, so the caller only needs to know a file was found. It
+   * coerces a Promise, so it means "playback started", not "playback
+   * succeeded" -- fine for a one-shot nobody needs to stop.
+   */
   playBirdsong(birdKey) {
     const src = DarkestAudio.findSound('birdsong', birdKey);
     if (!src) return false;
@@ -114,8 +129,16 @@ export const DarkestAudio = {
    * specific thing that exists wins, and missing files are silence rather
    * than an error. Mode beats region because poling a pirogue through the
    * Dismal sounds nothing like walking it.
+   *
+   * Returns the pending Sound (a PROMISE -- see playLocal) so the caller can
+   * fade it out on arrival. This used to return a bare boolean, which made
+   * the fade-out in showTransitionVeil() dead code and left the bed playing
+   * over the destination scene until the file ran out.
+   *
+   * `loop` is for the hold-for-roleplay mode: that pause is open-ended, so a
+   * one-shot bed would run out mid-conversation.
    */
-  playTravelAmbience({ region, mode } = {}) {
+  playTravelAmbience({ region, mode, loop = false } = {}) {
     // Cue keys are hyphenated to match the filename convention exactly --
     // travel-the-dismal-boat.ogg yields the key "the-dismal-boat", so the
     // most specific cue must be built the same way rather than with a
@@ -128,9 +151,9 @@ export const DarkestAudio = {
 
     for (const cue of cues) {
       const src = DarkestAudio.findSound('travel-ambience', cue);
-      if (src) return !!playLocal(src, volume(SETTING_AMBIENCE_VOLUME, 0.5));
+      if (src) return playLocal(src, volume(SETTING_AMBIENCE_VOLUME, 0.5), { loop });
     }
-    return false;
+    return null;
   },
 };
 

@@ -17,11 +17,22 @@
 
 import { SessionLog } from './session-log.mjs';
 import { DarkestAudio } from './audio.mjs';
+// Circular by design: scene-ambience needs the clock to decide which layers
+// are audible. Safe because neither side touches the other during module
+// evaluation -- only inside functions, long after both have loaded.
+import { SceneAmbience } from './scene-ambience.mjs';
 
 const SETTING_CLOCK = 'travelClock';
 const SETTING_BIRDSONGS = 'knownBirdsongs';
 const SETTING_ARRIVAL_TEXT = 'showArrivalText';
 const SETTING_TRANSITION_MS = 'transitionDelayMs';
+const SETTING_TRANSITION_MAX_MS = 'transitionDelayMaxMs';
+const SETTING_TRAVEL_SCENE = 'travelSceneUuid';
+const SETTING_HOLD = 'travelHold';
+
+// Journey length at which the transition reaches its full duration. Past a
+// full day on the move, "longer" stops meaning anything to the fade.
+const TRANSITION_FULL_MINUTES = 480;
 
 // Travel routes injected by the darkest-woods module. Empty without it.
 export let TRAVEL_ROUTES = [];
@@ -378,28 +389,85 @@ function arrivalFlavour(locationSlug, regionSlug) {
 }
 
 const VEIL_ID = 'darkest-transition-veil';
+// The fade is only part of the pause: the screen has to actually SIT dark
+// for a beat rather than spending the whole transition easing into it. The
+// remainder is opaque, which also means the scene never swaps at the exact
+// instant the veil finishes going black.
+const VEIL_FADE_RATIO = 0.45;
+const VEIL_FADE_MIN_MS = 400;
 // A dropped 'arrive' message must never leave a player staring at a black
 // screen, so the veil always removes itself regardless of what arrives.
-const VEIL_FAILSAFE_MS = 5000;
+// This is a MARGIN on top of the transition it covers, not a fixed ceiling:
+// fades scale with journey length now, and a flat 5s would cut a long one
+// short. It still covers both original failures -- a lost socket message and
+// a hung scene.activate().
+const VEIL_FAILSAFE_MARGIN_MS = 4000;
 let _veilTimer = null;
+// How long the current transition fades for, remembered so 'arrive' fades
+// out as slowly as 'depart' faded in, and so the node is removed after the
+// fade rather than during it.
+let _veilFadeMs = 800;
 // The ambience bed currently playing under a transition, so it can be faded
-// out on arrival instead of running on over the new scene.
+// out on arrival instead of running on over the new scene. Holds a PROMISE
+// of a Sound -- see playLocal() in audio.mjs.
 let _travelSound = null;
+
+/**
+ * Start or stop the looping travel bed on its own, with no veil.
+ *
+ * Only needed when transitions are switched off but a hold still wants its
+ * ambience: the veil is what normally carries the sound, and a zero-length
+ * one would fire its failsafe immediately and stop the bed again.
+ *
+ * Shares _travelSound with showTransitionVeil, so a later 'arrive' tears
+ * this down exactly as it would a bed the veil had started.
+ */
+export function setTravelBed(audio = null) {
+  if (audio) {
+    if (_travelSound) return;   // already running; don't layer a second
+    _travelSound = DarkestAudio.playTravelAmbience({ ...audio, loop: true });
+    return;
+  }
+
+  if (!_travelSound) return;
+  const pending = _travelSound;
+  _travelSound = null;
+  Promise.resolve(pending).then(snd => {
+    if (!snd) return;
+    if (typeof snd.fade === 'function') return snd.fade(0, { duration: 800 }).then(() => snd.stop?.());
+    snd.stop?.();
+  }).catch(() => { /* nothing worth breaking arrival over */ });
+}
 
 /**
  * Fade the screen out and back for a travel transition.
  *
  * Runs on every client via the travelTransition socket message. Deliberately
  * pointer-events: none, so even a stuck veil can't block input.
+ *
+ * @param {'depart'|'arrive'} phase
+ * @param {object|null} audio        Cue for the ambient bed: {region, mode}.
+ * @param {object} [opts]
+ * @param {number} [opts.fadeMs]     How long the fade runs, scaled by journey length.
+ * @param {number} [opts.coverMs]    How long the failsafe should wait before lifting itself.
+ * @param {boolean} [opts.loop]      Loop the bed -- for the open-ended hold.
+ * @param {boolean} [opts.keepAudio] Lift the veil but LEAVE the bed playing.
  */
-export function showTransitionVeil(phase, audio = null) {
+export function showTransitionVeil(phase, audio = null, opts = {}) {
+  const { fadeMs, coverMs, loop = false, keepAudio = false } = opts;
+
   if (phase === 'depart') {
+    _veilFadeMs = Math.max(VEIL_FADE_MIN_MS, Number(fadeMs) || 800);
+
     let veil = document.getElementById(VEIL_ID);
     if (!veil) {
       veil = document.createElement('div');
       veil.id = VEIL_ID;
       document.body.appendChild(veil);
     }
+    // The stylesheet's duration is only the default for a transition nobody
+    // sized. A scaled fade has to drive it from here, on every client.
+    veil.style.transitionDuration = `${_veilFadeMs}ms`;
     // Force a reflow so the transition runs from opacity 0 on a fresh node.
     void veil.offsetWidth;
     veil.classList.add('visible');
@@ -407,32 +475,49 @@ export function showTransitionVeil(phase, audio = null) {
     // Ambience rides along with the veil so it starts on every client at the
     // same moment the screen goes dark, rather than only on the GM's.
     if (audio) {
-      _travelSound = DarkestAudio.playTravelAmbience(audio);
+      _travelSound = DarkestAudio.playTravelAmbience({ ...audio, loop });
     }
 
     clearTimeout(_veilTimer);
-    _veilTimer = setTimeout(() => showTransitionVeil('arrive'), VEIL_FAILSAFE_MS);
+    _veilTimer = setTimeout(
+      () => showTransitionVeil('arrive'),
+      Number(coverMs) || (_veilFadeMs + VEIL_FAILSAFE_MARGIN_MS)
+    );
     return;
   }
 
   clearTimeout(_veilTimer);
   _veilTimer = null;
 
-  // Fade the bed out with the veil rather than cutting it dead. Guarded
-  // because the sound may have failed to start, or never existed.
-  if (_travelSound) {
-    const snd = _travelSound;
+  // Fade the bed out with the veil rather than cutting it dead.
+  //
+  // keepAudio is how the hold-for-roleplay mode lifts the veil ONTO the
+  // travelling scene without killing the bed it just started -- without it
+  // the ambience dies at the very moment the hold begins.
+  //
+  // The stored value is a promise, so it has to be resolved before .fade()
+  // exists. That also closes a race: an 'arrive' arriving before playback
+  // resolves used to leave the sound running with nothing holding a handle
+  // to it.
+  if (_travelSound && !keepAudio) {
+    const pending = _travelSound;
     _travelSound = null;
-    try {
-      if (typeof snd.fade === 'function') snd.fade(0, { duration: 800 }).then(() => snd.stop?.());
-      else snd.stop?.();
-    } catch { /* a sound that won't fade is not worth breaking arrival over */ }
+    const out = Math.min(_veilFadeMs, 1500);
+    Promise.resolve(pending).then(snd => {
+      if (!snd) return;
+      if (typeof snd.fade === 'function') return snd.fade(0, { duration: out }).then(() => snd.stop?.());
+      snd.stop?.();
+    }).catch(() => { /* a sound that won't fade is not worth breaking arrival over */ });
   }
 
   const veil = document.getElementById(VEIL_ID);
   if (!veil) return;
+  if (fadeMs) _veilFadeMs = Math.max(VEIL_FADE_MIN_MS, Number(fadeMs));
+  veil.style.transitionDuration = `${_veilFadeMs}ms`;
   veil.classList.remove('visible');
-  setTimeout(() => veil.remove(), 900);
+  // Must outlast the fade, or the node is yanked mid-transition and the
+  // screen snaps back instead of easing.
+  setTimeout(() => veil.remove(), _veilFadeMs + 100);
 }
 
 /**
@@ -972,6 +1057,15 @@ export class TravelTool extends Application {
 
     const known = TravelClock.getKnownBirdsongs();
 
+    // A journey paused on the road. Flagged stale after a couple of hours --
+    // a long roleplay scene is legitimate, so this is a nudge rather than
+    // anything automatic.
+    const heldRaw = TravelTool.getHold();
+    const hold = heldRaw ? {
+      ...heldRaw,
+      stale: (Date.now() - (heldRaw.startedAt ?? 0)) > 2 * 60 * 60 * 1000,
+    } : null;
+
     return {
       day: clock.day,
       time: TravelClock.formatTime(clock.minutes),
@@ -997,6 +1091,10 @@ export class TravelTool extends Application {
         hasAudio: DarkestAudio.hasBirdsong(b.key),
       })),
       hasLocationArt: !!currentLocationArt(),
+      ambience: SceneAmbience.status(),
+      hold,
+      travelSceneName: TravelTool.travelScene()?.name ?? null,
+      canHold: TravelTool.canHold(),
       paces: Object.keys(PACE_SPEED).map(p => ({
         key: p,
         label: PACE_LABEL[p],
@@ -1081,9 +1179,21 @@ export class TravelTool extends Application {
     // Passing time gets no flavour and no narration at all -- the GM
     // describes what happened and triggers whatever follows. The message
     // exists only to record that the clock moved.
+    //
+    // These stay usable during a hold: they pass no route, so they skip the
+    // transition entirely. That's how a GM charges extra time for a long
+    // conversation on the road.
     html.find('.time-skip').click((ev) => {
       const mins = parseInt(ev.currentTarget.dataset.minutes) || 0;
       this._passTime(mins, 'Time has passed.');
+    });
+
+    html.find('.hold-arrive').click(() => TravelTool.arriveFromHold());
+    html.find('.hold-abandon').click(() => TravelTool.abandonHold());
+    html.find('.travel-scene-pick').click(() => this._pickTravelScene());
+    html.find('.travel-scene-clear').click(async () => {
+      await game.settings.set('darkest-system', SETTING_TRAVEL_SCENE, '');
+      this.render();
     });
 
     html.find('.clock-reset').click(() => this._promptReset());
@@ -1381,24 +1491,45 @@ export class TravelTool extends Application {
       route: last.route,
       boating,
       pace: this._lastPace,
+      hold: this._holdRequested,
     });
   }
 
   async _travel(html) {
+    // A held journey is an open-ended pause, so it can't be guarded by the
+    // in-flight flag below -- that would stay set for the length of a
+    // roleplay scene and lock the tool. The hold setting is the guard, and
+    // being world-scoped it survives a refresh too.
+    if (TravelTool.getHold()) {
+      const hold = TravelTool.getHold();
+      ui.notifications.warn(
+        `The party is still on the road to ${hold.toTitle || 'their destination'} — arrive, or turn back, first.`
+      );
+      return;
+    }
+
     // The transition now awaits a timer mid-flight, so a second click during
     // that pause would advance the clock twice, post two departure messages,
     // and lift the veil on the first journey while the second is still
     // running. Worse, _travelLegs() clears this._legs before awaiting, so a
     // re-entrant call would read an empty array and throw on last.route.
-    if (this._travelling) {
+    //
+    // Static, because arriving from a hold runs from a chat button with no
+    // window behind it and has to take the same lock.
+    if (TravelTool._travelling) {
       ui.notifications.warn('The party is already on the move.');
       return;
     }
-    this._travelling = true;
+
+    // Read once here: _travelLegs() has no html to read it from later.
+    // Mirrors how _lastPace is captured.
+    this._holdRequested = html.find('[name="holdForRp"]').is(':checked');
+
+    TravelTool._travelling = true;
     try {
       await this._travelInner(html);
     } finally {
-      this._travelling = false;
+      TravelTool._travelling = false;
       this.render();
     }
   }
@@ -1450,6 +1581,7 @@ export class TravelTool extends Application {
       route,
       boating,
       pace,
+      hold: this._holdRequested,
     });
   }
 
@@ -1520,10 +1652,67 @@ export class TravelTool extends Application {
    * may simply not have imported that region yet.
    */
   async _activateDestinationScene(route) {
-    if (!route?.toSlug) return null;
+    return TravelTool._activateSceneBySlug(route?.toSlug);
+  }
+
+  /**
+   * Choose the generic travelling scene.
+   *
+   * Lives here rather than on the settings sheet because the list can't be
+   * built at registration time: settings register on init, before
+   * game.scenes exists, so a choices map would always come out empty. Built
+   * on click instead, when the world is actually loaded.
+   */
+  async _pickTravelScene() {
+    const current = game.settings.get('darkest-system', SETTING_TRAVEL_SCENE) || '';
+    const esc = (s) => foundry.utils.escapeHTML?.(s) ?? String(s);
+    const options = game.scenes.contents
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(s => `<option value="${s.uuid}"${s.uuid === current ? ' selected' : ''}>${esc(s.name)}</option>`)
+      .join('');
+
+    if (!options) {
+      ui.notifications.warn('There are no scenes in this world yet.');
+      return;
+    }
+
+    new Dialog({
+      title: 'Travelling Scene',
+      content: `<form>
+        <p class="notes">Shown while the party is on the road, so pick something generic — it stands in for every region.</p>
+        <div class="form-group">
+          <label>Scene</label>
+          <select name="scene">${options}</select>
+        </div>
+      </form>`,
+      buttons: {
+        set: {
+          icon: '<i class="fas fa-check"></i>',
+          label: 'Set',
+          callback: async (html) => {
+            const uuid = html.find('[name="scene"]').val() || '';
+            await game.settings.set('darkest-system', SETTING_TRAVEL_SCENE, uuid);
+            this.render();
+          },
+        },
+        cancel: { icon: '<i class="fas fa-times"></i>', label: 'Cancel' },
+      },
+      default: 'set',
+    }, { width: 360 }).render(true);
+  }
+
+  /**
+   * Activate the scene flagged with this location slug, if it's imported.
+   *
+   * Static because arriving from a hold happens from a chat button, which
+   * has no travel tool window to call through.
+   */
+  static async _activateSceneBySlug(slug) {
+    if (!slug) return null;
 
     const scene = game.scenes.find(s =>
-      s.getFlag('darkest-woods', 'locationSlug') === route.toSlug
+      s.getFlag('darkest-woods', 'locationSlug') === slug
     );
     if (!scene) return null;
 
@@ -1531,13 +1720,95 @@ export class TravelTool extends Application {
     return scene;
   }
 
-  /** Configured pause between setting out and arriving, in ms. */
-  static transitionDelay() {
+  /**
+   * The generic travelling scene, if the GM has set one and it still exists.
+   *
+   * Stored as a UUID rather than an id so a scene moved between folders
+   * still resolves. Returns null when unset OR when the scene has since been
+   * deleted -- both mean hold mode is unavailable, and a stale uuid must
+   * never be able to strand the party somewhere that isn't there.
+   */
+  static travelScene() {
+    let uuid = '';
     try {
-      return game.settings.get('darkest-system', SETTING_TRANSITION_MS) ?? 0;
+      uuid = game.settings.get('darkest-system', SETTING_TRAVEL_SCENE) || '';
+    } catch {
+      return null;
+    }
+    if (!uuid) return null;
+    try {
+      const scene = fromUuidSync(uuid);
+      return (scene instanceof Scene) ? scene : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Is hold-for-roleplay available? Only with a travelling scene set. */
+  static canHold() {
+    return !!TravelTool.travelScene();
+  }
+
+  /** The journey currently paused for roleplay, or null. */
+  static getHold() {
+    try {
+      return game.settings.get('darkest-system', SETTING_HOLD) || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Record (or clear) the paused journey.
+   *
+   * Broadcast so every GM's travel tool updates its banner, not just the one
+   * that pressed the button -- game.socket.emit doesn't loop back, so the
+   * local refresh is separate.
+   */
+  static async setHold(hold) {
+    await game.settings.set('darkest-system', SETTING_HOLD, hold);
+    game.socket.emit('system.darkest-system', { type: 'travelHoldChanged' });
+    TravelClock.refresh();
+    Hooks.callAll('darkestSystem.travelHoldChanged', hold);
+  }
+
+  /**
+   * Pause between setting out and arriving, in ms, scaled by how far they went.
+   *
+   * The configured pause is the FLOOR. A few steps between two clearings is
+   * over before it started, and stretching that fade just reads as lag; a
+   * full day on the move earns a longer beat. Square root rather than linear
+   * so the first hour is felt more than the eighth -- the difference between
+   * a hop and a hike matters, the difference between eight hours and ten
+   * doesn't.
+   *
+   *   5m -> 1.75s   1h -> 2.4s   4h -> 3.3s   8h+ -> 4.0s
+   *   (with the default 1500ms floor and 4000ms ceiling)
+   */
+  static transitionDelay(minutes = 0) {
+    let floor = 0;
+    let ceiling = 0;
+    try {
+      floor = game.settings.get('darkest-system', SETTING_TRANSITION_MS) ?? 0;
+      ceiling = game.settings.get('darkest-system', SETTING_TRANSITION_MAX_MS) ?? floor;
     } catch {
       return 0;
     }
+
+    // 0 disables the pause and the fade entirely, as it always has.
+    if (floor <= 0) return 0;
+    // A ceiling below the floor is a misconfiguration, not a request for a
+    // shorter fade on longer journeys.
+    const top = Math.max(floor, ceiling);
+    if (top === floor) return floor;
+
+    const t = Math.sqrt(Math.min(1, Math.max(0, (Number(minutes) || 0) / TRANSITION_FULL_MINUTES)));
+    return Math.round(floor + (top - floor) * t);
+  }
+
+  /** The fade portion of a given pause. See VEIL_FADE_RATIO. */
+  static fadeFor(delay) {
+    return Math.max(VEIL_FADE_MIN_MS, Math.round(delay * VEIL_FADE_RATIO));
   }
 
   /**
@@ -1548,14 +1819,26 @@ export class TravelTool extends Application {
    * covers exactly that. game.socket.emit doesn't loop back, so the GM's
    * own client runs it directly as well.
    */
-  static broadcastVeil(phase, audio = null) {
+  static broadcastVeil(phase, audio = null, opts = {}) {
     // Emit then run locally: game.socket.emit doesn't loop back, so the
     // socket covers other clients and the direct call covers this one. Every
     // client fades its own screen and plays its own copy of the audio file,
     // which is what we want. See the note on .birdsong-play about why a
     // single shared audio source would need gating to one client instead.
-    game.socket.emit('system.darkest-system', { type: 'travelTransition', phase, audio });
-    showTransitionVeil(phase, audio);
+    //
+    // opts is plain numbers and booleans, so it serialises over the socket
+    // as-is -- every client needs the fade duration to match, or they drift.
+    game.socket.emit('system.darkest-system', { type: 'travelTransition', phase, audio, opts });
+    showTransitionVeil(phase, audio, opts);
+  }
+
+  /**
+   * Start or stop the travel bed on every client without touching the veil.
+   * Only used when transitions are disabled -- see setTravelBed().
+   */
+  static broadcastTravelBed(audio = null) {
+    game.socket.emit('system.darkest-system', { type: 'travelBed', audio });
+    setTravelBed(audio);
   }
 
   async _passTime(minutes, flavour, opts = {}) {
@@ -1679,15 +1962,32 @@ export class TravelTool extends Application {
     // on every client, so players don't watch a hard canvas swap either),
     // and only then do they arrive.
     if (opts.route) {
-      const delay = TravelTool.transitionDelay();
+      // Longer journeys get a longer transition; see transitionDelay().
+      const delay = TravelTool.transitionDelay(minutes);
+      const fadeMs = TravelTool.fadeFor(delay);
+      // Region is the ground being crossed (captured before the scene
+      // change); mode distinguishes poling a pirogue from walking it.
+      const audio = {
+        region: opts.region ?? null,
+        mode: opts.boating ? 'boat' : (opts.pace === 'drive' ? 'drive' : 'walk'),
+      };
+
+      // Hold-for-roleplay takes a different path entirely: it stops at the
+      // travelling scene and waits for the GM, so neither the arrival card
+      // nor the travelArrive hook fires here -- the party hasn't arrived.
+      if (opts.hold && TravelTool.canHold()) {
+        await this._beginHold({ delay, fadeMs, audio, opts, minutes, timeLine, result });
+        TravelClock.refresh();
+        this.render();
+        return;
+      }
+
       let scene = null;
       try {
         if (delay > 0) {
-          // Region is the ground being crossed (captured before the scene
-          // change); mode distinguishes poling a pirogue from walking it.
-          TravelTool.broadcastVeil('depart', {
-            region: opts.region ?? null,
-            mode: opts.boating ? 'boat' : (opts.pace === 'drive' ? 'drive' : 'walk'),
+          TravelTool.broadcastVeil('depart', audio, {
+            fadeMs,
+            coverMs: delay + fadeMs + VEIL_FAILSAFE_MARGIN_MS,
           });
           await new Promise(r => setTimeout(r, delay));
         }
@@ -1710,11 +2010,11 @@ export class TravelTool extends Application {
         ui.notifications.error('Could not switch to the destination scene -- see the console.');
       } finally {
         // Must run even if activation threw, or every client sits behind a
-        // veil until its own 5s failsafe fires.
-        if (delay > 0) TravelTool.broadcastVeil('arrive');
+        // veil until its own failsafe fires.
+        if (delay > 0) TravelTool.broadcastVeil('arrive', null, { fadeMs });
       }
 
-      await this._postArrival({ route: opts.route, scene, timeLine, result, now });
+      await TravelTool._postArrival({ route: opts.route, scene, timeLine, result, now });
 
       Hooks.callAll('darkestSystem.travelArrive', {
         route: opts.route,
@@ -1736,8 +2036,11 @@ export class TravelTool extends Application {
    * rather than where they set out. The description never names the
    * destination -- see describeJourney() for why -- and is suppressed
    * entirely by the showArrivalText setting.
+   *
+   * Static: arriving from a hold is driven by a chat button with no window
+   * behind it. Uses no instance state, so there was nothing to move.
    */
-  async _postArrival({ route, scene, timeLine, result, now }) {
+  static async _postArrival({ route, scene, timeLine, result, now }) {
     const showText = game.settings.get('darkest-system', SETTING_ARRIVAL_TEXT);
     const region = scene?.getFlag('darkest-woods', 'region') ?? null;
     const line = showText ? arrivalFlavour(route.toSlug, region) : null;
@@ -1759,6 +2062,224 @@ export class TravelTool extends Application {
       content,
       flags: { 'darkest-system': { travel: true, phase: 'arrive' } },
     });
+  }
+
+  /**
+   * Set out, but stop on the road.
+   *
+   * The clock has already advanced by the journey's full duration, so the
+   * roleplay that happens here costs nothing further -- the conversation is
+   * happening ON the way, not after it. That's also why timeLine is stashed
+   * rather than recomputed: the arrival card should report the time they got
+   * there, which was fixed the moment they set out.
+   */
+  async _beginHold({ delay, fadeMs, audio, opts, minutes, timeLine, result }) {
+    const travelScene = TravelTool.travelScene();
+    const origin = canvas?.scene ?? null;
+
+    try {
+      if (delay > 0) {
+        // loop: the pause is open-ended, so a one-shot bed would run dry
+        // in the middle of the conversation.
+        TravelTool.broadcastVeil('depart', audio, {
+          fadeMs,
+          loop: true,
+          coverMs: delay + fadeMs + VEIL_FAILSAFE_MARGIN_MS,
+        });
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        // Transitions turned off entirely, but the bed still belongs here --
+        // it's the sound of the journey, not part of the fade, and without
+        // it the whole hold would be silent. Started directly rather than
+        // through a zero-length veil, whose failsafe would fire immediately
+        // and tear the sound straight back down.
+        TravelTool.broadcastTravelBed(audio);
+      }
+
+      await travelScene.activate();
+    } catch (err) {
+      // Same reasoning as the normal path: the clock has moved, so carry on
+      // rather than rethrowing and leaving the dial stale. But without the
+      // travelling scene there is nothing to hold ON, so fall through to a
+      // normal arrival instead of stranding the party mid-journey.
+      console.error('Darkest System | could not open the travelling scene', err);
+      ui.notifications.error('Could not switch to the travelling scene -- arriving directly instead.');
+
+      // Swap the scene BEFORE lifting the veil, not after: the veil exists
+      // precisely to cover that swap, and no keepAudio here means the
+      // looping bed is torn down with it.
+      let scene = null;
+      try {
+        scene = await TravelTool._activateSceneBySlug(opts.route.toSlug);
+      } catch (err2) {
+        console.error('Darkest System | destination scene also failed', err2);
+      } finally {
+        TravelTool.broadcastVeil('arrive', null, { fadeMs });
+      }
+
+      await TravelTool._postArrival({
+        route: opts.route, scene, timeLine, result,
+        now: TravelClock.dayStructure(result.day),
+      });
+      Hooks.callAll('darkestSystem.travelArrive', {
+        route: opts.route,
+        scene: scene ?? null,
+        region: scene?.getFlag('darkest-woods', 'region') ?? null,
+        day: result.day,
+      });
+      return;
+    }
+
+    await TravelTool.setHold({
+      toSlug: opts.route.toSlug ?? null,
+      toTitle: opts.route.toTitle ?? null,
+      region: opts.region ?? null,
+      mode: audio.mode,
+      minutes,
+      timeLine,
+      daysPassed: result.daysPassed ?? 0,
+      day: result.day,
+      originSceneUuid: origin?.uuid ?? null,
+      startedAt: Date.now(),
+    });
+
+    await ChatMessage.create({
+      content: `<div class="travel-chat travel-chat-holding">
+        <div class="travel-chat-head"><i class="fas fa-route"></i> The party is on the road.</div>
+        <div class="travel-chat-flavour">The way ahead is long, and there is time to talk.</div>
+        <div class="travel-hold-actions">
+          <button type="button" class="travel-arrive-btn"><i class="fas fa-map-pin"></i> Arrive</button>
+          <button type="button" class="travel-abandon-btn"><i class="fas fa-rotate-left"></i> Turn back</button>
+        </div>
+      </div>`,
+      flags: { 'darkest-system': { travel: true, phase: 'holding' } },
+    });
+
+    // keepAudio is the whole point: this lifts the veil ONTO the travelling
+    // scene, and the normal 'arrive' teardown would kill the bed we just
+    // started looping -- silencing the hold at the moment it begins.
+    if (delay > 0) TravelTool.broadcastVeil('arrive', null, { fadeMs, keepAudio: true });
+  }
+
+  /**
+   * Finish a held journey: the party gets where they were going.
+   *
+   * Static so the chat card's button can call it directly. Re-reads the hold
+   * rather than trusting the caller, so a button on a stale card from an
+   * earlier journey does nothing.
+   */
+  static async arriveFromHold() {
+    const hold = TravelTool.getHold();
+    if (!hold) {
+      ui.notifications.warn('The party is not on the road.');
+      return;
+    }
+    if (TravelTool._travelling) return;
+    TravelTool._travelling = true;
+
+    const delay = TravelTool.transitionDelay(hold.minutes ?? 0);
+    const fadeMs = TravelTool.fadeFor(delay);
+    let scene = null;
+
+    try {
+      if (delay > 0) {
+        // No audio payload: the bed from the depart leg is still looping,
+        // and starting a second one would layer them.
+        TravelTool.broadcastVeil('depart', null, {
+          fadeMs,
+          coverMs: delay + fadeMs + VEIL_FAILSAFE_MARGIN_MS,
+        });
+        await new Promise(r => setTimeout(r, delay));
+      }
+
+      scene = await TravelTool._activateSceneBySlug(hold.toSlug);
+      if (scene) {
+        ui.notifications.info(`Now viewing: ${scene.name}`);
+      } else if (hold.toSlug) {
+        ui.notifications.warn(
+          `No scene imported for ${hold.toTitle || 'that destination'} -- import its region to travel there automatically.`
+        );
+      }
+    } catch (err) {
+      console.error('Darkest System | scene activation failed arriving from a hold', err);
+      ui.notifications.error('Could not switch to the destination scene -- see the console.');
+    } finally {
+      // No keepAudio here: this is the real arrival, so the bed fades out.
+      TravelTool.broadcastVeil('arrive', null, { fadeMs });
+      await TravelTool.setHold(null);
+      TravelTool._travelling = false;
+    }
+
+    await TravelTool._postArrival({
+      route: { toSlug: hold.toSlug, toTitle: hold.toTitle },
+      scene,
+      timeLine: hold.timeLine ?? '',
+      result: { day: hold.day, daysPassed: hold.daysPassed ?? 0 },
+      now: TravelClock.dayStructure(hold.day),
+    });
+
+    // Only now has the party actually arrived, so this is where the hook
+    // fires -- scene darkness and anything else listening keys off it, and
+    // during the hold there was nowhere to apply it to.
+    Hooks.callAll('darkestSystem.travelArrive', {
+      route: { toSlug: hold.toSlug, toTitle: hold.toTitle },
+      scene: scene ?? null,
+      region: scene?.getFlag('darkest-woods', 'region') ?? null,
+      day: hold.day,
+    });
+
+    TravelClock.refresh();
+  }
+
+  /**
+   * Call the journey off and go back.
+   *
+   * The clock is deliberately NOT rewound: the time really did pass, the
+   * same reasoning the failed-activation path uses. They walked out and
+   * walked back.
+   */
+  static async abandonHold() {
+    const hold = TravelTool.getHold();
+    if (!hold) {
+      ui.notifications.warn('The party is not on the road.');
+      return;
+    }
+    if (TravelTool._travelling) return;
+    TravelTool._travelling = true;
+
+    const delay = TravelTool.transitionDelay(hold.minutes ?? 0);
+    const fadeMs = TravelTool.fadeFor(delay);
+
+    try {
+      if (delay > 0) {
+        TravelTool.broadcastVeil('depart', null, {
+          fadeMs,
+          coverMs: delay + fadeMs + VEIL_FAILSAFE_MARGIN_MS,
+        });
+        await new Promise(r => setTimeout(r, delay));
+      }
+
+      const origin = hold.originSceneUuid ? fromUuidSync(hold.originSceneUuid) : null;
+      if (origin instanceof Scene) await origin.activate();
+      else ui.notifications.warn('Could not find where the party set out from.');
+    } catch (err) {
+      console.error('Darkest System | could not return to the origin scene', err);
+      ui.notifications.error('Could not switch back -- see the console.');
+    } finally {
+      TravelTool.broadcastVeil('arrive', null, { fadeMs });
+      await TravelTool.setHold(null);
+      TravelTool._travelling = false;
+    }
+
+    await ChatMessage.create({
+      content: `<div class="travel-chat">
+        <div class="travel-chat-head"><i class="fas fa-rotate-left"></i> The party turns back.</div>
+        <div class="travel-chat-flavour">Whatever lay ahead, they do not meet it today.</div>
+      </div>`,
+      flags: { 'darkest-system': { travel: true, phase: 'abandon' } },
+    });
+
+    TravelClock.refresh();
   }
 }
 
@@ -1797,13 +2318,48 @@ export function registerTravelClockSettings() {
   });
 
   game.settings.register('darkest-system', SETTING_TRANSITION_MS, {
-    name: 'Travel transition pause (ms)',
-    hint: 'How long the screen holds between setting out and arriving, so the travel text can be read before the scene changes. 0 disables the pause and the fade.',
+    name: 'Shortest travel transition (ms)',
+    hint: 'How long the screen holds between setting out and arriving, so the travel text can be read before the scene changes. This is the floor, used for short hops. 0 disables the pause and the fade entirely.',
     scope: 'world',
     config: true,
     type: Number,
     range: { min: 0, max: 5000, step: 250 },
     default: 1500,
+  });
+
+  game.settings.register('darkest-system', SETTING_TRANSITION_MAX_MS, {
+    name: 'Longest travel transition (ms)',
+    hint: 'A long journey earns a longer fade. This is the ceiling, reached at a full day on the move (8h); shorter trips fall between the two. Set it equal to the floor above for a constant transition.',
+    scope: 'world',
+    config: true,
+    type: Number,
+    range: { min: 0, max: 12000, step: 250 },
+    default: 4000,
+  });
+
+  // The generic travelling scene, shown while the party is on the road in
+  // hold-for-roleplay mode. config: false because it is picked from the
+  // travel tool -- settings register on init, before game.scenes exists, so
+  // a choices map built here would always be empty.
+  game.settings.register('darkest-system', SETTING_TRAVEL_SCENE, {
+    name: 'Travelling scene',
+    hint: 'A generic scene shown while the party is on the road.',
+    scope: 'world',
+    config: false,
+    type: String,
+    default: '',
+  });
+
+  // A journey paused on the travelling scene, awaiting the GM's Arrive.
+  // World-scoped rather than in-memory so a browser refresh mid-hold
+  // recovers instead of stranding the party on the travelling scene.
+  game.settings.register('darkest-system', SETTING_HOLD, {
+    name: 'Travel hold',
+    hint: 'Internal: a journey paused for roleplay.',
+    scope: 'world',
+    config: false,
+    type: Object,
+    default: null,
   });
 }
 
@@ -1816,6 +2372,24 @@ export function registerTravelClockHooks() {
   // rather than just redrawing the dial.
   Hooks.on('canvasReady', () => TravelClock.refresh());
   Hooks.on('ready', () => renderDial());
+
+  // A hold survives a refresh (it's a world setting), but the ambience bed
+  // and the veil don't -- those were client-side. Say so rather than leaving
+  // the GM wondering why the road went quiet, and flag the case where
+  // someone has switched scenes by hand and left the hold dangling.
+  Hooks.on('ready', () => {
+    if (!game.user.isGM) return;
+    const hold = TravelTool.getHold();
+    if (!hold) return;
+
+    const travelScene = TravelTool.travelScene();
+    const onTravelScene = travelScene && canvas?.scene?.id === travelScene.id;
+    ui.notifications.info(
+      onTravelScene
+        ? `The party is still on the road to ${hold.toTitle || 'their destination'} — press Arrive in the travel tool when ready.`
+        : `A journey to ${hold.toTitle || 'a destination'} is still open, but this isn't the travelling scene. Arrive or turn back from the travel tool.`
+    );
+  });
   // The player list changes height as people connect/disconnect, and the
   // dial sits directly on top of it -- re-measure whenever it redraws.
   Hooks.on('renderPlayerList', () => renderDial());

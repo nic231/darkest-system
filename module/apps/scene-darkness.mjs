@@ -80,6 +80,17 @@ export const SceneDarkness = {
     const scene = canvas?.scene;
     if (!scene) return;
 
+    // The travelling scene is not a place, it's a transition. Its art carries
+    // its own light, so dimming it by the clock would darken a card rather
+    // than a sky. Guarding here rather than at the travelArrive hook because
+    // canvasReady and clockChanged both reach this too -- activating it for a
+    // hold fires the first, and time passing during the roleplay fires the
+    // second.
+    try {
+      const travelUuid = game.settings.get('darkest-system', 'travelSceneUuid');
+      if (travelUuid && scene.uuid === travelUuid) return;
+    } catch { /* setting not registered yet; nothing to exclude */ }
+
     if (!SceneDarkness.enabled()) return;
 
     // Never touch a scene the GM has lit themselves. We only manage scenes

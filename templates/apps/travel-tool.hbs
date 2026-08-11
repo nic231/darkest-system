@@ -1,5 +1,29 @@
 <div class="travel-tool-container">
 
+  {{#if hold}}
+  {{!-- A journey paused on the travelling scene. The same two actions live
+        on the chat card, which is where the GM usually is during roleplay;
+        this is the fallback, and what a mid-hold refresh recovers to. --}}
+  <div class="travel-hold-banner">
+    <div class="travel-hold-head">
+      <i class="fas fa-route"></i> On the road{{#if hold.toTitle}} to {{hold.toTitle}}{{/if}}
+    </div>
+    <p class="travel-hold-note">
+      The journey's time has already passed — the roleplay happens on the way.
+      {{#if hold.stale}} Set out over two hours ago.{{/if}}
+    </p>
+    <div class="travel-hold-actions">
+      <button type="button" class="hold-arrive">
+        <i class="fas fa-map-pin"></i> Arrive
+      </button>
+      <button type="button" class="hold-abandon"
+              data-tooltip="Go back where they set out from. The clock is not rewound.">
+        <i class="fas fa-rotate-left"></i> Turn back
+      </button>
+    </div>
+  </div>
+  {{/if}}
+
   <div class="travel-now">
     <div class="travel-now-time">{{#if isFixedRegion}}{{phaseLabel}}{{else}}{{time}}{{/if}}</div>
     <div class="travel-now-day">Day {{day}}{{#unless isFixedRegion}} · {{phaseLabel}}{{/unless}}</div>
@@ -72,6 +96,22 @@
       {{/each}}
     </select>
   </div>
+
+  {{#if canHold}}
+  {{!-- Hidden entirely without a travelling scene set: a visible control
+        that can't work is worse than none, and the picker row at the foot
+        of the tool explains what's missing. --}}
+  <div class="travel-group travel-hold-toggle">
+    <label class="travel-hold-check">
+      <input type="checkbox" name="holdForRp" />
+      Hold for roleplay
+    </label>
+    <p class="travel-hold-hint">
+      Stop at the travelling scene and wait there until you press Arrive.
+      The journey's time passes when they set out, so the talking is free.
+    </p>
+  </div>
+  {{/if}}
 
   {{#if hasLegs}}
   <div class="travel-legs">
@@ -163,5 +203,33 @@
     </div>
   </div>
   {{/if}}
+
+  {{!-- What the soundscape is doing and why. Diagnoses silence without
+        opening a console -- "Syrinscape not connected" and "nothing assigned
+        here" look identical from the table otherwise. --}}
+  <div class="travel-ambience-status">
+    <i class="fas fa-music"></i>
+    <span class="travel-ambience-text">{{ambience.text}}</span>
+    {{#if ambience.detail}}<span class="travel-ambience-detail">{{ambience.detail}}</span>{{/if}}
+  </div>
+
+  {{!-- Set once and forgotten, so it sits at the very bottom. Outside the
+        hasRoutes block deliberately: the travelling scene is a system
+        setting and shouldn't disappear with the content module. --}}
+  <div class="travel-scene-setting">
+    <span class="travel-scene-label">Travelling scene:</span>
+    <span class="travel-scene-name">
+      {{#if travelSceneName}}{{travelSceneName}}{{else}}<em>not set — needed to hold for roleplay</em>{{/if}}
+    </span>
+    <button type="button" class="travel-scene-pick"
+            data-tooltip="The generic scene shown while the party is on the road.">
+      <i class="fas fa-map"></i> {{#if travelSceneName}}Change{{else}}Set{{/if}}
+    </button>
+    {{#if travelSceneName}}
+    <button type="button" class="travel-scene-clear" data-tooltip="Unset it">
+      <i class="fas fa-times"></i>
+    </button>
+    {{/if}}
+  </div>
 
 </div>

@@ -5158,7 +5158,12 @@
 /* Covers the hard canvas swap players see when scene.activate() reaches
    them. pointer-events: none is deliberate -- if a socket message is ever
    dropped, a stuck veil must never be able to block input. The failsafe in
-   showTransitionVeil() removes it after 5s regardless. */
+   showTransitionVeil() removes it regardless, on a timer that scales with
+   the transition it's covering.
+
+   The 800ms here is only a fallback. Fades scale with journey length now, so
+   showTransitionVeil() overrides transitionDuration inline on every client --
+   the socket carries the duration so they all fade in step. */
 #darkest-transition-veil {
   position: fixed;
   inset: 0;
@@ -5171,6 +5176,183 @@
 
 #darkest-transition-veil.visible {
   opacity: 1;
+}
+
+/* ============================================================
+   Hold for roleplay — the party paused on the road
+   ============================================================ */
+
+/* Banner at the top of the travel tool while a journey is held. Blue-grey
+   rather than the arrival card's warm edge: this is a state to get out of,
+   not an event that happened. */
+.travel-hold-banner {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid #5a6a8a;
+  border-left: 3px solid #7a8fb8;
+  border-radius: 3px;
+  background: linear-gradient(to right, rgba(30, 34, 52, 0.6), transparent);
+}
+
+.travel-hold-head {
+  color: #a8bcd8;
+  font-weight: bold;
+}
+
+.travel-hold-note {
+  margin: 4px 0 8px;
+  color: var(--darkest-text-dim, #9a9088);
+  font-size: 11px;
+  font-style: italic;
+}
+
+/* Shared by the banner and the chat card, so both sets of buttons match. */
+.travel-hold-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+/* Explicit colours throughout: Foundry core styles buttons inside
+   .window-content and in chat at a higher specificity than a bare class,
+   so anything left unset comes out unreadable. */
+.travel-hold-actions button,
+.travel-hold-banner button {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #5a6a8a;
+  border-radius: 3px;
+  background: rgba(40, 46, 68, 0.8);
+  color: #c8d4e8;
+  font-size: 12px;
+  line-height: normal;
+  cursor: pointer;
+}
+
+.travel-hold-actions button:hover,
+.travel-hold-banner button:hover {
+  border-color: #8aa0c8;
+  background: rgba(58, 66, 94, 0.9);
+  color: #e4ecf8;
+}
+
+/* Arrive is the expected way out, so it leads. */
+.travel-hold-actions .hold-arrive,
+.travel-hold-actions .travel-arrive-btn {
+  border-color: #8a6a3a;
+  background: rgba(70, 54, 30, 0.8);
+  color: #e8c890;
+}
+
+.travel-hold-actions .hold-arrive:hover,
+.travel-hold-actions .travel-arrive-btn:hover {
+  border-color: #d8a05a;
+  background: rgba(96, 74, 40, 0.9);
+  color: #f4dcb0;
+}
+
+/* The chat card announcing the hold. */
+.travel-chat-holding {
+  border-left-color: #7a8fb8 !important;
+}
+
+.travel-chat-holding .travel-chat-head {
+  color: #a8bcd8;
+}
+
+/* The checkbox in the travel form. */
+.travel-hold-toggle {
+  margin-top: 2px;
+}
+
+.travel-hold-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--darkest-text, #d8d0c8);
+  cursor: pointer;
+}
+
+.travel-hold-check input[type="checkbox"] {
+  flex: none;
+  width: auto;
+  margin: 0;
+}
+
+.travel-hold-hint {
+  margin: 3px 0 0;
+  color: var(--darkest-text-dim, #9a9088);
+  font-size: 11px;
+  font-style: italic;
+}
+
+/* Soundscape readout. Quiet by default -- it only matters when something
+   isn't playing that should be. */
+.travel-ambience-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--darkest-border, #4a4038);
+  color: var(--darkest-text-dim, #9a9088);
+  font-size: 11px;
+}
+
+.travel-ambience-text {
+  color: var(--darkest-text, #d8d0c8);
+}
+
+.travel-ambience-detail {
+  margin-left: auto;
+  font-style: italic;
+  opacity: 0.75;
+}
+
+/* Set-once configuration, so it's quiet and sits at the foot of the tool. */
+.travel-scene-setting {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--darkest-border, #4a4038);
+  font-size: 11px;
+}
+
+.travel-scene-label {
+  color: var(--darkest-text-dim, #9a9088);
+  white-space: nowrap;
+}
+
+.travel-scene-name {
+  flex: 1;
+  overflow: hidden;
+  color: var(--darkest-text, #d8d0c8);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.travel-scene-name em {
+  color: var(--darkest-text-dim, #9a9088);
+}
+
+.travel-scene-setting button {
+  flex: none;
+  width: auto;
+  padding: 2px 8px;
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--darkest-text, #d8d0c8);
+  font-size: 11px;
+  line-height: normal;
+  cursor: pointer;
+}
+
+.travel-scene-setting button:hover {
+  border-color: #8a7a5a;
+  color: #e8dcc8;
 }
 
 /* The arrival card. Same shape as the departure card but marked out with a
@@ -5621,8 +5803,11 @@
 .effects-section .effect-row:hover .effect-delete-btn { opacity: 1; }
 .effects-section .effect-delete-btn:hover { color: #c56b5c; }
 
+/* Needs a bottom margin the populated list doesn't: .effect-row supplies its
+   own spacing above the next section, but a bare <p> has none, so the empty
+   state ended up crowding the Wounds header directly beneath it. */
 .effects-section .effects-empty {
-  margin: 4px 0 0;
+  margin: 4px 0 10px;
   font-size: 11px;
   font-style: italic;
   color: var(--darkest-text-muted, #9a9186);
