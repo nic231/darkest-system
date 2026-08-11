@@ -92,7 +92,11 @@
     <label>Pace</label>
     <select name="pace">
       {{#each paces}}
-      <option value="{{key}}"{{#if (eq key "normal")}} selected{{/if}}>{{label}} ({{speed}} km/h){{#if offRoad}} — road only{{/if}}{{#if offWater}} — swamp only{{/if}}</option>
+      {{!-- No region hint here any more: it said "road only" based on where
+            the party is standing, while travel actually gates on the chosen
+            route's label. _updatePaceOptions() disables the option and gives
+            the real reason once a route is picked. --}}
+      <option value="{{key}}"{{#if (eq key "normal")}} selected{{/if}}>{{label}} ({{speed}} km/h)</option>
       {{/each}}
     </select>
   </div>

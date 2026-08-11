@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.25.0-alpha (2026-08-11)
+
+**Invalid paces are now greyed out, and say why.** Picking "By pirogue" on a dry forest trail used to be accepted, then silently fall back to walking — correct behaviour, invisibly applied. The dropdown's old "road only" / "swamp only" hints made this worse: they checked the *region* the party was standing in, while travel gates on the chosen *route*, so a boat looked available anywhere in the swamp.
+
+Now the option itself is disabled with the actual reason — "no water here" once a route is picked, "no boat in this region" before one is. Selecting a route that invalidates your current pace resets it and tells you.
+
+**Driving has its own flavour text at last.** A driver on The Road was reading walking prose — including the line "the road surface is cracked but level, and the walking is easy", from inside a car. Eight new lines, written naive like the arrival text: nobody in this party has a word for an engine, so it is measured against horses and footsteps.
+
+Boat flavour already existed (16 lines across the Dismal, a Town Called Dismal and the Flood) and is unchanged. A multi-leg journey only counts as driven if *every* leg was road.
+
 ## 0.24.4-alpha (2026-08-11)
 
 **Fixed: the travel tool now has a dark background.** It never set one, so it inherited Foundry's light parchment while every text colour in it assumed a dark panel — light text on a light ground. That was the real reason the hints were unreadable, and why brightening the text in 0.24.3 didn't help.

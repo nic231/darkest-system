@@ -317,6 +317,30 @@ const BOAT_FLAVOUR = {
 };
 
 /**
+ * Driving, which only happens on The Road.
+ *
+ * Written naive, like the arrival lines: these characters come out of the
+ * Blades world and have no word for any of this. The car is "it", the
+ * headlights are lamps, speed is measured against a horse. Nobody names the
+ * machine, because nobody could.
+ *
+ * The Road is permanently night (see FIXED_TIME_REGIONS), so every line here
+ * assumes darkness and headlights -- there is no daytime driving to write.
+ */
+const DRIVE_FLAVOUR = {
+  'the-road': [
+    'The lamps throw the yellow stripe out ahead, faster than any horse could run.',
+    'The dark comes apart in front and closes up behind, and nothing else changes.',
+    'Whatever moves it growls on under the floor, steady, and never tires.',
+    'The seams in the road come up one after another, quicker than footsteps.',
+    'Trees leap out of the black at the edge of the lamplight and are gone again.',
+    'The road pours towards them and vanishes beneath, and the dark takes it back.',
+    'It eats the miles the way nothing living does, and asks for nothing.',
+    'Wind hammers past outside, though the air within stays oddly still.',
+  ],
+};
+
+/**
  * The key artwork for the scene the party is standing in, if the content
  * module supplied one.
  *
@@ -363,15 +387,19 @@ function routeKm(route) {
 // to a pirogue draws from a different list and shouldn't inherit its memory.
 const _lastFlavour = new Map();
 
-function regionFlavour(regionSlug, boating = false) {
+function regionFlavour(regionSlug, boating = false, driving = false) {
   const useBoat = boating && BOAT_FLAVOUR[regionSlug];
-  const lines = useBoat ? BOAT_FLAVOUR[regionSlug] : REGION_FLAVOUR[regionSlug];
+  const useDrive = !useBoat && driving && DRIVE_FLAVOUR[regionSlug];
+  const mode = useBoat ? 'boat' : (useDrive ? 'drive' : 'walk');
+  const lines = useBoat ? BOAT_FLAVOUR[regionSlug]
+    : useDrive ? DRIVE_FLAVOUR[regionSlug]
+      : REGION_FLAVOUR[regionSlug];
   if (!lines?.length) return null;
   if (lines.length === 1) return lines[0];
 
   // Uniform random repeats ~1 time in 6 with these table sizes, and an
   // immediate repeat reads as a bug rather than as atmosphere.
-  const key = `${regionSlug}:${useBoat ? 'boat' : 'walk'}`;
+  const key = `${regionSlug}:${mode}`;
   const last = _lastFlavour.get(key);
   let i = Math.floor(Math.random() * lines.length);
   if (i === last) i = (i + 1 + Math.floor(Math.random() * (lines.length - 1))) % lines.length;
@@ -1095,17 +1123,12 @@ export class TravelTool extends Application {
       hold,
       travelSceneName: TravelTool.travelScene()?.name ?? null,
       canHold: TravelTool.canHold(),
+      // Every pace is offered; _updatePaceOptions() disables the ones the
+      // SELECTED ROUTE can't take, which is the check travel actually makes.
       paces: Object.keys(PACE_SPEED).map(p => ({
         key: p,
         label: PACE_LABEL[p],
         speed: PACE_SPEED[p],
-        // Driving is offered everywhere -- the party might have a car
-        // anywhere -- but it only actually speeds up road routes, so flag
-        // it when the current scene isn't somewhere you can drive.
-        offRoad: p === 'drive' && !DRIVABLE_REGIONS.has(TravelClock.currentRegion()),
-        // Same idea for the pirogue: offered anywhere, but flagged outside
-        // the swamp regions where there's actually a boat to take.
-        offWater: p === 'boat' && !BOATABLE_REGIONS.has(TravelClock.currentRegion()),
       })),
     };
   }
@@ -1305,8 +1328,56 @@ export class TravelTool extends Application {
     return 0;
   }
 
+  /**
+   * Grey out paces the selected route can't take.
+   *
+   * The gating that matters happens on the ROUTE label (isDrivable /
+   * isNavigable), not the region -- a dry trail through the Dismal is still
+   * a dry trail. The dropdown used to hint by region, so a pirogue looked
+   * available anywhere in the swamp and then silently fell back to walking.
+   * Now the option itself is disabled, and says why.
+   *
+   * With no route picked, everything stays enabled: the GM may be entering a
+   * raw distance, which has no label to test.
+   */
+  _updatePaceOptions(html) {
+    const route = this._selectedRoute(html);
+    const select = html.find('[name="pace"]');
+
+    const region = TravelClock.currentRegion();
+
+    select.find('option').each((_, opt) => {
+      const key = opt.value;
+      let blocked = null;
+      if (route) {
+        // A route is chosen, so test the thing travel actually tests.
+        if (key === 'drive' && !isDrivable(route)) blocked = 'no road here';
+        else if (key === 'boat' && !isNavigable(route)) blocked = 'no water here';
+      } else if (region) {
+        // No route yet: fall back to whether the vehicle exists in this
+        // region at all. There's no boat moored in the Backwoods whatever
+        // route you end up picking.
+        if (key === 'drive' && !DRIVABLE_REGIONS.has(region)) blocked = 'no roads in this region';
+        else if (key === 'boat' && !BOATABLE_REGIONS.has(region)) blocked = 'no boat in this region';
+      }
+      opt.disabled = !!blocked;
+      const base = opt.dataset.baseLabel ?? opt.textContent;
+      opt.dataset.baseLabel = base;
+      opt.textContent = blocked ? `${base} — ${blocked}` : base;
+    });
+
+    // If the pace that's selected has just become invalid, move off it
+    // rather than leaving a disabled option showing as chosen.
+    const current = select.find('option:selected')[0];
+    if (current?.disabled) {
+      select.val('normal');
+      ui.notifications.info('That route is walked — pace set back to normal.');
+    }
+  }
+
   _updatePreview(html) {
     const preview = html.find('.travel-preview');
+    this._updatePaceOptions(html);
 
     // A queued journey is what the Travel button will actually walk, so
     // preview that rather than whatever is left in the form boxes.
@@ -1490,6 +1561,9 @@ export class TravelTool extends Application {
       region: TravelClock.currentRegion(),
       route: last.route,
       boating,
+      // Only claim the party drove if EVERY leg was road -- a journey that
+      // leaves the tarmac partway is a walk with a drive at one end.
+      driving: driving && allRoad,
       pace: this._lastPace,
       hold: this._holdRequested,
     });
@@ -1580,6 +1654,7 @@ export class TravelTool extends Application {
       region: TravelClock.currentRegion(),
       route,
       boating,
+      driving,
       pace,
       hold: this._holdRequested,
     });
@@ -1844,7 +1919,9 @@ export class TravelTool extends Application {
   async _passTime(minutes, flavour, opts = {}) {
     // Capture the region BEFORE any scene change, so the flavour describes
     // the ground actually crossed rather than wherever the party ends up.
-    const flavourLine = opts.region ? regionFlavour(opts.region, opts.boating) : null;
+    const flavourLine = opts.region
+      ? regionFlavour(opts.region, opts.boating, opts.driving)
+      : null;
 
     const result = await TravelClock.advance(minutes);
     const state = TravelClock.displayState();
