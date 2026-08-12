@@ -555,6 +555,11 @@ export class SessionLog extends Application {
     // Add a leg by hand. Lives in travel-history.mjs (which knows about
     // locations and routes); imported lazily so the log doesn't take a
     // static dependency on the clock.
+    html.find('.log-route-map').click(async () => {
+      const { RouteMapApp } = await import('./route-map.mjs');
+      new RouteMapApp().render(true);
+    });
+
     html.find('.log-add-move').click(async () => {
       const { TravelHistory } = await import('./travel-history.mjs');
       await TravelHistory.addMoveDialog();

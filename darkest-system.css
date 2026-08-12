@@ -6231,3 +6231,88 @@
 
 /* A stay -- time spent in one place rather than a journey. */
 .log-stay td { opacity: 0.85; font-style: italic; }
+
+/* ============================================================
+   Route map
+   ============================================================ */
+
+.route-map-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--darkest-bg-dark, #1e1c19);
+  color: var(--darkest-text, #cec9c0);
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.route-map-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.route-control { display: flex; flex-direction: column; gap: 3px; }
+
+.route-control label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--darkest-text-dim, #b3aa9c);
+}
+
+.route-control select {
+  background: var(--darkest-bg-medium, #2a2723);
+  color: var(--darkest-text, #cec9c0);
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+.route-actions { display: flex; gap: 6px; margin-left: auto; }
+
+/* Explicit colours: Foundry core wins on specificity inside .window-content. */
+.route-actions button {
+  width: auto;
+  padding: 4px 10px;
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--darkest-text, #cec9c0);
+  font-size: 12px;
+  line-height: normal;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.route-actions button:hover { border-color: #8a7a5a; color: #e8dcc8; }
+
+.route-canvas {
+  width: 100%;
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  background: #0d0c0a;
+}
+
+.route-map-empty {
+  margin: auto;
+  text-align: center;
+  color: var(--darkest-text-dim, #b3aa9c);
+  font-style: italic;
+}
+
+.route-map-empty i { display: block; font-size: 26px; margin-bottom: 8px; opacity: 0.5; }
+
+/* The real map is a flowchart of every location, secret paths included. */
+.route-spoiler-warning {
+  margin: 0;
+  padding: 6px 10px;
+  border-left: 3px solid #b8923a;
+  background: rgba(60, 50, 30, 0.4);
+  color: #e0cfa0;
+  font-size: 11px;
+}
+
+.log-move-actions .log-route-map { flex: 1; }

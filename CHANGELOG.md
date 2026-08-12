@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.33.0-alpha (2026-08-12)
+
+**The route map.** *Draw the route* in the session log plots everywhere the party has walked, from the log itself. Two styles:
+
+- **Sketch** — aged paper, showing *only* the places they have actually been, at their true positions. Safe to hand to players, and the auto-map for anyone who doesn't want to draw their own.
+- **Real map** — the route over the book's own art. **GM only.** The region maps are flowcharts: every location is a labelled blob and the secret birdsong paths are drawn in red, so sharing one gives away the whole region. Sharing it asks twice.
+
+Fog of war is safe by construction — the renderer walks the *log*, never the pin list, so an unvisited location cannot appear even by accident.
+
+**A split party draws as two lines**, one colour per group, with a legend. The divergence and the rejoining are visible as shapes. **Stays draw as rings** sized by how long they were there, so two days at the Dark Lodge is a heavy mark and a fifteen-minute pause barely shows. **Gaps break the line** rather than joining across them — the map never invents a journey nobody made.
+
+**The credits scene.** *Replay* animates the route drawing itself; *Play for all* runs it on every connected screen at once, in step. Both groups animate against the same clock, so a split looks like two parties moving at once.
+
+Stays pause the replay **logarithmically, capped** — a night's sleep reads as a night, but two days is only 1.4× that rather than 6×, and a week-long imprisonment cannot stall the film. A sixty-leg campaign replays in under a minute.
+
+Coordinates ship in the content module (**1.8.0 required**), covering 130 of the 131 locations. The one location the book never pins is positioned from its route neighbours and drawn hollow to mark it approximate.
+
 ## 0.32.0-alpha (2026-08-12)
 
 **The party can split.** Travel is now logged against a named **group** — create one, say who is in it, and every leg records which group walked it. The travel tool gains a "Who is travelling" selector, and the session log shows one route per group, colour-keyed.

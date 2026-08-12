@@ -1,0 +1,73 @@
+<div class="route-map-container">
+
+  {{#unless available}}
+  <p class="route-map-empty">
+    <i class="fas fa-map"></i>
+    No map data. Enable the Darkest Woods content module — the coordinates
+    ship with it.
+  </p>
+  {{else}}
+
+  {{#unless hasRoute}}
+  <p class="route-map-empty">
+    <i class="fas fa-shoe-prints"></i>
+    Nothing walked yet. Travel with the Travel &amp; Time tool, or add legs by
+    hand in the session log, and the route appears here.
+  </p>
+  {{else}}
+
+  <div class="route-map-controls">
+    <div class="route-control">
+      <label>Map</label>
+      <select name="mapSlug">
+        {{#each maps}}
+        <option value="{{slug}}"{{#if active}} selected{{/if}}>{{title}}</option>
+        {{/each}}
+      </select>
+    </div>
+
+    {{#if isGM}}
+    <div class="route-control">
+      <label>Style</label>
+      <select name="style">
+        <option value="sketch"{{#if (eq style "sketch")}} selected{{/if}}>Sketch — safe to share</option>
+        <option value="real"{{#if (eq style "real")}} selected{{/if}}>Real map — GM only</option>
+      </select>
+    </div>
+    {{/if}}
+
+    <div class="route-actions">
+      {{#if playing}}
+      <button type="button" class="route-stop"><i class="fas fa-stop"></i> Stop</button>
+      {{else}}
+      <button type="button" class="route-play"><i class="fas fa-play"></i> Replay</button>
+      {{/if}}
+      {{#if isGM}}
+      <button type="button" class="route-broadcast"
+              data-tooltip="Play it on everyone's screen at once, in the sketch style">
+        <i class="fas fa-users"></i> Play for all
+      </button>
+      <button type="button" class="route-share"
+              data-tooltip="Hand the current view to the players as an image">
+        <i class="fas fa-share"></i> Share
+      </button>
+      {{/if}}
+    </div>
+  </div>
+
+  <canvas class="route-canvas"></canvas>
+
+  {{#if isGM}}
+  {{#if (eq style "real")}}
+  <p class="route-spoiler-warning">
+    <i class="fas fa-eye-slash"></i>
+    The real map names every location and draws the secret paths in red.
+    Share the sketch instead.
+  </p>
+  {{/if}}
+  {{/if}}
+
+  {{/unless}}
+  {{/unless}}
+
+</div>

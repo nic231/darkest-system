@@ -42,6 +42,7 @@ import {
 } from './module/apps/scene-darkness.mjs';
 import { TravelHistory, registerTravelHistorySettings } from './module/apps/travel-history.mjs';
 import { TravelGroups, registerTravelGroupSettings } from './module/apps/travel-groups.mjs';
+import { RouteMap, RouteMapApp } from './module/apps/route-map.mjs';
 import {
   SceneAmbience,
   registerSceneAmbienceSettings,
@@ -243,6 +244,7 @@ async function _preloadHandlebarsTemplates() {
     'systems/darkest-system/templates/apps/npc-tracker.hbs',
     'systems/darkest-system/templates/apps/travel-tool.hbs',
     'systems/darkest-system/templates/apps/session-log.hbs',
+    'systems/darkest-system/templates/apps/route-map.hbs',
 
     // Dialogs - NOT preloaded due to inline scripts
     // They are rendered dynamically via renderTemplate() instead
@@ -275,6 +277,8 @@ Hooks.once('ready', function() {
   // committing it to the markdown.
   game.darkestSystem.Ambience = SceneAmbience;
   game.darkestSystem.TravelGroups = TravelGroups;
+  game.darkestSystem.RouteMap = RouteMap;
+  game.darkestSystem.RouteMapApp = RouteMapApp;
 
   // Register doom tally hooks
   registerDoomTallyHooks();
@@ -358,6 +362,17 @@ Hooks.once('ready', function() {
         // without it every client would fall back to the stylesheet default
         // and drift out of step with the GM.
         showTransitionVeil(data.phase, data.audio ?? null, data.opts ?? {});
+        break;
+
+      case 'routeReplay':
+        // Every client animates the SAME plan from a shared start time, so
+        // they stay in step without a frame ever crossing the wire -- the
+        // pattern travelTransition already uses.
+        RouteMapApp.playShared({
+          plan: data.plan,
+          mapSlug: data.mapSlug,
+          startedAt: data.startedAt,
+        });
         break;
 
       case 'travelBed':
