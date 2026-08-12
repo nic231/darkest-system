@@ -17,7 +17,21 @@
           Path walked
           <span class="log-route-count">{{route.distinct}} locations</span>
         </div>
-        <div class="log-route-chain">{{route.chainText}}</div>
+        {{!-- Triple-stash: chainText carries a gap marker as markup. The
+              place names in it come from the log's own entries. --}}
+        <div class="log-route-chain">
+          {{#if route.hasMore}}<a class="route-expand" data-tooltip="Show the whole path">… {{route.hidden}} earlier</a> → {{/if}}{{{route.chainText}}}
+        </div>
+        <div class="log-route-chain log-route-full" style="display:none">{{{route.fullText}}}</div>
+
+        {{#if route.gapCount}}
+        <div class="log-route-gaps">
+          <i class="fas fa-triangle-exclamation"></i>
+          {{#if (eq route.gapCount 1)}}A leg looks missing{{else}}{{route.gapCount}} legs look missing{{/if}}:
+          {{#each route.gaps}}<span class="log-route-gap-detail">{{this}}</span>{{#unless @last}}; {{/unless}}{{/each}}
+        </div>
+        {{/if}}
+
         {{#if route.revisited.length}}
         <div class="log-route-revisit">
           <i class="fas fa-rotate-left"></i>
@@ -65,6 +79,8 @@
             <td>{{duration}}</td>
             <td class="log-dim">{{gameTime}}{{#if manual}} <i class="fas fa-pen log-manual-mark" data-tooltip="Added by hand"></i>{{/if}}</td>
             <td class="log-row-actions">
+              <button type="button" class="log-edit-move" data-id="{{id}}"
+                      data-tooltip="Edit this leg — changing its day or times re-sorts it"><i class="fas fa-pen"></i></button>
               <button type="button" class="log-del" data-id="{{id}}"
                       data-tooltip="Delete this movement"><i class="fas fa-times"></i></button>
             </td>

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.31.1-alpha (2026-08-12)
+
+**Legs can be edited, not just added and deleted.** A pencil on each row reopens the same dialog. Changing a leg's day or times **re-sorts it into place** — the list is ordered by game time rather than by when it was typed, so a correction lands where it belongs with nothing to drag.
+
+**Gaps in the route are shown rather than smoothed over.** "Path walked" used to join every leg into one chain regardless, so a leg that began somewhere the party had not walked to produced a path they never took. Those breaks are now marked, named ("after X, the next leg starts at Y"), and reported in the export. The route map would otherwise have drawn that fiction as a line.
+
+**"Path walked" collapses once it gets long.** A full campaign runs to a couple of hundred legs — about fifty lines of unbroken text. It now shows the last dozen places with a count and a click to expand.
+
+**Clearing the log says what it is about to delete.** Both clear buttons now name the count ("Permanently delete 214 movements?"), break the full clear down by kind, and default to No. It is the only record of the campaign's movement, and a mis-click was unrecoverable.
+
 ## 0.31.0-alpha (2026-08-12)
 
 **The woods remember a path walked two days running.** The book: *"Traversing the same path two days in a row is a transgression... This must happen on consecutive days. Retracing one's steps on the same day is fine. So is doing so with a full day in between."*

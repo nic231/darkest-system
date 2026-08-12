@@ -6090,3 +6090,51 @@
 }
 
 .log-move-actions button { flex: 1; }
+
+/* ============================================================
+   Session log: route gaps, collapsing, per-row editing
+   ============================================================ */
+
+/* A break in the chain -- a leg is missing or mistyped, and the party could
+   not have walked from where the last leg ended to where the next begins.
+   Marked rather than smoothed over, because the route map would otherwise
+   draw a line that never happened. */
+.route-gap {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(120, 60, 30, 0.35);
+  color: #e0a070;
+  font-size: 11px;
+  cursor: help;
+}
+
+.log-route-gaps {
+  margin-top: 4px;
+  color: #e0a070;
+  font-size: 11px;
+}
+
+.log-route-gap-detail { font-style: italic; opacity: 0.9; }
+
+/* "… 42 earlier" -- the whole path is a couple of hundred legs by the end of
+   a campaign, and the tail is what anyone is actually reading. */
+.route-expand {
+  color: var(--darkest-text-dim, #b3aa9c);
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.route-expand:hover { color: var(--darkest-text, #d8d0c8); }
+
+.log-row-actions .log-edit-move {
+  border: none;
+  background: none;
+  color: var(--darkest-text-dim, #b3aa9c);
+  cursor: pointer;
+  padding: 0 3px;
+  width: auto;
+  line-height: 1;
+}
+
+.log-row-actions .log-edit-move:hover { color: #d8a05a; }

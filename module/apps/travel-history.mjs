@@ -165,57 +165,69 @@ export const TravelHistory = {
    * travel-clock.mjs imports this file, and a static import would close the
    * cycle at module-evaluation time.
    */
-  async addMoveDialog() {
+  async addMoveDialog(existing = null) {
     if (!game.user.isGM) return;
 
     const { TravelTool, TravelClock, TRAVEL_ROUTES } = await import('./travel-clock.mjs');
     const locations = TravelClock.allLocations();
+    const editing = !!existing;
     const datalist = locations
       .map(l => `<option value="${foundry.utils.escapeHTML?.(l.title) ?? l.title}"></option>`)
       .join('');
     const clock = TravelClock.getClock();
+    // Editing prefills from the entry; adding prefills from the clock, which
+    // is nearly always the day the GM means.
+    const pre = {
+      from: existing?.fromTitle ?? '',
+      to: existing?.toTitle ?? '',
+      day: existing?.departDay ?? existing?.day ?? clock.day,
+      departTime: existing?.departTime ?? TravelClock.formatTime(clock.minutes),
+      arriveTime: existing?.time ?? TravelClock.formatTime(clock.minutes),
+      label: existing?.label ?? '',
+    };
+    const esc = (v) => foundry.utils.escapeHTML?.(String(v ?? '')) ?? String(v ?? '');
 
     const content = `<form class="darkest-dialog manual-move">
-      <p class="notes">For travel that happened away from the table, or to fix the record.</p>
+      <p class="notes">${editing ? 'Correcting a leg. Changing the day or times re-sorts it into place.' : 'For travel that happened away from the table, or to fix the record.'}</p>
       <div class="form-row">
         <div class="form-group">
           <label>From</label>
-          <input type="text" name="from" list="manual-move-locations" autocomplete="off" placeholder="type to search…" />
+          <input type="text" name="from" list="manual-move-locations" autocomplete="off" placeholder="type to search…" value="${esc(pre.from)}" />
         </div>
         <div class="form-group">
           <label>To</label>
-          <input type="text" name="to" list="manual-move-locations" autocomplete="off" placeholder="type to search…" />
+          <input type="text" name="to" list="manual-move-locations" autocomplete="off" placeholder="type to search…" value="${esc(pre.to)}" />
         </div>
       </div>
       <datalist id="manual-move-locations">${datalist}</datalist>
       <div class="form-row">
         <div class="form-group">
           <label>Day</label>
-          <input type="number" name="day" value="${clock.day}" min="1" />
+          <input type="number" name="day" value="${pre.day}" min="1" />
         </div>
         <div class="form-group">
           <label>Departed</label>
-          <input type="time" name="departTime" value="${TravelClock.formatTime(clock.minutes)}" />
+          <input type="time" name="departTime" value="${pre.departTime}" />
         </div>
         <div class="form-group">
           <label>Arrived</label>
-          <input type="time" name="arriveTime" value="${TravelClock.formatTime(clock.minutes)}" />
+          <input type="time" name="arriveTime" value="${pre.arriveTime}" />
         </div>
       </div>
       <div class="form-group">
         <label>Route</label>
-        <input type="text" name="label" placeholder="e.g. Trail to the North — filled in automatically if known" />
+        <input type="text" name="label" value="${esc(pre.label)}" placeholder="e.g. Trail to the North — filled in automatically if known" />
       </div>
     </form>`;
 
     return new Promise((resolve) => {
       new Dialog({
-        title: 'Add a leg by hand',
+        title: editing ? 'Edit this leg' : 'Add a leg by hand',
         content,
         buttons: {
           add: {
-            icon: '<i class="fas fa-plus"></i>',
-            label: 'Add',
+            icon: `<i class="fas fa-${editing ? 'check' : 'plus'}"></i>`,
+            label: editing ? 'Save' : 'Add',
             callback: async (html) => {
               const from = TravelTool._resolveLocation(html.find('[name="from"]').val());
               const to = TravelTool._resolveLocation(html.find('[name="to"]').val());
@@ -248,7 +260,7 @@ export const TravelHistory = {
 
               const titleOf = (slug) => locations.find(l => l.slug === slug)?.title || null;
 
-              await SessionLog.recordMove({
+              const fields = {
                 fromSlug: from || null,
                 fromTitle: titleOf(from),
                 toSlug: to,
@@ -256,20 +268,31 @@ export const TravelHistory = {
                 label,
                 minutes,
                 km: route?.km ?? null,
-                region: null,
                 departDay: day,
                 departTime,
                 day: arriveDay,
                 time: arriveTime,
                 manual: true,
-              });
+              };
+
+              if (editing) {
+                // Region is deliberately not touched on an edit: it records
+                // the ground crossed at the time, which a correction to the
+                // times doesn't change.
+                await SessionLog.updateEntry(existing.id, fields);
+              } else {
+                await SessionLog.recordMove({ ...fields, region: null });
+              }
 
               // Correcting the record should surface the rule too -- a leg
-              // added after the fact can be exactly the one that backtracks.
+              // added or re-dated after the fact can be exactly the one that
+              // backtracks. Its own id is excluded so an edit can't match
+              // itself.
               await TravelHistory.checkAndAnnounce({
                 toSlug: to,
                 toTitle: titleOf(to),
                 arrivalDay: arriveDay,
+                ignoreEntryId: existing?.id ?? null,
               });
 
               SessionLog.refresh();

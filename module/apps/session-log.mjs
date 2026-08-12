@@ -124,6 +124,30 @@ export class SessionLog extends Application {
     return SessionLog.remove(e => e.id === id);
   }
 
+  /**
+   * Change one entry in place.
+   *
+   * Through the same write queue as record(), for the same reason: this is a
+   * read-modify-write on a world setting, and an edit racing a travel roll
+   * would lose one of them. The id and kind are never overwritten -- an edit
+   * corrects a leg, it doesn't turn it into a different kind of entry.
+   */
+  static async updateEntry(id, changes) {
+    if (!game.user.isGM) return false;
+    SessionLog._writeQueue = SessionLog._writeQueue
+      .catch(() => {})
+      .then(async () => {
+        const log = SessionLog.getLog();
+        const entry = log.entries.find(e => e.id === id);
+        if (!entry) return false;
+        Object.assign(entry, changes, { id: entry.id, kind: entry.kind });
+        await game.settings.set('darkest-system', SETTING_LOG, log);
+        SessionLog.refresh();
+        return true;
+      });
+    return SessionLog._writeQueue;
+  }
+
   /** Delete every entry of one kind ('move' | 'roll' | 'transgression'). */
   static removeKind(kind) {
     return SessionLog.remove(e => e.kind === kind);
@@ -324,17 +348,62 @@ export class SessionLog extends Application {
    * The path walked, deduplicated into an ordered chain of place names --
    * the thing you'd actually trace onto a map.
    */
+  /**
+   * The path walked, as a chain of places.
+   *
+   * Two things this has to do that the old version didn't:
+   *
+   * GAPS ARE SHOWN, NOT SMOOTHED OVER. A leg that starts somewhere the
+   * previous leg didn't end means a leg is missing or mistyped. Joining the
+   * chain anyway produced a path the party never walked -- and the route map
+   * would go on to draw that fiction as a line. Marked instead.
+   *
+   * LONG CHAINS COLLAPSE. A full campaign runs to a couple of hundred legs,
+   * which is fifty-odd lines of unbroken text and no use to anyone. The tail
+   * is what the GM is actually looking at, so show that and offer the rest.
+   */
   static _routeSummary(moves) {
+    const TAIL = 12;
     const chain = [];
+    let previousEnd = null;
+
     for (const m of moves) {
-      if (!chain.length && m.fromTitle) chain.push(m.fromTitle);
-      if (m.toTitle && chain[chain.length - 1] !== m.toTitle) chain.push(m.toTitle);
+      // A break: this leg starts somewhere the party wasn't.
+      if (previousEnd && m.fromTitle && m.fromTitle !== previousEnd) {
+        chain.push({ gap: true, expected: previousEnd, actual: m.fromTitle });
+        chain.push({ name: m.fromTitle });
+      } else if (!chain.length && m.fromTitle) {
+        chain.push({ name: m.fromTitle });
+      }
+      if (m.toTitle && chain[chain.length - 1]?.name !== m.toTitle) {
+        chain.push({ name: m.toTitle });
+      }
+      if (m.toTitle) previousEnd = m.toTitle;
     }
+
+    const places = chain.filter(c => !c.gap);
     const visits = {};
-    chain.forEach(c => { visits[c] = (visits[c] || 0) + 1; });
+    places.forEach(c => { visits[c.name] = (visits[c.name] || 0) + 1; });
+
+    const gaps = chain.filter(c => c.gap);
+    const hidden = Math.max(0, places.length - TAIL);
+    const tail = hidden ? chain.slice(chain.length - TAIL) : chain;
+
+    const render = (list) => list
+      .map(c => (c.gap ? '<span class="route-gap" data-tooltip="A leg is missing or mistyped: the next leg starts somewhere the party had not walked to.">⚠ gap</span>' : c.name))
+      .join('  →  ');
+
     return {
-      chain,
-      chainText: chain.join('  →  '),
+      chain: places.map(c => c.name),
+      chainText: render(tail),
+      fullText: render(chain),
+      // Markup-free, for the Markdown export -- chainText carries a <span>
+      // for the gap marker, which has no business in a notes file.
+      plainText: chain.map(c => (c.gap ? '⚠ GAP' : c.name)).join('  →  '),
+      hidden,
+      hasMore: hidden > 0,
+      gapCount: gaps.length,
+      gaps: gaps.map(g => `after ${g.expected}, the next leg starts at ${g.actual}`),
       distinct: Object.keys(visits).length,
       revisited: Object.entries(visits)
         .filter(([, n]) => n > 1)
@@ -420,26 +489,68 @@ export class SessionLog extends Application {
       await TravelHistory.addMoveDialog();
     });
 
+    // Editing a leg reuses the same dialog. Changing its day or times moves
+    // it in the list, because the list is sorted by game time rather than by
+    // when it happened to be typed -- so a correction lands where it belongs
+    // without anything to drag.
+    html.find('.log-edit-move').click(async (ev) => {
+      const id = ev.currentTarget.dataset.id;
+      const entry = SessionLog.getLog().entries.find(e => e.id === id);
+      if (!entry) return;
+      const { TravelHistory } = await import('./travel-history.mjs');
+      await TravelHistory.addMoveDialog(entry);
+    });
+
+    // Show the whole path when it has been collapsed.
+    html.find('.route-expand').click((ev) => {
+      $(ev.currentTarget).closest('.log-route').find('.log-route-full').show();
+      $(ev.currentTarget).closest('.log-route-chain').hide();
+    });
+
+    // Both clears say HOW MUCH will go and default to No. This is the only
+    // record of the campaign's movement -- a mis-click here is unrecoverable,
+    // and "delete every recorded movement" reads much less alarming than
+    // "delete 214 movements" does.
     html.find('.log-clear-kind').click(async (ev) => {
       const kind = ev.currentTarget.dataset.kind;
       const labels = { move: 'movements', roll: 'rolls', transgression: 'transgressions' };
       const label = labels[kind] || 'entries';
+      const n = SessionLog.getLog().entries.filter(e => e.kind === kind).length;
+      if (!n) {
+        ui.notifications.info(`No ${label} to clear.`);
+        return;
+      }
       const ok = await Dialog.confirm({
-        title: `Clear ${label}`,
-        content: `<p>Delete every recorded ${label}? Other tabs are untouched.</p>`,
-        defaultYes: false
+        title: `Clear ${label}?`,
+        content: `<p>Permanently delete <strong>${n}</strong> ${n === 1 ? label.replace(/s$/, '') : label}?</p>
+                  <p class="notes">Other tabs are untouched. This cannot be undone.</p>`,
+        defaultYes: false,
       });
       if (ok) {
-        const n = await SessionLog.removeKind(kind);
-        ui.notifications.info(`Deleted ${n} ${label}.`);
+        const deleted = await SessionLog.removeKind(kind);
+        ui.notifications.info(`Deleted ${deleted} ${label}.`);
       }
     });
 
     html.find('.log-clear').click(async () => {
+      const all = SessionLog.getLog().entries;
+      if (!all.length) {
+        ui.notifications.info('The log is already empty.');
+        return;
+      }
+      const moves = all.filter(e => e.kind === 'move').length;
+      const rolls = all.filter(e => e.kind === 'roll').length;
+      const trans = all.filter(e => e.kind === 'transgression').length;
       const ok = await Dialog.confirm({
-        title: 'Clear session log',
-        content: '<p>Delete every recorded movement and roll? This cannot be undone.</p>',
-        defaultYes: false
+        title: 'Clear the whole session log?',
+        content: `<p>Permanently delete <strong>${all.length}</strong> entries?</p>
+                  <ul class="notes">
+                    <li>${moves} movement${moves === 1 ? '' : 's'}</li>
+                    <li>${rolls} roll${rolls === 1 ? '' : 's'}</li>
+                    <li>${trans} transgression${trans === 1 ? '' : 's'}</li>
+                  </ul>
+                  <p class="notes"><strong>This cannot be undone.</strong> Export first if you want to keep it.</p>`,
+        defaultYes: false,
       });
       if (ok) await SessionLog.clear();
     });
@@ -453,7 +564,11 @@ export class SessionLog extends Application {
     const lines = ['# Darkest Woods — session log', ''];
 
     if (route.chain.length) {
-      lines.push('## Path walked', '', route.chainText, '');
+      lines.push('## Path walked', '', route.plainText, '');
+      if (route.gapCount) {
+        lines.push(`> **${route.gapCount} gap${route.gapCount === 1 ? '' : 's'} in the record:** `
+          + route.gaps.join('; '), '');
+      }
       if (route.revisited.length) {
         lines.push(`**Revisited:** ${route.revisited.join(', ')}`, '');
         lines.push('_Retracing the same path on consecutive days is a transgression._', '');
