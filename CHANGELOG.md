@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.30.2-alpha (2026-08-12)
+
+**Ability rows re-laid out:** name and tags on the left, then the wound cost, with **Uses** and its pips pushed to the right-hand edge and labelled. The pip track now lines up down the list however long each ability name is.
+
+**Fixed: an ability with a wound cost but unlimited uses never showed its cost.** On the Abilities tab the cost button was nested inside the uses block, so it only rendered for abilities that also had limited uses.
+
 ## 0.30.1-alpha (2026-08-12)
 
 **Fixed: the ability wound cost's Physical/Mental selector was hidden.** It existed, but only appeared once a non-zero rating had been saved — so on a fresh ability the option looked as though it wasn't there. It's always visible now, since the type has to be pickable in the same pass as the rating.

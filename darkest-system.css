@@ -6007,3 +6007,26 @@
   width: auto;
   margin: 0;
 }
+
+/* ============================================================
+   Ability row: name and tags left, uses pushed right
+   ============================================================ */
+
+/* margin-left:auto is what right-aligns this inside .ability-info's flex
+   row. flex-shrink:0 keeps the pip track intact when a long ability name
+   would otherwise squeeze it. */
+.ability-uses-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.ability-uses-label {
+  color: var(--darkest-text-dim, #b3aa9c);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

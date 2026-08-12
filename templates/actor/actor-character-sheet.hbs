@@ -121,22 +121,23 @@
               <i class="fas fa-star-of-david"></i>
               <span class="compact-ability-name">{{name}}</span>
               {{#if system.grantsBoon}}<span class="compact-ability-tag boon">Boon</span>{{/if}}
-              {{#if usePips}}
-              <span class="ability-use-pips" title="{{system.usesRemaining}}/{{system.usesPerDay}} uses — click a pip to set uses remaining">
-                {{#each usePips}}
-                <span class="ability-use-pip {{#if filled}}filled{{else}}empty{{/if}}" data-value="{{value}}"></span>
-                {{/each}}
-              </span>
-              {{/if}}
+              {{!-- Cost before uses, matching the Abilities tab. --}}
               {{#if system.woundCostRating}}
-              {{!-- The price of using it, next to the uses. Clicking applies
-                    the wound (and runs the unconsciousness check) -- never
-                    automatic, because using an ability and paying for it are
-                    two decisions. --}}
               <button type="button" class="ability-wound-cost {{system.woundCostType}}" data-item-id="{{_id}}"
                       data-tooltip="Apply this cost: a Rating {{system.woundCostRating}} {{system.woundCostType}} wound">
                 <i class="fas fa-heart-crack"></i> {{system.woundCostRating}}{{#if (eq system.woundCostType "mental")}}M{{else}}P{{/if}}
               </button>
+              {{/if}}
+
+              {{#if usePips}}
+              <span class="ability-uses-group" title="{{system.usesRemaining}}/{{system.usesPerDay}} uses — click a pip to set uses remaining">
+                <span class="ability-uses-label">Uses:</span>
+                <span class="ability-use-pips">
+                  {{#each usePips}}
+                  <span class="ability-use-pip {{#if filled}}filled{{else}}empty{{/if}}" data-value="{{value}}"></span>
+                  {{/each}}
+                </span>
+              </span>
               {{/if}}
             </div>
             {{#if enrichedDescription}}
@@ -380,22 +381,34 @@
               <div class="ability-info">
                 <span class="ability-name">{{name}}</span>
                 {{#if system.grantsBoon}}<span class="ability-tag boon">Boon</span>{{/if}}
-                {{#if usePips}}
-                <span class="ability-use-pips" title="{{system.usesRemaining}}/{{system.usesPerDay}} uses — click a pip to set uses remaining">
-                  {{#each usePips}}
-                  <span class="ability-use-pip {{#if filled}}filled{{else}}empty{{/if}}" data-value="{{value}}"></span>
-                  {{/each}}
-                </span>
+
+                {{!-- The price of using it. Clicking applies the wound (and
+                      runs the unconsciousness check) -- never automatic,
+                      because using an ability and paying for it are two
+                      decisions.
+
+                      NOT nested inside the uses block: an ability can cost a
+                      wound and still be unlimited, and nesting it meant those
+                      never showed their cost at all. --}}
                 {{#if system.woundCostRating}}
-                {{!-- The price of using it, next to the uses. Clicking applies
-                      the wound (and runs the unconsciousness check) -- never
-                      automatic, because using an ability and paying for it are
-                      two decisions. --}}
                 <button type="button" class="ability-wound-cost {{system.woundCostType}}" data-item-id="{{_id}}"
                         data-tooltip="Apply this cost: a Rating {{system.woundCostRating}} {{system.woundCostType}} wound">
                   <i class="fas fa-heart-crack"></i> {{system.woundCostRating}}{{#if (eq system.woundCostType "mental")}}M{{else}}P{{/if}}
                 </button>
                 {{/if}}
+
+                {{!-- Uses sit last and push right, so the left of the row
+                      stays a readable name + tags and the pip track lines up
+                      down the list however long each name is. --}}
+                {{#if usePips}}
+                <span class="ability-uses-group" title="{{system.usesRemaining}}/{{system.usesPerDay}} uses — click a pip to set uses remaining">
+                  <span class="ability-uses-label">Uses:</span>
+                  <span class="ability-use-pips">
+                    {{#each usePips}}
+                    <span class="ability-use-pip {{#if filled}}filled{{else}}empty{{/if}}" data-value="{{value}}"></span>
+                    {{/each}}
+                  </span>
+                </span>
                 {{/if}}
               </div>
               {{#if enrichedDescription}}
