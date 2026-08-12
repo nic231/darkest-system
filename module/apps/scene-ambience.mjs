@@ -185,21 +185,40 @@ export const SceneAmbience = {
   },
 
   async _applyUnsafe({ force = false } = {}) {
-    if (!isPrimaryGM()) return;
+    // Every bail below is silent by design -- none of them is an error, and
+    // a GM without Syrinscape shouldn't see warnings. But silent-by-design
+    // made "nothing happens" impossible to diagnose from the table, so each
+    // one now says why at debug level. Turn on with:
+    //   CONFIG.debug.darkestAmbience = true
+    const log = (msg) => {
+      if (CONFIG.debug?.darkestAmbience) console.log(`Darkest System | ambience: ${msg}`);
+    };
+
+    if (!isPrimaryGM()) return log('not the primary GM');
 
     if (!SceneAmbience.enabled()) {
+      log('setting is off — stopping anything we started');
       await SceneAmbience.stopAll();
       return;
     }
     // Nothing to play through. Not an error -- the GM may simply not use
     // Syrinscape, in which case this whole subsystem stays dormant.
-    if (!SceneAmbience.available()) return;
+    if (!SceneAmbience.available()) return log('syrinscapeControl global not available');
     // Foundry refuses to build a Sound before the first user gesture, and
     // Syrinscape Controller's _createSound() throws outright if we try.
-    if (game.audio?.locked) return;
+    if (game.audio?.locked) {
+      // Arm the watcher here too: whatever triggered this apply (a scene
+      // change, say) happened before the user clicked, and without this
+      // nothing would retry once audio unlocks.
+      SceneAmbience.armAudioUnlock();
+      return log('Foundry audio still locked — will retry after the first click');
+    }
 
     const resolved = SceneAmbience.resolve();
     const wanted = SceneAmbience.wantedIds(resolved);
+    log(resolved
+      ? `${resolved.cue} — ${wanted.size} element(s) wanted, ${_playing.ids.size} playing`
+      : `no soundscape for scene "${canvas?.scene?.name}"`);
 
     // Same soundscape, same layers: leave it completely alone. This is what
     // stops the bed stuttering as the party moves between two locations in
@@ -359,18 +378,16 @@ export function registerSceneAmbienceHooks() {
   Hooks.on('darkestSystem.travelArrive', () => SceneAmbience.apply());
   Hooks.on('darkestSystem.clockChanged', () => SceneAmbience.apply());
 
-  // The scene open at load stays silent otherwise, since canvasReady may
-  // have fired before the Syrinscape module published its global.
-  Hooks.once('ready', () => {
-    // The unlock listener is armed REGARDLESS of whether ambience is on
-    // right now. It used to sit behind an enabled() check, which meant
-    // turning the setting on after the world had loaded -- the normal way
-    // anyone enables it the first time -- left nothing waiting for the
-    // audio unlock: the setting's onChange fired apply(), that hit the
-    // game.audio.locked guard and returned silently, and nothing ever
-    // retried. Manual playback from the Playlists sidebar still worked,
-    // which made it look as though only the automatic path was broken.
-    SceneAmbience.armAudioUnlock();
-    SceneAmbience.apply();
-  });
+  // NOT Hooks.once('ready', ...).
+  //
+  // registerSceneAmbienceHooks() is itself called from inside the system's
+  // Hooks.once('ready') handler, and Foundry does not replay a hook that has
+  // already fired -- so a 'ready' listener registered here never ran at all.
+  // That silently killed both the startup apply() AND armAudioUnlock(),
+  // which is why enabling the setting mid-session left nothing waiting for
+  // the browser's audio unlock.
+  //
+  // We are already inside ready by definition, so just do the work now.
+  SceneAmbience.armAudioUnlock();
+  SceneAmbience.apply();
 }

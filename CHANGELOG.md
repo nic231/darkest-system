@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.28.2-alpha (2026-08-12)
+
+**Fixed: three startup hooks never ran at all.** `registerSceneAmbienceHooks()` and `registerTravelClockHooks()` are called from inside the system's own `ready` handler, and they each registered a *further* `ready` listener. Foundry doesn't replay a hook that has already fired, so those callbacks were dead code.
+
+That killed the ambience system's startup pass and its audio-unlock watcher outright — the reason scene ambience stayed silent no matter what. It also explains the travel dial needing a refresh to appear, and the hold-recovery notice never showing after a reload.
+
+**Ambience now says why it's silent.** Every bail-out was silent by design (none is an error), which made "nothing happens" impossible to diagnose. Set `CONFIG.debug.darkestAmbience = true` in the console and each one reports itself: not the primary GM, setting off, Syrinscape global missing, audio still locked, or no soundscape for this scene.
+
+A scene change that arrives while audio is still locked now arms the unlock watcher too, so it retries after the first click instead of doing nothing.
+
 ## 0.28.1-alpha (2026-08-12)
 
 **Fixed: scene ambience never started if you turned it on after loading the world.** The audio-unlock watcher was only armed during startup, and only when the setting was already on — so enabling it mid-session (the normal way anyone turns it on the first time) left nothing waiting for the browser's audio unlock. `apply()` hit the locked-audio guard and returned silently, and nothing ever retried.

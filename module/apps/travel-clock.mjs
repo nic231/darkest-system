@@ -2460,25 +2460,29 @@ export function registerTravelClockHooks() {
   // the tool's "From here" routes both depend on it, so refresh both
   // rather than just redrawing the dial.
   Hooks.on('canvasReady', () => TravelClock.refresh());
-  Hooks.on('ready', () => renderDial());
+
+  // Called directly rather than through Hooks.on('ready'): this function is
+  // itself invoked from the system's ready handler, and Foundry never
+  // replays a hook that has already fired -- so a 'ready' listener
+  // registered here would never run at all.
+  renderDial();
 
   // A hold survives a refresh (it's a world setting), but the ambience bed
   // and the veil don't -- those were client-side. Say so rather than leaving
   // the GM wondering why the road went quiet, and flag the case where
   // someone has switched scenes by hand and left the hold dangling.
-  Hooks.on('ready', () => {
-    if (!game.user.isGM) return;
+  if (game.user.isGM) {
     const hold = TravelTool.getHold();
-    if (!hold) return;
-
-    const travelScene = TravelTool.travelScene();
-    const onTravelScene = travelScene && canvas?.scene?.id === travelScene.id;
-    ui.notifications.info(
-      onTravelScene
-        ? `The party is still on the road to ${hold.toTitle || 'their destination'} — press Arrive in the travel tool when ready.`
-        : `A journey to ${hold.toTitle || 'a destination'} is still open, but this isn't the travelling scene. Arrive or turn back from the travel tool.`
-    );
-  });
+    if (hold) {
+      const travelScene = TravelTool.travelScene();
+      const onTravelScene = travelScene && canvas?.scene?.id === travelScene.id;
+      ui.notifications.info(
+        onTravelScene
+          ? `The party is still on the road to ${hold.toTitle || 'their destination'} — press Arrive in the travel tool when ready.`
+          : `A journey to ${hold.toTitle || 'a destination'} is still open, but this isn't the travelling scene. Arrive or turn back from the travel tool.`
+      );
+    }
+  }
   // The player list changes height as people connect/disconnect, and the
   // dial sits directly on top of it -- re-measure whenever it redraws.
   Hooks.on('renderPlayerList', () => renderDial());
