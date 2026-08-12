@@ -22,6 +22,7 @@ import { DarkestAudio } from './audio.mjs';
 // evaluation -- only inside functions, long after both have loaded.
 import { SceneAmbience } from './scene-ambience.mjs';
 import { TravelHistory } from './travel-history.mjs';
+import { TravelGroups } from './travel-groups.mjs';
 
 const SETTING_CLOCK = 'travelClock';
 const SETTING_BIRDSONGS = 'knownBirdsongs';
@@ -1127,6 +1128,14 @@ export class TravelTool extends Application {
       })),
       hasLocationArt: !!currentLocationArt(),
       ambience: SceneAmbience.status(),
+      // Who is walking. Only surfaced once there's more than one group --
+      // an unsplit party shouldn't have to think about this at all.
+      travelGroups: TravelGroups.all().map(g => ({
+        ...g,
+        active: g.id === TravelGroups.activeId(),
+      })),
+      activeGroup: TravelGroups.active(),
+      hasGroups: TravelGroups.all().length > 1,
       hold,
       travelSceneName: TravelTool.travelScene()?.name ?? null,
       canHold: TravelTool.canHold(),
@@ -1216,6 +1225,14 @@ export class TravelTool extends Application {
     html.find('.time-skip').click((ev) => {
       const mins = parseInt(ev.currentTarget.dataset.minutes) || 0;
       this._passTime(mins, 'Time has passed.');
+    });
+
+    // Switching who is travelling. Persisted immediately rather than read at
+    // travel time, so the choice survives the tool re-rendering (which it
+    // does on every clock tick).
+    html.find('[name="travelGroup"]').on('change', async (ev) => {
+      await TravelGroups.setActive(ev.currentTarget.value);
+      this.render();
     });
 
     html.find('.hold-arrive').click(() => TravelTool.arriveFromHold());
@@ -1587,6 +1604,7 @@ export class TravelTool extends Application {
         day: cursor.day,
         time: TravelClock.formatTime(cursor.minutes),
         pace: this._lastPace,
+        groupId: TravelGroups.activeId(),
       });
     }
 
@@ -2073,6 +2091,28 @@ export class TravelTool extends Application {
       }
     }
 
+    // Time passing WITHOUT moving is recorded too. A group held at the Dark
+    // Lodge for two days, or a night's sleep, leaves no leg -- and without
+    // it the map can't tell time spent somewhere from a gap in the record,
+    // nor line two separated groups up against each other.
+    //
+    // Skipped for journeys (they record their own leg) and for zero-length
+    // skips, which would just be noise.
+    if (!opts.route && minutes >= 1) {
+      const here = canvas?.scene;
+      SessionLog.recordStay({
+        slug: here?.getFlag('darkest-woods', 'locationSlug') ?? null,
+        title: here?.name ?? 'Where they were',
+        minutes,
+        region: TravelClock.currentRegion(),
+        departDay: depart.day,
+        departTime: depart.time,
+        day: result.day,
+        time: state.fixed ? state.phaseLabel : state.time,
+        groupId: TravelGroups.activeId(),
+      });
+    }
+
     // Record the move for the GM-only session log. The public chat message
     // above deliberately never names the destination, so this is the only
     // place the real from/to survives -- it's what the map gets drawn from.
@@ -2093,6 +2133,7 @@ export class TravelTool extends Application {
         day: result.day,
         time: state.fixed ? state.phaseLabel : state.time,
         pace: opts.pace,
+        groupId: TravelGroups.activeId(),
       });
     }
 
@@ -2165,6 +2206,7 @@ export class TravelTool extends Application {
         toTitle: opts.route.toTitle,
         arrivalDay: result.day,
         region: opts.region,
+        groupId: TravelGroups.activeId(),
       });
 
       Hooks.callAll('darkestSystem.travelArrive', {
@@ -2277,6 +2319,7 @@ export class TravelTool extends Application {
         toTitle: opts.route.toTitle,
         arrivalDay: result.day,
         region: opts.region,
+        groupId: TravelGroups.activeId(),
       });
       Hooks.callAll('darkestSystem.travelArrive', {
         route: opts.route,
@@ -2396,6 +2439,7 @@ export class TravelTool extends Application {
       toTitle: hold.toTitle,
       arrivalDay: hold.day,
       region: hold.region,
+      groupId: hold.groupId ?? TravelGroups.activeId(),
     });
 
     // Only now has the party actually arrived, so this is where the hook

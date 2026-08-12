@@ -41,6 +41,7 @@ import {
   registerSceneDarknessHooks,
 } from './module/apps/scene-darkness.mjs';
 import { TravelHistory, registerTravelHistorySettings } from './module/apps/travel-history.mjs';
+import { TravelGroups, registerTravelGroupSettings } from './module/apps/travel-groups.mjs';
 import {
   SceneAmbience,
   registerSceneAmbienceSettings,
@@ -106,6 +107,8 @@ Hooks.once('init', function() {
   registerSceneAmbienceSettings();
 
   registerTravelHistorySettings();
+
+  registerTravelGroupSettings();
 
   // Register travel clock settings
   registerTravelClockSettings();
@@ -271,6 +274,7 @@ Hooks.once('ready', function() {
   // Ambience.preview([ids]) auditions an assignment from a macro before
   // committing it to the markdown.
   game.darkestSystem.Ambience = SceneAmbience;
+  game.darkestSystem.TravelGroups = TravelGroups;
 
   // Register doom tally hooks
   registerDoomTallyHooks();

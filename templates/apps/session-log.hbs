@@ -12,6 +12,34 @@
     <div class="tab" data-tab="movement">
       {{#if moves.length}}
 
+      {{#if multipleGroups}}
+      {{!-- Split party: one block per group. Merged, their legs interleave
+            into a path nobody walked and a false gap at every handover. --}}
+      {{#each routes}}
+      <div class="log-route log-route-grouped" style="border-left-color: {{groupColour}}">
+        <div class="log-route-head">
+          <span class="log-group-swatch" style="background: {{groupColour}}"></span>
+          {{groupName}}
+          <span class="log-route-count">{{distinct}} locations</span>
+        </div>
+        <div class="log-route-chain">
+          {{#if hasMore}}<a class="route-expand">… {{hidden}} earlier</a> → {{/if}}{{{chainText}}}
+        </div>
+        {{#if gapCount}}
+        <div class="log-route-gaps">
+          <i class="fas fa-triangle-exclamation"></i>
+          {{#each gaps}}{{this}}{{#unless @last}}; {{/unless}}{{/each}}
+        </div>
+        {{/if}}
+        {{#if revisited.length}}
+        <div class="log-route-revisit">
+          <i class="fas fa-rotate-left"></i>
+          Revisited: {{#each revisited}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+        </div>
+        {{/if}}
+      </div>
+      {{/each}}
+      {{else}}
       <div class="log-route">
         <div class="log-route-head">
           Path walked
@@ -39,6 +67,23 @@
           <span class="log-route-warn">— retracing on consecutive days is a transgression</span>
         </div>
         {{/if}}
+      </div>
+      {{/if}}
+
+      {{!-- Groups. Hidden until the party actually splits, so an unsplit
+            game never has to think about them. --}}
+      <div class="log-groups">
+        <span class="log-groups-label">Travelling:</span>
+        {{#each groups}}
+        <span class="log-group-chip{{#if active}} active{{/if}}" data-id="{{id}}"
+              data-tooltip="{{membersLabel}} · {{legCount}} legs">
+          <span class="log-group-swatch" style="background: {{colour}}"></span>{{name}}
+          <button type="button" class="log-group-edit" data-id="{{id}}" data-tooltip="Rename or re-crew"><i class="fas fa-pen"></i></button>
+        </span>
+        {{/each}}
+        <button type="button" class="log-group-add" data-tooltip="Split the party into a new group">
+          <i class="fas fa-user-plus"></i> New group
+        </button>
       </div>
 
       {{#if totals}}

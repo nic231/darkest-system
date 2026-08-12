@@ -15,6 +15,8 @@
  * Everything is stored in a world setting the GM alone can read.
  */
 
+import { TravelGroups } from './travel-groups.mjs';
+
 const SETTING_LOG = 'sessionLog';
 const MAX_ENTRIES = 2000;  // ~20 sessions; trims oldest first
 
@@ -177,11 +179,41 @@ export class SessionLog extends Application {
    */
   static recordMove({
     fromSlug, fromTitle, toSlug, toTitle, label, minutes, km, region,
-    day, time, departDay, departTime, pace, manual,
+    day, time, departDay, departTime, pace, manual, groupId,
   }) {
     return SessionLog.record({
       kind: 'move', fromSlug, fromTitle, toSlug, toTitle, label, minutes, km,
       region, day, time, departDay, departTime, pace, manual,
+      // Who walked it. Legs recorded before groups existed have none, and
+      // are treated as the first group -- which is what they were.
+      groupId,
+    });
+  }
+
+  /**
+   * The party stayed put while time passed.
+   *
+   * Waiting, resting, sleeping, being held somewhere against their will --
+   * none of it moved them, and until now none of it was recorded either.
+   * That left the map unable to tell "they were at the Dark Lodge for two
+   * days" from "they vanished and reappeared", and made it impossible to
+   * line two separated groups up in time.
+   *
+   * Recorded as a MOVE whose from and to are the same place, so everything
+   * that already reads movement -- the chain, the gap check, the route
+   * map -- handles it without a second code path. The `stay` flag is what
+   * lets the display say "waited 8h" rather than drawing a line of zero
+   * length.
+   */
+  static recordStay({ slug, title, minutes, day, time, departDay, departTime, region, groupId, manual, reason }) {
+    return SessionLog.record({
+      kind: 'move',
+      stay: true,
+      reason: reason || '',
+      fromSlug: slug, fromTitle: title,
+      toSlug: slug, toTitle: title,
+      label: '', minutes, km: 0,
+      region, day, time, departDay, departTime, groupId, manual,
     });
   }
 
@@ -215,6 +247,20 @@ export class SessionLog extends Application {
       moveCount: moves.length,
       totals: SessionLog._travelTotals(moves),
       route: SessionLog._routeSummary(moves),
+      // One route per group. Rendered as separate blocks so a split party
+      // reads as two journeys rather than one impossible one.
+      routes: SessionLog._routesByGroup(moves).map(r => ({
+        ...r,
+        groupName: TravelGroups.nameOf(r.groupId),
+        groupColour: TravelGroups.colourOf(r.groupId),
+      })),
+      groups: TravelGroups.all().map(g => ({
+        ...g,
+        membersLabel: TravelGroups.membersLabel(g),
+        active: g.id === TravelGroups.activeId(),
+        legCount: moves.filter(m => (m.groupId ?? TravelGroups.all()[0].id) === g.id).length,
+      })),
+      multipleGroups: TravelGroups.all().length > 1,
       stats: SessionLog._rollStats(rolls),
       rollCount: rolls.length,
       // The stats above are aggregate, so there's nothing to click to drop a
@@ -307,8 +353,10 @@ export class SessionLog extends Application {
       id: m.id,
       index: i + 1,
       from: m.fromTitle || '—',
-      to: m.toTitle || '—',
-      label: m.label || '',
+      to: m.stay ? '—' : (m.toTitle || '—'),
+      label: m.stay ? (m.reason || 'waited') : (m.label || ''),
+      // A stay reads as time spent, not a journey of zero length.
+      stay: !!m.stay,
       duration: m.minutes ? SessionLog._dur(m.minutes) : '—',
       distance: (typeof m.km === 'number' && m.km > 0)
         ? `${Math.round(m.km * 10) / 10} km` : '—',
@@ -362,6 +410,29 @@ export class SessionLog extends Application {
    * which is fifty-odd lines of unbroken text and no use to anyone. The tail
    * is what the GM is actually looking at, so show that and offer the rest.
    */
+  /**
+   * One route summary per group.
+   *
+   * Scoping this per group is the whole point of groups existing: two
+   * parties walking different paths on the same day produce, when merged
+   * into one chain, a path that zig-zags between them and reports a gap at
+   * every handover. Split first, then chain.
+   */
+  static _routesByGroup(moves) {
+    const byGroup = new Map();
+    for (const m of moves) {
+      // Legs from before groups existed belong to the first group, which is
+      // what they were recorded as.
+      const key = m.groupId ?? '__legacy__';
+      if (!byGroup.has(key)) byGroup.set(key, []);
+      byGroup.get(key).push(m);
+    }
+    return [...byGroup.entries()].map(([groupId, legs]) => ({
+      groupId: groupId === '__legacy__' ? null : groupId,
+      ...SessionLog._routeSummary(legs),
+    }));
+  }
+
   static _routeSummary(moves) {
     const TAIL = 12;
     const chain = [];
@@ -499,6 +570,25 @@ export class SessionLog extends Application {
       if (!entry) return;
       const { TravelHistory } = await import('./travel-history.mjs');
       await TravelHistory.addMoveDialog(entry);
+    });
+
+    html.find('.log-group-add').click(async () => {
+      await TravelGroups.manageDialog();
+      this.render();
+    });
+
+    html.find('.log-group-edit').click(async (ev) => {
+      ev.stopPropagation();
+      const group = TravelGroups.get(ev.currentTarget.dataset.id);
+      if (group) { await TravelGroups.manageDialog(group); this.render(); }
+    });
+
+    // Clicking a chip makes that group the one travel is logged against --
+    // the same switch as the travel tool's selector, from wherever you
+    // happen to be looking.
+    html.find('.log-group-chip').click(async (ev) => {
+      await TravelGroups.setActive(ev.currentTarget.dataset.id);
+      this.render();
     });
 
     // Show the whole path when it has been collapsed.

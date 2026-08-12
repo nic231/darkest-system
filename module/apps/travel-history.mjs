@@ -83,7 +83,7 @@ export const TravelHistory = {
    * hit. Never guesses: an arrival with no day at all can't be compared, and
    * returns null rather than assuming.
    */
-  checkBacktrack({ toSlug, arrivalDay, ignoreEntryId = null }) {
+  checkBacktrack({ toSlug, arrivalDay, ignoreEntryId = null, groupId = null }) {
     if (TravelHistory.sensitivity() === 'off') return null;
     if (!toSlug || arrivalDay == null) return null;
 
@@ -98,9 +98,20 @@ export const TravelHistory = {
     const key = (slug) => (byArea ? (LOCATION_AREAS[slug] ?? slug) : slug);
     const wanted = key(toSlug);
 
+    // Scoped to the group that walked it. The woods notice a party returning
+    // to a place THEY were yesterday -- another group having been there is
+    // somebody else's business, and matching on it would fire constantly
+    // once the party splits.
+    //
+    // Legs recorded before groups existed have no groupId; those are treated
+    // as belonging to whichever group is asking, since at the time there was
+    // only one.
+    const sameGroup = (m) => !groupId || !m.groupId || m.groupId === groupId;
+
     const prior = TravelHistory.moves().find(m =>
       m.id !== ignoreEntryId
       && m.toSlug
+      && sameGroup(m)
       && key(m.toSlug) === wanted
       && m.day === previousDay
     );
@@ -314,9 +325,9 @@ export const TravelHistory = {
    * Check an arrival and announce it if it counts. The single entry point --
    * called after travelling, and after a leg is added by hand.
    */
-  async checkAndAnnounce({ toSlug, toTitle, arrivalDay, region, ignoreEntryId }) {
+  async checkAndAnnounce({ toSlug, toTitle, arrivalDay, region, ignoreEntryId, groupId }) {
     if (!game.user.isGM) return null;
-    const hit = TravelHistory.checkBacktrack({ toSlug, arrivalDay, ignoreEntryId });
+    const hit = TravelHistory.checkBacktrack({ toSlug, arrivalDay, ignoreEntryId, groupId });
     if (!hit) return null;
     await TravelHistory.announceBacktrack(hit, { title: toTitle, region });
     return hit;

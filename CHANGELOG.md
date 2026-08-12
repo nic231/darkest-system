@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.32.0-alpha (2026-08-12)
+
+**The party can split.** Travel is now logged against a named **group** — create one, say who is in it, and every leg records which group walked it. The travel tool gains a "Who is travelling" selector, and the session log shows one route per group, colour-keyed.
+
+This matters more than it sounds. Merged into one chain, two groups walking different paths on the same day produce a path nobody took and a false gap at every handover — tested with a four-leg split, which reported **three phantom gaps** before grouping and none after. The route map would have drawn that fiction as a line.
+
+The **clock stays global**, deliberately. One clock per group would have to be read by the dial, the scene darkness, the ambience layers and the daylight decay, none of which have any notion of *whose* time it is. You run one group, then the other, and keep them level by narration — which is what happens at the table anyway.
+
+**Backtracking is scoped to the group.** The woods notice a party returning somewhere *they* were yesterday; another group having passed through is somebody else's business, and matching on it would have fired constantly once the party split.
+
+**Time spent in one place is recorded now.** Waiting, resting, sleeping, or being held somewhere for two days left no trace at all in the movement log — so the map could not tell time spent somewhere from a hole in the record, and two separated groups could not be lined up against each other. Passing time now logs a stay: same place, real duration, shown as "waited 8h" rather than a journey of zero length.
+
+Groups only appear once you make a second one; an unsplit game never has to think about them. Deleting a group leaves its legs intact — they are a record of something that happened.
+
 ## 0.31.1-alpha (2026-08-12)
 
 **Legs can be edited, not just added and deleted.** A pencil on each row reopens the same dialog. Changing a leg's day or times **re-sorts it into place** — the list is ordered by game time rather than by when it was typed, so a correction lands where it belongs with nothing to drag.

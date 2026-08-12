@@ -6138,3 +6138,96 @@
 }
 
 .log-row-actions .log-edit-move:hover { color: #d8a05a; }
+
+/* ============================================================
+   Travel groups — a split party
+   ============================================================ */
+
+.log-groups {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+  font-size: 11px;
+}
+
+.log-groups-label { color: var(--darkest-text-dim, #b3aa9c); }
+
+.log-group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--darkest-text-dim, #b3aa9c);
+  cursor: pointer;
+}
+
+/* The active group is the one travel gets logged against -- worth being
+   obvious about, since logging a leg to the wrong group is a quiet error. */
+.log-group-chip.active {
+  border-color: #d8a05a;
+  background: rgba(90, 70, 40, 0.4);
+  color: #e8dcc8;
+}
+
+.log-group-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.log-group-chip .log-group-edit {
+  border: none;
+  background: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0 0 0 2px;
+  width: auto;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.log-group-chip .log-group-edit:hover { opacity: 1; }
+
+.log-group-add {
+  width: auto;
+  padding: 2px 8px;
+  border: 1px dashed var(--darkest-border, #4a4038);
+  border-radius: 999px;
+  background: none;
+  color: var(--darkest-text-dim, #b3aa9c);
+  font-size: 11px;
+  line-height: normal;
+  cursor: pointer;
+}
+
+.log-group-add:hover { border-color: #8a7a5a; color: #e8dcc8; }
+
+/* Each group's route gets its own block, colour-keyed to the chip. */
+.log-route-grouped { border-left-width: 3px; border-left-style: solid; }
+
+.group-members {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.group-member {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.group-member input[type="checkbox"] { flex: none; width: auto; margin: 0; }
+
+/* A stay -- time spent in one place rather than a journey. */
+.log-stay td { opacity: 0.85; font-style: italic; }

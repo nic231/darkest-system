@@ -88,6 +88,20 @@
     </div>
   </div>
 
+  {{#if hasGroups}}
+  {{!-- Only shown once the party has actually split. Travel logs against
+        whichever group is selected, so the route map can tell two journeys
+        apart instead of merging them into one impossible chain. --}}
+  <div class="travel-group travel-who">
+    <label>Who is travelling</label>
+    <select name="travelGroup">
+      {{#each travelGroups}}
+      <option value="{{id}}"{{#if active}} selected{{/if}}>{{name}}</option>
+      {{/each}}
+    </select>
+  </div>
+  {{/if}}
+
   <div class="travel-group">
     <label>Pace</label>
     <select name="pace">
