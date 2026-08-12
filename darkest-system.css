@@ -5948,6 +5948,21 @@
   color: #ffd8d8;
 }
 
+/* Mental costs read blue, matching how mental wounds are shown elsewhere --
+   the two are tracked separately and cause different things (catatonia
+   rather than unconsciousness), so they shouldn't look identical. */
+.ability-wound-cost.mental {
+  border-color: #3f5c7c;
+  background: rgba(30, 46, 70, 0.35);
+  color: #a8c4e0;
+}
+
+.ability-wound-cost.mental:hover {
+  border-color: #5a8ab8;
+  background: rgba(40, 62, 94, 0.55);
+  color: #d8ecff;
+}
+
 /* The countdown on a locked wound. Muted -- it's information, not an alarm. */
 .wound-locked-badge {
   margin-left: 6px;

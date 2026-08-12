@@ -96,15 +96,18 @@
             data-dtype="Number" min="0" max="10" />
           <small class="hint">0 = costs nothing</small>
         </div>
-        {{#if system.woundCostRating}}
+        {{!-- Always visible, not gated on a non-zero rating: the type has to
+              be pickable in the same pass as the rating, and hiding it until
+              a save + re-render made it look as though the option wasn't
+              there at all. --}}
         <div class="form-group">
           <label>Cost type</label>
           <select name="system.woundCostType">
             <option value="physical" {{#if (eq system.woundCostType "physical")}}selected{{/if}}>Physical</option>
             <option value="mental" {{#if (eq system.woundCostType "mental")}}selected{{/if}}>Mental</option>
           </select>
+          <small class="hint">Only applies when the cost is above 0</small>
         </div>
-        {{/if}}
       </div>
 
     </div>

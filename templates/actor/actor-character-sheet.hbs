@@ -133,7 +133,7 @@
                     the wound (and runs the unconsciousness check) -- never
                     automatic, because using an ability and paying for it are
                     two decisions. --}}
-              <button type="button" class="ability-wound-cost" data-item-id="{{_id}}"
+              <button type="button" class="ability-wound-cost {{system.woundCostType}}" data-item-id="{{_id}}"
                       data-tooltip="Apply this cost: a Rating {{system.woundCostRating}} {{system.woundCostType}} wound">
                 <i class="fas fa-heart-crack"></i> {{system.woundCostRating}}{{#if (eq system.woundCostType "mental")}}M{{else}}P{{/if}}
               </button>
@@ -391,7 +391,7 @@
                       the wound (and runs the unconsciousness check) -- never
                       automatic, because using an ability and paying for it are
                       two decisions. --}}
-                <button type="button" class="ability-wound-cost" data-item-id="{{_id}}"
+                <button type="button" class="ability-wound-cost {{system.woundCostType}}" data-item-id="{{_id}}"
                         data-tooltip="Apply this cost: a Rating {{system.woundCostRating}} {{system.woundCostType}} wound">
                   <i class="fas fa-heart-crack"></i> {{system.woundCostRating}}{{#if (eq system.woundCostType "mental")}}M{{else}}P{{/if}}
                 </button>

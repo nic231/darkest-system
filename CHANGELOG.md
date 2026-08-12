@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.30.1-alpha (2026-08-12)
+
+**Fixed: the ability wound cost's Physical/Mental selector was hidden.** It existed, but only appeared once a non-zero rating had been saved — so on a fresh ability the option looked as though it wasn't there. It's always visible now, since the type has to be pickable in the same pass as the rating.
+
+Mental costs also read blue on the character sheet rather than sharing the physical red. The two are tracked separately and lead to different places (catatonia rather than unconsciousness), so they shouldn't look identical.
+
 ## 0.30.0-alpha (2026-08-12)
 
 **The 24-hour rest lock is on the clock now.** A wound you fail to rest away couldn't be attempted again until the GM cleared it by hand — the lock was stored as a plain flag with no notion of time. It now stamps the travel clock, so the wound row shows **how long is left** ("6h 20m") and the lock **lapses on its own** when the time passes. The rules ask for exactly this: *"note the time when recovery can next be attempted."*
