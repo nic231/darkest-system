@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.29.0-alpha (2026-08-12)
+
+**Fixed: the road fell silent during a hold for roleplay.** The travelling scene is generic — it stands in for every region, so it carries no region flag of its own — and the ambience controller resolves the soundscape from the *active scene*. So moving to it resolved to nothing, stopped the region bed, and left the whole roleplay scene in silence.
+
+It now falls back to the region recorded in the hold: the ground the party is actually crossing. Because that resolves to the same soundscape they set out in, the bed **keeps running without restarting** — the woods carry on around them while they talk, rather than cutting out and back in.
+
+This also needed a re-resolve after the hold is written. `canvasReady` fires when the travelling scene activates, which is *before* the hold exists, so the first attempt had nothing to fall back to.
+
+(The separate local-file travel bed — `travel-*.ogg` in the content module — is unaffected and still plays if you supply those files. Nothing ships with them, which is why the hold was silent even with Syrinscape working.)
+
 ## 0.28.2-alpha (2026-08-12)
 
 **Fixed: three startup hooks never ran at all.** `registerSceneAmbienceHooks()` and `registerTravelClockHooks()` are called from inside the system's own `ready` handler, and they each registered a *further* `ready` listener. Foundry doesn't replay a hook that has already fired, so those callbacks were dead code.

@@ -2226,6 +2226,15 @@ export class TravelTool extends Application {
       startedAt: Date.now(),
     });
 
+    // Re-resolve the soundscape now the hold exists.
+    //
+    // The travelling scene carries no region of its own, so SceneAmbience
+    // falls back to the region recorded in the hold -- but canvasReady fired
+    // back at activate(), BEFORE setHold() had written it. Without this the
+    // road stays silent for the whole roleplay scene, having stopped the
+    // region bed on the way in.
+    SceneAmbience.apply({ force: true });
+
     await ChatMessage.create({
       content: `<div class="travel-chat travel-chat-holding">
         <div class="travel-chat-head"><i class="fas fa-route"></i> The party is on the road.</div>

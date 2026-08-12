@@ -35,7 +35,7 @@
  * fire the same sounds at one Syrinscape account.
  */
 
-import { TravelClock } from './travel-clock.mjs';
+import { TravelClock, TravelTool } from './travel-clock.mjs';
 import { isPrimaryGM } from '../helpers/gm.mjs';
 
 const SETTING_ENABLED = 'sceneAmbienceEnabled';
@@ -128,11 +128,24 @@ export const SceneAmbience = {
   resolve(scene = canvas?.scene) {
     if (!scene) return null;
     const slug = scene.getFlag('darkest-woods', 'locationSlug');
-    const region = scene.getFlag('darkest-woods', 'region');
+    let region = scene.getFlag('darkest-woods', 'region');
 
     if (slug && SCENE_AMBIENCE[slug]) {
       return { cue: `scene:${slug}`, region, layers: SCENE_AMBIENCE[slug], own: true };
     }
+
+    // The travelling scene is generic -- it stands in for every region, so
+    // it carries no region flag of its own and would otherwise resolve to
+    // nothing, silencing the road for the whole roleplay scene.
+    //
+    // While a journey is held, the party is somewhere: the ground they're
+    // crossing, which the hold recorded when they set out. Play that bed, so
+    // the woods keep sounding around them while they talk.
+    if (!region) {
+      const hold = TravelTool.getHold?.();
+      if (hold?.region) region = hold.region;
+    }
+
     if (region && REGION_AMBIENCE[region]) {
       return { cue: `region:${region}`, region, layers: REGION_AMBIENCE[region], own: false };
     }
