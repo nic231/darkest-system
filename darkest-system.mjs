@@ -40,6 +40,7 @@ import {
   registerSceneDarknessSettings,
   registerSceneDarknessHooks,
 } from './module/apps/scene-darkness.mjs';
+import { TravelHistory, registerTravelHistorySettings } from './module/apps/travel-history.mjs';
 import {
   SceneAmbience,
   registerSceneAmbienceSettings,
@@ -103,6 +104,8 @@ Hooks.once('init', function() {
   registerSceneDarknessSettings();
 
   registerSceneAmbienceSettings();
+
+  registerTravelHistorySettings();
 
   // Register travel clock settings
   registerTravelClockSettings();
@@ -757,6 +760,30 @@ Hooks.on('renderChatMessage', (message, html) => {
 // Not gated on isPrimaryGM: an assistant GM should be able to press Arrive.
 // Two GMs pressing it at the same instant would double-fade, which is a race
 // not worth more machinery than the null check inside.
+// Backtracking: apply the transgression, or let it pass. The players have
+// already seen the woods take notice either way -- these only decide whether
+// the track advances, so "let it pass" simply retires the prompt.
+$(document).on('click', '.backtrack-apply', async function(event) {
+  event.preventDefault();
+  if (!game.user.isGM) return;
+  const btn = event.currentTarget;
+  const region = btn.dataset.region || TransgressionTracker.getCurrentRegion();
+  if (!region) {
+    ui.notifications.warn('No region set — open the Transgression Tracker and pick one.');
+    return;
+  }
+  // bypassDamping: this is one deliberate press, not a flurry of dice.
+  await TransgressionTracker.incrementTransgression(region, { bypassDamping: true });
+  $(btn).closest('.backtrack-actions').html('<em class="backtrack-done">Transgression applied.</em>');
+});
+
+$(document).on('click', '.backtrack-dismiss', function(event) {
+  event.preventDefault();
+  if (!game.user.isGM) return;
+  $(event.currentTarget).closest('.backtrack-actions')
+    .html('<em class="backtrack-done">Let pass.</em>');
+});
+
 $(document).on('click', '.travel-arrive-btn', async function(event) {
   event.preventDefault();
   if (!game.user.isGM) return;

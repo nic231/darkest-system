@@ -6030,3 +6030,63 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* ============================================================
+   Backtracking prompt + manual log entries
+   ============================================================ */
+
+.backtrack-prompt .backtrack-head {
+  color: #b8923a;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.backtrack-prompt p { margin: 0 0 6px; }
+.backtrack-prompt .hint { font-style: italic; opacity: 0.8; font-size: 11px; }
+
+.backtrack-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Explicit colours: Foundry core styles buttons in chat at a higher
+   specificity than a bare class. */
+.backtrack-actions button {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #6a5a3a;
+  border-radius: 3px;
+  background: rgba(60, 50, 30, 0.5);
+  color: #e0cfa0;
+  font-size: 12px;
+  line-height: normal;
+  cursor: pointer;
+}
+
+.backtrack-actions button:hover {
+  border-color: #b8923a;
+  background: rgba(90, 74, 44, 0.7);
+  color: #fff0cc;
+}
+
+.backtrack-done {
+  color: var(--darkest-text-dim, #b3aa9c);
+  font-size: 11px;
+}
+
+/* Rows added by hand, so machine-recorded and hand-entered are tellable
+   apart at a glance. */
+.log-manual-mark {
+  margin-left: 4px;
+  opacity: 0.55;
+  font-size: 9px;
+}
+
+.log-move-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.log-move-actions button { flex: 1; }

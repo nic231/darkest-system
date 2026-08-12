@@ -379,7 +379,7 @@ export class TransgressionTracker extends Application {
     return { level: region.level, loops: region.loops };
   }
 
-  static async incrementTransgression(regionSlug) {
+  static async incrementTransgression(regionSlug, { bypassDamping = false } = {}) {
     if (this.getGameMode() === 'darkest-house') {
       return this._incrementHouseAction();
     }
@@ -393,7 +393,18 @@ export class TransgressionTracker extends Application {
     // Optional pacing house rule. A damped trigger still stirs the woods --
     // the players must not be able to tell the difference -- but leaves the
     // track where it is so the GM can finish narrating the last one.
-    const damping = await TransgressionTracker._checkDamping();
+    // bypassDamping skips the check ENTIRELY rather than ignoring its
+    // verdict. Damping exists to stop dice-driven transgressions stacking
+    // when four players roll at once, and its 'rolls'/'threshold' modes
+    // COUNT every trigger -- so merely ignoring the answer would silently
+    // consume a player's provocation for something no player did.
+    //
+    // The backtracking prompt is the caller that needs this: it is one
+    // deliberate GM button press, and being told "held" after pressing
+    // Apply reads as a bug rather than as pacing.
+    const damping = bypassDamping
+      ? { advance: true }
+      : await TransgressionTracker._checkDamping();
     if (!damping.advance) {
       const current = this.getTransgressions()[regionSlug] || { level: 0, loops: 0 };
       // Tier the message off the level this trigger WOULD have reached, not

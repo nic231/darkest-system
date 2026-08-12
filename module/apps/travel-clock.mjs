@@ -21,6 +21,7 @@ import { DarkestAudio } from './audio.mjs';
 // are audible. Safe because neither side touches the other during module
 // evaluation -- only inside functions, long after both have loaded.
 import { SceneAmbience } from './scene-ambience.mjs';
+import { TravelHistory } from './travel-history.mjs';
 
 const SETTING_CLOCK = 'travelClock';
 const SETTING_BIRDSONGS = 'knownBirdsongs';
@@ -1550,17 +1551,53 @@ export class TravelTool extends Application {
     // Log every leg, not just the last -- the intermediate stops are the
     // most useful part of the map, and _passTime only ever sees the final
     // route. Recorded before _passTime so the order reads correctly.
+    //
+    // Their times have to be PROJECTED rather than read: these are logged
+    // before the clock moves, and the real advance happens once, in
+    // _passTime, for the whole journey. So walk a copy of the clock forward
+    // leg by leg. Without this every intermediate stop landed in the log
+    // with no day at all -- which meant the backtracking check could never
+    // fire for a multi-leg journey, and the route map had nothing to label.
+    let cursor = TravelClock.getClock();
+    const step = (from, mins) => {
+      const total = from.minutes + Math.round(mins || 0);
+      return {
+        // floor() rather than a bare division: a journey can cross more than
+        // one midnight, and a negative total is impossible here but would
+        // floor correctly anyway.
+        day: from.day + Math.floor(total / 1440),
+        minutes: ((total % 1440) + 1440) % 1440,
+      };
+    };
+
     for (const leg of legs.slice(0, -1)) {
+      const departCursor = cursor;
+      cursor = step(cursor, leg.minutes);
       SessionLog.recordMove({
+        fromSlug: leg.route?.fromSlug,
         fromTitle: leg.route?.fromTitle,
+        toSlug: leg.route?.toSlug,
         toTitle: leg.route?.toTitle,
         label: leg.route?.label,
         minutes: leg.minutes,
         km: routeKm(leg.route),
         region: TravelClock.currentRegion(),
+        departDay: departCursor.day,
+        departTime: TravelClock.formatTime(departCursor.minutes),
+        day: cursor.day,
+        time: TravelClock.formatTime(cursor.minutes),
         pace: this._lastPace,
       });
     }
+
+    // The final leg goes through _passTime, which advances the real clock.
+    // Its departure is where the last intermediate leg ARRIVED, not where
+    // the journey began -- otherwise the last leg would claim to have set
+    // out hours before the one before it finished.
+    const finalDepart = {
+      day: cursor.day,
+      time: TravelClock.formatTime(cursor.minutes),
+    };
 
     this._legs = [];
     await this._passTime(totalMinutes, `${opening}${legNote}.`, {
@@ -1572,6 +1609,7 @@ export class TravelTool extends Application {
       driving: driving && allRoad,
       pace: this._lastPace,
       hold: this._holdRequested,
+      departOverride: legs.length > 1 ? finalDepart : null,
     });
   }
 
@@ -1929,6 +1967,21 @@ export class TravelTool extends Application {
       ? regionFlavour(opts.region, opts.boating, opts.driving)
       : null;
 
+    // Departure has to be read BEFORE the clock moves: advance() is
+    // destructive, and afterwards the only time available is the arrival.
+    // A leg crossing midnight departs on a different DAY than it arrives,
+    // which is exactly the case the backtracking rule turns on.
+    //
+    // opts.departOverride lets a multi-leg journey hand the final leg the
+    // arrival of the leg before it, rather than the journey's start -- see
+    // _travelLegs().
+    const departState = TravelClock.displayState();
+    const departRaw = TravelClock.getClock();
+    const depart = opts.departOverride ?? {
+      day: departRaw.day,
+      time: departState.fixed ? departState.phaseLabel : departState.time,
+    };
+
     const result = await TravelClock.advance(minutes);
     const state = TravelClock.displayState();
 
@@ -2025,12 +2078,18 @@ export class TravelTool extends Application {
     // place the real from/to survives -- it's what the map gets drawn from.
     if (opts.route) {
       SessionLog.recordMove({
+        // Slugs as well as titles: the map and the backtracking check need
+        // to know WHICH place, and a title is only for reading.
+        fromSlug: opts.route.fromSlug,
         fromTitle: opts.route.fromTitle,
+        toSlug: opts.route.toSlug,
         toTitle: opts.route.toTitle,
         label: opts.route.label,
         minutes,
         km: routeKm(opts.route),
         region: opts.region,
+        departDay: depart.day,
+        departTime: depart.time,
         day: result.day,
         time: state.fixed ? state.phaseLabel : state.time,
         pace: opts.pace,
@@ -2098,6 +2157,15 @@ export class TravelTool extends Application {
       }
 
       await TravelTool._postArrival({ route: opts.route, scene, timeLine, result, now });
+
+      // After the arrival card, so the recognition reads as a beat that
+      // follows getting there rather than interrupting it.
+      await TravelHistory.checkAndAnnounce({
+        toSlug: opts.route.toSlug,
+        toTitle: opts.route.toTitle,
+        arrivalDay: result.day,
+        region: opts.region,
+      });
 
       Hooks.callAll('darkestSystem.travelArrive', {
         route: opts.route,
@@ -2203,6 +2271,12 @@ export class TravelTool extends Application {
       await TravelTool._postArrival({
         route: opts.route, scene, timeLine, result,
         now: TravelClock.dayStructure(result.day),
+      });
+      await TravelHistory.checkAndAnnounce({
+        toSlug: opts.route.toSlug,
+        toTitle: opts.route.toTitle,
+        arrivalDay: result.day,
+        region: opts.region,
       });
       Hooks.callAll('darkestSystem.travelArrive', {
         route: opts.route,
@@ -2313,6 +2387,15 @@ export class TravelTool extends Application {
       timeLine: hold.timeLine ?? '',
       result: { day: hold.day, daysPassed: hold.daysPassed ?? 0 },
       now: TravelClock.dayStructure(hold.day),
+    });
+
+    // The recognition belongs to the moment they actually get there, which
+    // for a held journey is this button rather than when they set out.
+    await TravelHistory.checkAndAnnounce({
+      toSlug: hold.toSlug,
+      toTitle: hold.toTitle,
+      arrivalDay: hold.day,
+      region: hold.region,
     });
 
     // Only now has the party actually arrived, so this is where the hook

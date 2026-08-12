@@ -63,7 +63,7 @@
             <td class="log-dim">{{label}}{{#if pace}} <em>({{pace}})</em>{{/if}}</td>
             <td class="log-dim">{{distance}}</td>
             <td>{{duration}}</td>
-            <td class="log-dim">{{gameTime}}</td>
+            <td class="log-dim">{{gameTime}}{{#if manual}} <i class="fas fa-pen log-manual-mark" data-tooltip="Added by hand"></i>{{/if}}</td>
             <td class="log-row-actions">
               <button type="button" class="log-del" data-id="{{id}}"
                       data-tooltip="Delete this movement"><i class="fas fa-times"></i></button>
@@ -73,11 +73,19 @@
         </tbody>
       </table>
 
-      <button type="button" class="log-clear-kind" data-kind="move">
-        <i class="fas fa-trash"></i> Clear all movement
-      </button>
+      <div class="log-move-actions">
+        <button type="button" class="log-add-move">
+          <i class="fas fa-plus"></i> Add a leg by hand
+        </button>
+        <button type="button" class="log-clear-kind" data-kind="move">
+          <i class="fas fa-trash"></i> Clear all movement
+        </button>
+      </div>
 
       {{else}}
+      <button type="button" class="log-add-move">
+        <i class="fas fa-plus"></i> Add a leg by hand
+      </button>
       <p class="log-empty">
         <i class="fas fa-map-signs"></i>
         No movement recorded yet. Travel with the Travel &amp; Time tool and the

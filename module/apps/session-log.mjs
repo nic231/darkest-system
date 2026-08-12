@@ -137,10 +137,27 @@ export class SessionLog extends Application {
 
   // ── Recording helpers, called from the rest of the system ─────────────
 
-  /** The party moved. Records real names -- this is the map data. */
-  static recordMove({ fromTitle, toTitle, label, minutes, km, region, day, time, pace }) {
+  /**
+   * The party moved. Records real names -- this is the map data.
+   *
+   * Every field beyond the original set is optional, so entries written by
+   * older versions keep rendering exactly as they did:
+   *
+   *   fromSlug/toSlug   identity, not just display. Titles are for reading;
+   *                     the backtracking check and the route map both need to
+   *                     know WHICH place, and two locations can share a name.
+   *   departDay/Time    when they set out. `day`/`time` remain ARRIVAL, which
+   *                     is what they always meant -- recordMove is called
+   *                     after the clock advances.
+   *   manual            added by hand rather than recorded from a journey.
+   */
+  static recordMove({
+    fromSlug, fromTitle, toSlug, toTitle, label, minutes, km, region,
+    day, time, departDay, departTime, pace, manual,
+  }) {
     return SessionLog.record({
-      kind: 'move', fromTitle, toTitle, label, minutes, km, region, day, time, pace
+      kind: 'move', fromSlug, fromTitle, toSlug, toTitle, label, minutes, km,
+      region, day, time, departDay, departTime, pace, manual,
     });
   }
 
@@ -160,7 +177,11 @@ export class SessionLog extends Application {
 
   getData() {
     const entries = SessionLog.getLog().entries;
-    const moves = entries.filter(e => e.kind === 'move');
+    // Sorted into game order, not recording order. A leg added by hand for
+    // Day 2 is necessarily appended after everything already logged, and
+    // _routeSummary in particular walks these in sequence to build the
+    // "path walked" chain -- an out-of-order entry corrupts it.
+    const moves = SessionLog._chronological(entries.filter(e => e.kind === 'move'));
     const rolls = entries.filter(e => e.kind === 'roll');
     const transgressions = entries.filter(e => e.kind === 'transgression');
 
@@ -227,6 +248,36 @@ export class SessionLog extends Application {
     };
   }
 
+  /**
+   * Movement rows in game-world order.
+   *
+   * Sorted on READ rather than spliced on write: splicing would fight
+   * MAX_ENTRIES trimming (which slices from the front) and would make
+   * deletion-by-id depend on position. This keeps record() a plain append
+   * and every id stable.
+   *
+   * Undated rows -- legacy entries, and anything from before departure times
+   * existed -- compare equal to everything, so they keep their recorded
+   * position rather than being flung to one end. Array#sort is stable in
+   * every engine Foundry runs on, so that is well-defined rather than
+   * incidental.
+   */
+  static _chronological(moves) {
+    const mins = (e) => {
+      const m = /^(\d{1,2}):(\d{2})$/.exec(String(e.departTime ?? e.time ?? ''));
+      // Fixed-time regions store a phase label ("Endless Night"), not a
+      // clock reading -- those sort by day alone, which is the honest answer.
+      return m ? (Number(m[1]) * 60) + Number(m[2]) : 0;
+    };
+    return [...moves].sort((a, b) => {
+      const ad = a.departDay ?? a.day;
+      const bd = b.departDay ?? b.day;
+      if (ad == null || bd == null) return 0;
+      if (ad !== bd) return ad - bd;
+      return mins(a) - mins(b);
+    });
+  }
+
   static _formatMoves(moves) {
     return moves.map((m, i) => ({
       id: m.id,
@@ -237,10 +288,28 @@ export class SessionLog extends Application {
       duration: m.minutes ? SessionLog._dur(m.minutes) : '—',
       distance: (typeof m.km === 'number' && m.km > 0)
         ? `${Math.round(m.km * 10) / 10} km` : '—',
-      gameTime: m.day ? `Day ${m.day}, ${m.time}` : '',
+      // "Day 3, 08:00 -> 14:20" once departures are recorded; the older
+      // single-time form for entries written before they were.
+      gameTime: SessionLog._gameTime(m),
+      manual: !!m.manual,
       pace: m.pace && m.pace !== 'normal' ? m.pace : '',
       when: SessionLog._clock(m)
+      // Newest first, as it always has been. The chronological SORT happens
+      // before this (see _chronological) -- reversing here is presentation,
+      // not ordering.
     })).reverse();
+  }
+
+  /** "Day 3, 08:00 → 14:20", or the older single-time form. */
+  static _gameTime(m) {
+    if (!m.day && !m.departDay) return '';
+    if (m.departTime && m.time) {
+      const sameDay = (m.departDay ?? m.day) === m.day;
+      return sameDay
+        ? `Day ${m.day}, ${m.departTime} → ${m.time}`
+        : `Day ${m.departDay}, ${m.departTime} → Day ${m.day}, ${m.time}`;
+    }
+    return m.day ? `Day ${m.day}, ${m.time}` : '';
   }
 
   static _dur(mins) {
@@ -343,6 +412,14 @@ export class SessionLog extends Application {
     });
 
     // Clearing a whole tab does confirm -- that one can lose real data.
+    // Add a leg by hand. Lives in travel-history.mjs (which knows about
+    // locations and routes); imported lazily so the log doesn't take a
+    // static dependency on the clock.
+    html.find('.log-add-move').click(async () => {
+      const { TravelHistory } = await import('./travel-history.mjs');
+      await TravelHistory.addMoveDialog();
+    });
+
     html.find('.log-clear-kind').click(async (ev) => {
       const kind = ev.currentTarget.dataset.kind;
       const labels = { move: 'movements', roll: 'rolls', transgression: 'transgressions' };

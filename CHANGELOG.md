@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.31.0-alpha (2026-08-12)
+
+**The woods remember a path walked two days running.** The book: *"Traversing the same path two days in a row is a transgression... This must happen on consecutive days. Retracing one's steps on the same day is fine. So is doing so with a full day in between."*
+
+Arriving somewhere the party was the previous day now posts a public line — *"This place recognises you. One should not let the Woods become too familiar with them…"* — and whispers you a prompt offering the transgression. **The players see the same message either way**, worded identically, so nobody can work out from it whether you applied it.
+
+Sensitivity is a setting: **per location** (the default, finer-grained than the book and firing more often), **per area** (as the book has it), or **off**.
+
+Applying it deliberately **bypasses the transgression damping**. Damping exists to stop dice-driven transgressions stacking when four players roll at once; this is one considered press of a button, and being told "held" after pressing Apply would read as a bug. It skips the damping check entirely rather than ignoring its verdict, so it can't silently consume a player's provocation either.
+
+**Travel legs now record when they set out, not just when they arrived.** The log reads `Day 3, 08:00 → 14:20`, and legs that cross midnight show both days. Legs also record location *slugs* now, so the log knows which place, not just what it was called.
+
+**Fixed: a multi-leg journey logged its intermediate stops with no day or time at all.** Only the final leg carried them. Every multi-hop trip has been leaving undated rows in the log — which would have made the backtracking check silently impossible for exactly the journeys it matters most for. Intermediate legs now project the clock forward leg by leg, verified against a three-leg journey crossing midnight twice.
+
+**Legs can be added by hand** — for travel that happened away from the table, or to correct the record. Times, day, and route are prefilled where they can be inferred; an arrival before its departure is read as walking through midnight rather than rejected. Hand-added rows are marked, and sorted into game order rather than appended to the end.
+
 ## 0.30.2-alpha (2026-08-12)
 
 **Ability rows re-laid out:** name and tags on the left, then the wound cost, with **Uses** and its pips pushed to the right-hand edge and labelled. The pip track now lines up down the list however long each ability name is.
