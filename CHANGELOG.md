@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.34.0-alpha (2026-08-12)
+
+**The replay draws the line properly now.** It advanced a whole step per frame, so the route snapped from pin to pin. It now creeps along each segment with a travelling mark at its head, and the destination pin only appears once the line reaches it — so you watch them arrive rather than seeing where they end up first.
+
+**Sub-areas draw on their own maps.** A cave crawl through the Ghost Caves was being squashed into the small inset on The Lost's map, and the line then flew straight from inside the caves to wherever they went next — skipping the way they actually left. Locations now always draw on their *own* area's map, so the crawl gets the Ghost Caves' full map and the crossings in and out are marked at the Cave Mouth and Cave Exit. The same fix covers the Temple of the Moon and the Rootrealm.
+
+**Places can carry the name the players gave them.** Click any pin on the map and name it as they know it — "the cabin with the typewriter", "where Ida died". Stored per location rather than edited into the log, so renaming fixes every past and future mention at once and the book's name is never lost underneath. That name is what the sketch shows.
+
+**Also:** no labels on the real map, which already prints every name — a second set on top was just noise. Sketch pins are larger, with a paper-coloured rim so an overlapping line doesn't read as part of the marker.
+
 ## 0.33.0-alpha (2026-08-12)
 
 **The route map.** *Draw the route* in the session log plots everywhere the party has walked, from the log itself. Two styles:

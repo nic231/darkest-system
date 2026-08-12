@@ -35,6 +35,45 @@ import { TravelHistory } from './travel-history.mjs';
 /** Injected by the content module. Empty without it, which means no map. */
 export let MAP_DATA = { maps: {}, locationArea: {}, derived: {} };
 
+const SETTING_NAMES = 'partyPlaceNames';
+
+/**
+ * What the PARTY calls a place.
+ *
+ * The players rarely learn a location's printed name -- they call it "the
+ * cabin with the typewriter" or "where Ida died", and that is what belongs on
+ * a map they are meant to keep. Stored by slug rather than edited into the
+ * log, so renaming a place fixes every mention of it at once, past and
+ * future, and the real name is never lost underneath.
+ */
+export function partyNames() {
+  try {
+    return game.settings.get('darkest-system', SETTING_NAMES) || {};
+  } catch {
+    return {};
+  }
+}
+
+export async function setPartyName(slug, name) {
+  if (!game.user.isGM || !slug) return;
+  const names = { ...partyNames() };
+  const clean = (name || '').trim();
+  if (clean) names[slug] = clean;
+  else delete names[slug];      // cleared -- fall back to the book's name
+  await game.settings.set('darkest-system', SETTING_NAMES, names);
+}
+
+export function registerRouteMapSettings() {
+  game.settings.register('darkest-system', SETTING_NAMES, {
+    name: 'Party place names',
+    hint: 'Internal: what the players call each place.',
+    scope: 'world',
+    config: false,
+    type: Object,
+    default: {},
+  });
+}
+
 Hooks.once('darkestSystem.registerMapData', (data) => {
   if (data?.maps) MAP_DATA = data;
 });
@@ -85,10 +124,20 @@ export const RouteMap = {
       return pin ? { map: mapSlug, x: pin.x, y: pin.y, kind: pin.kind } : null;
     };
 
-    // The map we're already drawing on, then the location's own area, then
-    // anywhere it appears at all.
+    // A location's OWN area map wins, always.
+    //
+    // Sub-areas -- the Ghost Caves, the Temple of the Moon, the Rootrealm --
+    // have their own maps AND are drawn as a bounded inset on their parent's.
+    // Preferring the map we happen to be drawing on would keep the whole
+    // cave crawl squashed into that inset and then fly the line straight out
+    // to wherever they went next, skipping the way they actually left. Going
+    // to the sub-area's own map instead means the crawl is drawn where it
+    // belongs, at proper size, and the parent map shows only the entrance.
+    //
+    // `prefer` still breaks ties for the 41 locations pinned on several maps
+    // with no home of their own.
     const home = MAP_DATA.locationArea?.[slug];
-    const hit = (prefer && on(prefer)) || (home && on(home))
+    const hit = (home && on(home)) || (prefer && on(prefer))
       || Object.keys(maps).map(on).find(Boolean);
     if (hit) return hit;
 
@@ -131,12 +180,20 @@ export const RouteMap = {
       let currentMap = null;       // keeps a run on one map
       let lastPlaced = null;       // for stays that can't place themselves
 
-      const place = (slug, title) => {
+      const names = partyNames();
+      const place = (slug, rawTitle) => {
         const pin = RouteMap.resolvePin(slug, currentMap);
         if (!pin) return null;
+        // What the party calls it wins over the book's name.
+        const title = names[slug] || rawTitle;
+        // Crossing onto another map -- into the Ghost Caves, out to another
+        // region. Marked so the line stops here rather than shooting across
+        // to a point that isn't on this map at all, and so the replay can
+        // cut between maps at the right moment.
+        const crossed = currentMap && pin.map !== currentMap ? currentMap : null;
         currentMap = pin.map;
         usedMaps.add(pin.map);
-        return { ...pin, slug, title };
+        return { ...pin, slug, title, crossedFrom: crossed };
       };
 
       for (const leg of legs) {
@@ -168,6 +225,11 @@ export const RouteMap = {
         }
 
         const end = place(leg.toSlug, leg.toTitle);
+        if (end?.crossedFrom) {
+          // A hand-off between maps. Both sides get the marker so each map
+          // can show where the party left it and where they came in.
+          steps.push({ type: 'cross', from: end.crossedFrom, to: end.map, at: end.slug, title: end.title });
+        }
         if (end) {
           // Don't repeat a point the line is already sitting on. A leg that
           // ends where the previous one did (a there-and-back within one
@@ -260,17 +322,24 @@ export function drawRoute(ctx, plan, {
   const ink = style === 'real' ? '#f0e6d2' : '#3a3026';
   const dim = style === 'real' ? 'rgba(240,230,210,0.55)' : 'rgba(58,48,38,0.5)';
 
-  // How many steps to reveal, shared across groups so they move together.
+  // How much to reveal, shared across groups so they move together.
+  //
+  // FRACTIONAL, not whole steps. Revealing a step at a time made the line
+  // jump from pin to pin; carrying the fraction lets the last segment be
+  // drawn part-way, so the line CREEPS the way a route does in an old
+  // adventure serial.
   const total = Math.max(1, plan.groups.reduce((n, g) => n + g.steps.length, 0));
-  let budget = Math.round(total * Math.max(0, Math.min(1, t)));
+  let budget = total * Math.max(0, Math.min(1, t));
 
   for (const group of plan.groups) {
     const steps = group.steps.filter(s => !s.map || s.map === mapSlug);
     if (!steps.length) continue;
 
-    const show = Math.min(steps.length, Math.max(0, budget));
+    const reveal = Math.min(steps.length, Math.max(0, budget));
     budget -= steps.length;
-    if (show <= 0) continue;
+    if (reveal <= 0) continue;
+    const show = Math.ceil(reveal);          // steps touched at all
+    const partial = reveal - Math.floor(reveal);   // how far into the last one
 
     ctx.strokeStyle = group.colour;
     ctx.lineWidth = style === 'real' ? 3 : 2.5;
@@ -279,12 +348,15 @@ export function drawRoute(ctx, plan, {
 
     // ── The line ─────────────────────────────────────────────────────────
     let drawing = false;
+    let head = null;   // where the line has got to, for the travelling mark
     ctx.beginPath();
     for (let i = 0; i < show; i++) {
       const s = steps[i];
-      if (s.type === 'break') {
-        // A leg is missing. The line STOPS -- joining across it would draw a
-        // journey nobody made, which is the whole reason gaps are flagged.
+      if (s.type === 'break' || s.type === 'cross') {
+        // A break is a missing leg; a cross is the party walking onto
+        // another map. Either way the line STOPS -- joining across it would
+        // draw a journey nobody made, or a line to a point that isn't on
+        // this map.
         ctx.stroke();
         ctx.beginPath();
         drawing = false;
@@ -293,17 +365,35 @@ export function drawRoute(ctx, plan, {
       if (s.type !== 'point' && s.type !== 'stay') continue;
 
       const w = style === 'sketch' ? 3 : 0;
-      const x = px(s.x) + wobble(s.slug ?? 'x', i) * w;
-      const y = py(s.y) + wobble(s.slug ?? 'y', i + 99) * w;
+      let x = px(s.x) + wobble(s.slug ?? 'x', i) * w;
+      let y = py(s.y) + wobble(s.slug ?? 'y', i + 99) * w;
+
+      // The head of the line: draw only part-way into the final segment, so
+      // it advances smoothly rather than snapping to the next pin.
+      const isHead = (i === show - 1) && partial > 0 && drawing;
+      if (isHead) {
+        const prev = steps[i - 1];
+        if (prev && (prev.type === 'point' || prev.type === 'stay')) {
+          const pxr = px(prev.x) + wobble(prev.slug ?? 'x', i - 1) * w;
+          const pyr = py(prev.y) + wobble(prev.slug ?? 'y', i + 98) * w;
+          x = pxr + (x - pxr) * partial;
+          y = pyr + (y - pyr) * partial;
+        }
+      }
+
       if (!drawing) { ctx.moveTo(x, y); drawing = true; }
       else ctx.lineTo(x, y);
+      if (isHead) { head = { x, y, colour: group.colour }; }
     }
     ctx.stroke();
 
     // ── Pins, stays and labels ───────────────────────────────────────────
-    for (let i = 0; i < show; i++) {
+    // The final pin only appears once the line has actually reached it, so
+    // the destination isn't revealed before they get there.
+    const pinsToShow = partial > 0 ? show - 1 : show;
+    for (let i = 0; i < pinsToShow; i++) {
       const s = steps[i];
-      if (s.type === 'break') continue;
+      if (s.type === 'break' || s.type === 'cross') continue;
       const x = px(s.x);
       const y = py(s.y);
 
@@ -320,8 +410,14 @@ export function drawRoute(ctx, plan, {
         ctx.globalAlpha = 1;
       }
 
+      // Bigger on the sketch: it is the only thing on an empty field, so a
+      // small dot reads as a speck. On the real map the art is already busy,
+      // so the marker stays modest.
+      const r = style === 'sketch'
+        ? (i === show - 1 ? 9 : 7)
+        : (i === show - 1 ? 5.5 : 4);
       ctx.beginPath();
-      ctx.arc(x, y, i === show - 1 ? 5.5 : 4, 0, Math.PI * 2);
+      ctx.arc(x, y, r, 0, Math.PI * 2);
       // An approximate position (no pin in the source) is hollow, so it is
       // never mistaken for a surveyed one.
       if (s.approximate) {
@@ -331,14 +427,38 @@ export function drawRoute(ctx, plan, {
       } else {
         ctx.fillStyle = group.colour;
         ctx.fill();
+        if (style === 'sketch') {
+          // A rim in the paper colour lifts the pin off the field and stops
+          // an overlapping line reading as part of the marker.
+          ctx.strokeStyle = 'rgba(232, 223, 200, 0.9)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
       }
 
-      if (s.title) {
-        ctx.font = `${style === 'sketch' ? 12 : 11}px "Signika", sans-serif`;
-        ctx.fillStyle = i === show - 1 ? ink : dim;
+      // Labels ONLY on the sketch. The real map already prints every name --
+      // a second one on top is just noise over the art.
+      if (s.title && style === 'sketch') {
+        ctx.font = `${i === pinsToShow - 1 ? 'bold ' : ''}13px "Signika", sans-serif`;
+        ctx.fillStyle = i === pinsToShow - 1 ? ink : dim;
         ctx.textAlign = 'center';
-        ctx.fillText(s.title, x, y - 10);
+        ctx.fillText(s.title, x, y - r - 5);
       }
+    }
+
+    // The travelling mark -- the thing the eye follows while it moves.
+    if (head) {
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = head.colour;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 9, 0, Math.PI * 2);
+      ctx.strokeStyle = head.colour;
+      ctx.globalAlpha = 0.4;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
     }
   }
 
@@ -433,10 +553,71 @@ export class RouteMapApp extends Application {
       this._redraw();
     });
 
+    // Click a pin to rename it. The players almost never learn a place's
+    // printed name -- they call it "the cabin with the typewriter" -- and
+    // that is what belongs on a map they keep.
+    if (this._canvas) {
+      this._canvas.addEventListener('click', (ev) => this._onCanvasClick(ev));
+      this._canvas.style.cursor = game.user.isGM ? 'pointer' : 'default';
+    }
+
     html.find('.route-play').click(() => this.play());
     html.find('.route-stop').click(() => this.stop());
     html.find('.route-share').click(() => this.share());
     html.find('.route-broadcast').click(() => this.broadcast());
+  }
+
+  /** Rename whatever pin was clicked. */
+  async _onCanvasClick(ev) {
+    if (!game.user.isGM || !this._plan || this.playing) return;
+    const rect = this._canvas.getBoundingClientRect();
+    const scale = this._canvas.width / rect.width;
+    const cx = (ev.clientX - rect.left) * scale;
+    const cy = (ev.clientY - rect.top) * scale;
+
+    // Nearest pin on this map, within reach of the click.
+    let best = null;
+    for (const g of this._plan.groups) {
+      for (const s of g.steps) {
+        if (s.map !== this.mapSlug || !s.slug) continue;
+        const dx = (s.x / 100) * this._canvas.width - cx;
+        const dy = (s.y / 100) * this._canvas.height - cy;
+        const d = Math.hypot(dx, dy);
+        if (d < 18 && (!best || d < best.d)) best = { d, step: s };
+      }
+    }
+    if (!best) return;
+
+    const slug = best.step.slug;
+    const current = partyNames()[slug] ?? '';
+    const content = `<form class="darkest-dialog">
+      <p class="notes">What do the players call this place? Leave it empty to
+      use the book's name.</p>
+      <div class="form-group">
+        <label>${best.step.title}</label>
+        <input type="text" name="partyName" value="${foundry.utils.escapeHTML?.(current) ?? current}"
+               placeholder="e.g. where Ida died" />
+      </div>
+    </form>`;
+
+    new Dialog({
+      title: 'What the party calls it',
+      content,
+      buttons: {
+        save: {
+          icon: '<i class="fas fa-check"></i>',
+          label: 'Save',
+          callback: async (html) => {
+            await setPartyName(slug, html.find('[name="partyName"]').val());
+            this.render(false);
+            this._plan = RouteMap.buildPlan();
+            this._redraw();
+          },
+        },
+        cancel: { icon: '<i class="fas fa-times"></i>', label: 'Cancel' },
+      },
+      default: 'save',
+    }, { width: 380 }).render(true);
   }
 
   /** Load any map art the real style needs, once. */
@@ -484,19 +665,35 @@ export class RouteMapApp extends Application {
     if (!steps.length) return;
 
     // Each step gets a slice of the run, stays get their pause on top.
-    const LEG = 420;
+    // Longer than it was: the line now DRAWS across the segment rather than
+    // appearing, so it needs time to be watched. Still short enough that a
+    // sixty-leg campaign stays under a couple of minutes.
+    const LEG = 900;
     const durations = steps.map(s => (s.type === 'stay' ? stayPause(s.minutes) : LEG));
     const total = durations.reduce((a, b) => a + b, 0);
 
     const tick = () => {
       if (!this.playing) return;
       const elapsed = Date.now() - startedAt;
-      let acc = 0, shown = 0;
+
+      // Fractional progress: how far INTO the current step we are, not just
+      // how many are done. That fraction is what lets the line creep along
+      // the segment instead of snapping from pin to pin.
+      //
+      // A stay's slice is spent standing still, so the line holds at its pin
+      // while the ring is on screen -- the pause reads as time passing
+      // rather than as the animation stalling.
+      let acc = 0, progress = 0;
       for (let i = 0; i < durations.length; i++) {
-        acc += durations[i];
-        if (elapsed >= acc) shown = i + 1;
+        const d = durations[i];
+        if (elapsed >= acc + d) { progress = i + 1; acc += d; continue; }
+        const into = Math.max(0, elapsed - acc) / d;
+        progress = i + (steps[i].type === 'stay' ? 1 : into);
+        acc = Infinity;
+        break;
       }
-      this._t = Math.min(1, shown / steps.length);
+
+      this._t = Math.min(1, progress / steps.length);
       this._redraw(this._t);
       if (elapsed >= total) { this.playing = false; this._t = 1; this._redraw(1); this.render(false); return; }
       this._raf = requestAnimationFrame(tick);

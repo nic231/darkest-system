@@ -58,6 +58,14 @@
   <canvas class="route-canvas"></canvas>
 
   {{#if isGM}}
+  <p class="route-hint">
+    <i class="fas fa-hand-pointer"></i>
+    Click a place to name it as the players know it — that name is what the
+    sketch shows.
+  </p>
+  {{/if}}
+
+  {{#if isGM}}
   {{#if (eq style "real")}}
   <p class="route-spoiler-warning">
     <i class="fas fa-eye-slash"></i>

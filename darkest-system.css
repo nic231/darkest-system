@@ -6316,3 +6316,10 @@
 }
 
 .log-move-actions .log-route-map { flex: 1; }
+
+.route-hint {
+  margin: 0;
+  color: var(--darkest-text-dim, #b3aa9c);
+  font-size: 11px;
+  font-style: italic;
+}

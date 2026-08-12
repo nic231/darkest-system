@@ -42,7 +42,7 @@ import {
 } from './module/apps/scene-darkness.mjs';
 import { TravelHistory, registerTravelHistorySettings } from './module/apps/travel-history.mjs';
 import { TravelGroups, registerTravelGroupSettings } from './module/apps/travel-groups.mjs';
-import { RouteMap, RouteMapApp } from './module/apps/route-map.mjs';
+import { RouteMap, RouteMapApp, registerRouteMapSettings } from './module/apps/route-map.mjs';
 import {
   SceneAmbience,
   registerSceneAmbienceSettings,
@@ -110,6 +110,8 @@ Hooks.once('init', function() {
   registerTravelHistorySettings();
 
   registerTravelGroupSettings();
+
+  registerRouteMapSettings();
 
   // Register travel clock settings
   registerTravelClockSettings();
