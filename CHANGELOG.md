@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.28.1-alpha (2026-08-12)
+
+**Fixed: scene ambience never started if you turned it on after loading the world.** The audio-unlock watcher was only armed during startup, and only when the setting was already on — so enabling it mid-session (the normal way anyone turns it on the first time) left nothing waiting for the browser's audio unlock. `apply()` hit the locked-audio guard and returned silently, and nothing ever retried.
+
+Playing a sound by hand from the Playlists sidebar still worked, which made it look as though only the automatic transitions were broken. The watcher is now armed regardless of the setting's state, and again when the setting is switched on.
+
 ## 0.28.0-alpha (2026-08-12)
 
 **Reverted three changes from 0.27.0** that were made on rules readings that didn't hold up:

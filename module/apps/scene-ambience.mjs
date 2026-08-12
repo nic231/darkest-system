@@ -67,6 +67,9 @@ let _playing = { cue: null, ids: new Map() };
 // same tick, and two interleaved runs would each diff against a stale
 // _playing and fight over what's started.
 let _queue = Promise.resolve();
+// Guards against stacking several unlock listeners when the GM toggles the
+// setting a few times before clicking anything.
+let _unlockArmed = false;
 
 export const SceneAmbience = {
 
@@ -284,6 +287,22 @@ export const SceneAmbience = {
     };
   },
 
+  /**
+   * Wait for the browser's audio unlock, then apply.
+   *
+   * Foundry blocks all audio until the user has interacted with the page, so
+   * on a fresh load canvasReady almost always fires while still locked. Both
+   * signals are watched because either can come first, and both are `once`
+   * so nothing accumulates. Idempotent -- safe to call again from onChange.
+   */
+  armAudioUnlock() {
+    if (!game.audio?.locked || _unlockArmed) return;
+    _unlockArmed = true;
+    const go = () => { _unlockArmed = false; SceneAmbience.apply({ force: true }); };
+    Hooks.once('globalInterfaceVolumeChanged', go);
+    document.addEventListener('click', go, { once: true });
+  },
+
   /** Test an assignment by hand: game.darkestSystem.Ambience.preview([ids]) */
   async preview(ids = []) {
     for (const id of ids) await SceneAmbience._playId(id, null);
@@ -312,7 +331,12 @@ export function registerSceneAmbienceSettings() {
     config: true,
     type: Boolean,
     default: false,
-    onChange: () => SceneAmbience.apply({ force: true }),
+    onChange: () => {
+      // Turning this on before the first click leaves audio locked, so arm
+      // the unlock watcher as well as trying immediately.
+      SceneAmbience.armAudioUnlock();
+      SceneAmbience.apply({ force: true });
+    },
   });
 
   game.settings.register('darkest-system', SETTING_VOLUME, {
@@ -338,13 +362,15 @@ export function registerSceneAmbienceHooks() {
   // The scene open at load stays silent otherwise, since canvasReady may
   // have fired before the Syrinscape module published its global.
   Hooks.once('ready', () => {
-    if (!SceneAmbience.enabled()) return;
-    // Audio is locked until the user interacts with the page; Foundry fires
-    // this once that happens. Covers both orders without polling.
-    if (game.audio?.locked) {
-      Hooks.once('globalInterfaceVolumeChanged', () => SceneAmbience.apply());
-      document.addEventListener('click', () => SceneAmbience.apply(), { once: true });
-    }
+    // The unlock listener is armed REGARDLESS of whether ambience is on
+    // right now. It used to sit behind an enabled() check, which meant
+    // turning the setting on after the world had loaded -- the normal way
+    // anyone enables it the first time -- left nothing waiting for the
+    // audio unlock: the setting's onChange fired apply(), that hit the
+    // game.audio.locked guard and returned silently, and nothing ever
+    // retried. Manual playback from the Playlists sidebar still worked,
+    // which made it look as though only the automatic path was broken.
+    SceneAmbience.armAudioUnlock();
     SceneAmbience.apply();
   });
 }
