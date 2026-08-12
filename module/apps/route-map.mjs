@@ -36,6 +36,17 @@ import { TravelHistory } from './travel-history.mjs';
 export let MAP_DATA = { maps: {}, locationArea: {}, derived: {} };
 
 const SETTING_NAMES = 'partyPlaceNames';
+const SETTING_SPEED = 'routeReplaySpeed';
+
+/** Seconds per leg in the replay. The GM's dial on how fast it reads. */
+export function replayLegSeconds() {
+  try {
+    const v = game.settings.get('darkest-system', SETTING_SPEED);
+    return typeof v === 'number' && v > 0 ? v : 1.6;
+  } catch {
+    return 1.6;
+  }
+}
 
 /**
  * What the PARTY calls a place.
@@ -64,6 +75,16 @@ export async function setPartyName(slug, name) {
 }
 
 export function registerRouteMapSettings() {
+  game.settings.register('darkest-system', SETTING_SPEED, {
+    name: 'Route replay speed',
+    hint: 'Seconds the replay spends drawing each leg. Higher is slower and more readable; a long campaign at 3s a leg runs several minutes. Stays hold for longer than a leg, but never proportionally — a week somewhere is not thirty times a night.',
+    scope: 'world',
+    config: true,
+    type: Number,
+    range: { min: 0.4, max: 6, step: 0.2 },
+    default: 1.6,
+  });
+
   game.settings.register('darkest-system', SETTING_NAMES, {
     name: 'Party place names',
     hint: 'Internal: what the players call each place.',
@@ -124,20 +145,20 @@ export const RouteMap = {
       return pin ? { map: mapSlug, x: pin.x, y: pin.y, kind: pin.kind } : null;
     };
 
-    // A location's OWN area map wins, always.
+    // STAY ON THE MAP WE ARE ALREADY DRAWING, when it has the pin.
     //
-    // Sub-areas -- the Ghost Caves, the Temple of the Moon, the Rootrealm --
-    // have their own maps AND are drawn as a bounded inset on their parent's.
-    // Preferring the map we happen to be drawing on would keep the whole
-    // cave crawl squashed into that inset and then fly the line straight out
-    // to wherever they went next, skipping the way they actually left. Going
-    // to the sub-area's own map instead means the crawl is drawn where it
-    // belongs, at proper size, and the parent map shows only the entrance.
+    // The region maps draw their interiors as a bounded inset -- the Ghost
+    // Caves are a box down the left of The Lost, with all four rooms in it --
+    // and that reads better than cutting away to a separate screen for four
+    // rooms. So a run stays put wherever the parent map can carry it.
     //
-    // `prefer` still breaks ties for the 41 locations pinned on several maps
-    // with no home of their own.
+    // Not every sub-area can: the Ghost Caves and A Town Called Dismal are
+    // pinned in full on their parents, the Rootrealm only partly, and the
+    // Temple of the Moon not at all. Those fall through to their own map and
+    // the replay cuts to it -- which is why the crossing machinery still
+    // exists rather than being deleted.
     const home = MAP_DATA.locationArea?.[slug];
-    const hit = (home && on(home)) || (prefer && on(prefer))
+    const hit = (prefer && on(prefer)) || (home && on(home))
       || Object.keys(maps).map(on).find(Boolean);
     if (hit) return hit;
 
@@ -226,8 +247,24 @@ export const RouteMap = {
 
         const end = place(leg.toSlug, leg.toTitle);
         if (end?.crossedFrom) {
-          // A hand-off between maps. Both sides get the marker so each map
-          // can show where the party left it and where they came in.
+          // Walking onto another map -- into the Ghost Caves, out to another
+          // region. Rather than the line simply stopping, draw the party
+          // ARRIVING at the crossing point on the map they are leaving, so
+          // you watch them reach the cave mouth before the view follows them
+          // inside.
+          //
+          // The crossing point is usually pinned on BOTH maps (the Cave
+          // Mouth is on The Lost and on the Ghost Caves), which is what
+          // makes the hand-off drawable from either side.
+          const doorOut = MAP_DATA.maps?.[end.crossedFrom]?.pins?.[end.slug];
+          if (doorOut) {
+            steps.push({
+              type: 'point', map: end.crossedFrom,
+              x: doorOut.x, y: doorOut.y,
+              slug: end.slug, title: end.title, doorway: true,
+              day: leg.day, minutes: leg.minutes || 0,
+            });
+          }
           steps.push({ type: 'cross', from: end.crossedFrom, to: end.map, at: end.slug, title: end.title });
         }
         if (end) {
@@ -535,6 +572,12 @@ export class RouteMapApp extends Application {
         active: slug === this.mapSlug,
       })),
       groups: plan.groups.map(g => ({ name: g.name, colour: g.colour, steps: g.steps.length })),
+      speeds: [
+        { value: 0.8, label: 'Brisk' },
+        { value: 1.6, label: 'Walking' },
+        { value: 2.6, label: 'Slow' },
+        { value: 4, label: 'Credits' },
+      ].map(o => ({ ...o, active: Math.abs(o.value - replayLegSeconds()) < 0.01 })),
     };
   }
 
@@ -546,6 +589,10 @@ export class RouteMapApp extends Application {
     html.find('[name="mapSlug"]').on('change', (ev) => {
       this.mapSlug = ev.currentTarget.value;
       this._redraw();
+    });
+
+    html.find('[name="speed"]').on('change', async (ev) => {
+      await game.settings.set('darkest-system', SETTING_SPEED, Number(ev.currentTarget.value));
     });
 
     html.find('[name="style"]').on('change', (ev) => {
@@ -661,15 +708,24 @@ export class RouteMapApp extends Application {
     this.stop();
     this.playing = true;
 
-    const steps = this._plan.groups.flatMap(g => g.steps.filter(s => !s.map || s.map === this.mapSlug));
+    // The whole journey, in order, ACROSS maps -- not filtered to the one
+    // being viewed. The replay follows the party: it draws them reaching the
+    // cave mouth, cuts into the caves, and cuts back out when they leave.
+    // Filtering to a single map is what made them vanish at the boundary.
+    const steps = this._plan.groups.flatMap(g => g.steps);
     if (!steps.length) return;
 
-    // Each step gets a slice of the run, stays get their pause on top.
-    // Longer than it was: the line now DRAWS across the segment rather than
-    // appearing, so it needs time to be watched. Still short enough that a
-    // sixty-leg campaign stays under a couple of minutes.
-    const LEG = 900;
-    const durations = steps.map(s => (s.type === 'stay' ? stayPause(s.minutes) : LEG));
+    // From the setting: how long the line takes to cross one leg. The
+    // default reads at a walking pace; a GM showing this as a credits scene
+    // will want it slower than one checking a route.
+    const LEG = replayLegSeconds() * 1000;
+    const CUT = 700;    // a beat on the new map before the line resumes
+    const durations = steps.map(s =>
+      s.type === 'stay' ? stayPause(s.minutes)
+      : s.type === 'cross' ? CUT
+      : s.type === 'break' ? 0
+      : LEG
+    );
     const total = durations.reduce((a, b) => a + b, 0);
 
     const tick = () => {
@@ -691,6 +747,19 @@ export class RouteMapApp extends Application {
         progress = i + (steps[i].type === 'stay' ? 1 : into);
         acc = Infinity;
         break;
+      }
+
+      // Follow the party onto whichever map they are on now. The last
+      // 'cross' the replay has passed decides what we are looking at.
+      const reached = Math.floor(progress);
+      let onMap = null;
+      for (let i = 0; i < Math.min(reached + 1, steps.length); i++) {
+        if (steps[i].type === 'cross') onMap = steps[i].to;
+        else if (steps[i].map && onMap === null) onMap = steps[i].map;
+      }
+      if (onMap && onMap !== this.mapSlug) {
+        this.mapSlug = onMap;
+        this._loadImages();          // fire and forget; next frame draws it
       }
 
       this._t = Math.min(1, progress / steps.length);

@@ -36,6 +36,17 @@
     </div>
     {{/if}}
 
+    {{#if isGM}}
+    <div class="route-control">
+      <label>Speed</label>
+      <select name="speed">
+        {{#each speeds}}
+        <option value="{{value}}"{{#if active}} selected{{/if}}>{{label}}</option>
+        {{/each}}
+      </select>
+    </div>
+    {{/if}}
+
     <div class="route-actions">
       {{#if playing}}
       <button type="button" class="route-stop"><i class="fas fa-stop"></i> Stop</button>

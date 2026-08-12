@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.35.0-alpha (2026-08-12)
+
+**Replay speed is yours to set** — Brisk, Walking, Slow or Credits, from the map window or system settings. Your eight-leg session runs anywhere from six seconds to half a minute; a sixty-leg campaign from 1.3 to 4.5 minutes. The default was far too quick to follow.
+
+**The replay follows the party across maps instead of losing them.** It was locked to the map you were viewing, so a party walking into the Ghost Caves simply vanished at the boundary. It now watches them reach the crossing point, cuts to the new map, draws their journey there, and cuts back out when they leave.
+
+**Interiors stay on their region map where the art allows it.** The region maps already draw their interiors as a bounded inset — the Ghost Caves are a box down the left of The Lost — and following the route inside that box reads better than cutting away to a separate screen for four rooms. The Ghost Caves and A Town Called Dismal are pinned in full on their parents, so they stay there; the Temple of the Moon has no parent pins at all and the Rootrealm only some, so those still cut to their own map. That is the data's limit, not a preference.
+
 ## 0.34.0-alpha (2026-08-12)
 
 **The replay draws the line properly now.** It advanced a whole step per frame, so the route snapped from pin to pin. It now creeps along each segment with a travelling mark at its head, and the destination pin only appears once the line reaches it — so you watch them arrive rather than seeing where they end up first.
