@@ -79,7 +79,9 @@
       "usesPerDay": 0,
       "usesRemaining": 0,
       "unlimited": true,
-      "abilityType": "passive"
+      "abilityType": "passive",
+      "woundCostRating": 0,
+      "woundCostType": "physical"
     },
     "equipment": {
       "templates": [

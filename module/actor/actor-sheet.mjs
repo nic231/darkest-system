@@ -1,4 +1,5 @@
 import { DARKEST } from '../helpers/config.mjs';
+import { DarkestActor } from './actor.mjs';
 
 /**
  * Extend the basic ActorSheet for The Darkest System
@@ -221,9 +222,19 @@ export class DarkestActorSheet extends ActorSheet {
     context.abilities = abilities;
     context.equipment = equipment;
 
-    // Mark wounds as rest-locked (failed rest roll, waiting for GM to unlock)
+    // Mark wounds as rest-locked, and say how long is left.
+    //
+    // The rules put a 24-hour bar on re-attempting a wound you failed to
+    // rest away -- and tell the GM to "note the time when recovery can next
+    // be attempted", which is exactly this countdown. It lapses on its own
+    // now; the GM's unlock button remains for the medical-attention case and
+    // for wounds locked under the old boolean scheme.
     for (const w of wounds) {
-      w.restLocked = !!w.system.restFailedAt;
+      const left = DarkestActor.restLockRemaining(w);
+      w.restLockLabel = DarkestActor.restLockLabel(w);
+      // Expired locks stop counting as locked, so the wound rejoins the
+      // normal Rest roll without anyone having to clear it.
+      w.restLocked = !!w.system.restFailedAt && (left === null || left > 0);
     }
 
     // Count active (unhealed) wounds
@@ -302,6 +313,9 @@ export class DarkestActorSheet extends ActorSheet {
 
     // Doom spend button
     html.find('.doom-spend').click(this._onDoomSpend.bind(this));
+
+    // Pay an ability's wound cost.
+    html.find('.ability-wound-cost').click(this._onAbilityWoundCost.bind(this));
 
     // Resist unconsciousness/catatonia button
     html.find('.resist-unconscious').click(this._onResistUnconscious.bind(this));
@@ -1085,11 +1099,17 @@ export class DarkestActorSheet extends ActorSheet {
               const name = html.find('[name="name"]').val().trim() || 'New Wound';
               const woundType = html.find('[name="type"]').val();
               const rating = parseInt(html.find('[name="rating"]').val()) || 1;
-              await Item.create({
-                name,
-                type: 'wound',
-                system: { rating, type: woundType, healed: false }
-              }, { parent: this.actor });
+              // Through addWound(), NOT Item.create(): a wound added by hand
+              // is still a wound, and has to run the same unconsciousness /
+              // catatonia check a wound from a damage roll does. Creating the
+              // item directly skipped that check entirely, so the same injury
+              // behaved differently depending on how it arrived.
+              const wound = await this.actor.addWound(rating, woundType, '');
+              // addWound names it by type and rating; keep whatever the GM
+              // actually typed if they bothered to describe it.
+              if (wound && name && name !== 'New Wound') {
+                await wound.update({ name });
+              }
               resolve(true);
             }
           },
@@ -1356,6 +1376,48 @@ export class DarkestActorSheet extends ActorSheet {
   /**
    * Handle resist unconsciousness/catatonia roll from sheet button
    */
+  /**
+   * Apply an ability's wound cost to its owner.
+   *
+   * Deliberately a button rather than something that fires when the ability
+   * is used: the sheet has no concept of "using" a passive ability, and a
+   * cost that applied itself would be impossible to undo when the GM rules
+   * the ability didn't go off. Confirmed first for the same reason.
+   */
+  async _onAbilityWoundCost(event) {
+    event.preventDefault();
+    event.stopPropagation();   // don't also trigger the row's edit handler
+
+    const itemId = event.currentTarget.dataset.itemId;
+    const ability = this.actor.items.get(itemId);
+    if (!ability) return;
+
+    const rating = ability.system.woundCostRating || 0;
+    const type = ability.system.woundCostType || 'physical';
+    if (rating <= 0) return;
+
+    const confirmed = await Dialog.confirm({
+      title: 'Pay the cost',
+      content: `<p>Give <strong>${this.actor.name}</strong> a Rating <strong>${rating}</strong>
+                ${type} wound as the cost of <strong>${ability.name}</strong>?</p>`,
+      defaultYes: false,
+    });
+    if (!confirmed) return;
+
+    // addWound() runs the unconsciousness/catatonia check, which matters here:
+    // a cost paid by an already-wounded character can be what puts them down.
+    const wound = await this.actor.addWound(rating, type, `Cost of ${ability.name}`);
+    if (wound) {
+      await wound.update({ name: `${ability.name} (cost)` });
+      ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        content: `<div class="darkest-wound-applied"><i class="fas fa-heart-crack"></i>
+          <strong>${this.actor.name}</strong> pays the cost of <strong>${ability.name}</strong>:
+          a Rating <strong>${rating}</strong> ${type} wound.</div>`,
+      });
+    }
+  }
+
   async _onResistUnconscious(event) {
     event.preventDefault();
     // Use highest wound type to determine check type

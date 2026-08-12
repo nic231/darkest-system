@@ -128,6 +128,16 @@
                 {{/each}}
               </span>
               {{/if}}
+              {{#if system.woundCostRating}}
+              {{!-- The price of using it, next to the uses. Clicking applies
+                    the wound (and runs the unconsciousness check) -- never
+                    automatic, because using an ability and paying for it are
+                    two decisions. --}}
+              <button type="button" class="ability-wound-cost" data-item-id="{{_id}}"
+                      data-tooltip="Apply this cost: a Rating {{system.woundCostRating}} {{system.woundCostType}} wound">
+                <i class="fas fa-heart-crack"></i> {{system.woundCostRating}}{{#if (eq system.woundCostType "mental")}}M{{else}}P{{/if}}
+              </button>
+              {{/if}}
             </div>
             {{#if enrichedDescription}}
             <div class="compact-ability-description">{{{enrichedDescription}}}</div>
@@ -231,7 +241,7 @@
             <div class="wound-info">
               <span class="wound-name">{{name}}</span>
               <span class="wound-type">{{system.type}}</span>
-              {{#if restLocked}}<span class="wound-locked-badge" title="Cannot rest — failed within 24h"><i class="fas fa-lock"></i></span>{{/if}}
+              {{#if restLocked}}<span class="wound-locked-badge" title="Failed a rest roll — normally can't be treated again for 24h without specialised care or tools"><i class="fas fa-lock"></i>{{#if restLockLabel}} {{restLockLabel}}{{/if}}</span>{{/if}}
             </div>
             <div class="item-controls">
               {{#if restLocked}}{{#if @root.isGM}}
@@ -376,6 +386,16 @@
                   <span class="ability-use-pip {{#if filled}}filled{{else}}empty{{/if}}" data-value="{{value}}"></span>
                   {{/each}}
                 </span>
+                {{#if system.woundCostRating}}
+                {{!-- The price of using it, next to the uses. Clicking applies
+                      the wound (and runs the unconsciousness check) -- never
+                      automatic, because using an ability and paying for it are
+                      two decisions. --}}
+                <button type="button" class="ability-wound-cost" data-item-id="{{_id}}"
+                        data-tooltip="Apply this cost: a Rating {{system.woundCostRating}} {{system.woundCostType}} wound">
+                  <i class="fas fa-heart-crack"></i> {{system.woundCostRating}}{{#if (eq system.woundCostType "mental")}}M{{else}}P{{/if}}
+                </button>
+                {{/if}}
                 {{/if}}
               </div>
               {{#if enrichedDescription}}

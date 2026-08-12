@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.30.0-alpha (2026-08-12)
+
+**The 24-hour rest lock is on the clock now.** A wound you fail to rest away couldn't be attempted again until the GM cleared it by hand — the lock was stored as a plain flag with no notion of time. It now stamps the travel clock, so the wound row shows **how long is left** ("6h 20m") and the lock **lapses on its own** when the time passes. The rules ask for exactly this: *"note the time when recovery can next be attempted."*
+
+**Rest now warns instead of blocking.** Locked wounds are listed with their remaining time and a "treat them anyway (specialised care)" tick. That's a real rule, not a house exception — *"a character with relevant skill and appropriate equipment... allows recovery on a wound they failed to heal without waiting 24 hours"* — and blocking the roll outright made it unreachable.
+
+**Abilities can carry a wound cost.** A rating and a type on the ability, shown beside its uses on the character sheet. Clicking it applies the wound after a confirmation — never automatically, since using an ability and paying for it are two decisions, and a cost that applied itself couldn't be undone when the GM rules the ability didn't go off.
+
+**Fixed: a wound added by hand skipped the unconsciousness check.** The sheet's **+** button created the item directly, bypassing the path damage rolls use — so the same injury behaved differently depending on how it arrived. It now runs the same check, which (per the rules) only prompts when the character already had a wound of that type.
+
+Wounds locked under the old scheme stay locked until cleared by hand, rather than silently freeing themselves on upgrade.
+
 ## 0.29.0-alpha (2026-08-12)
 
 **Fixed: the road fell silent during a hold for roleplay.** The travelling scene is generic — it stands in for every region, so it carries no region flag of its own — and the ambience controller resolves the soundscape from the *active scene*. So moving to it resolved to nothing, stopped the region bed, and left the whole roleplay scene in silence.

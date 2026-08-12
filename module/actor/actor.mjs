@@ -744,6 +744,32 @@ export class DarkestActor extends Actor {
   }
 
   /** Current world clock, or null if the travel clock isn't available. */
+  /**
+   * How long until a failed wound can be rested again, in minutes.
+   *
+   * Returns 0 when it's free, or null when there's nothing to wait for (never
+   * failed, or locked under the old boolean scheme with no timestamp to
+   * measure from -- those stay locked until cleared by hand).
+   */
+  static restLockRemaining(wound) {
+    const at = wound?.system?.restFailedAt;
+    if (!at || at === true || typeof at !== 'object') return null;
+    const now = DarkestActor._clock();
+    if (!now) return null;
+    const elapsed = ((now.day - at.day) * 1440) + (now.minutes - at.minutes);
+    return Math.max(0, 1440 - elapsed);
+  }
+
+  /** "6h 20m" for a locked wound, or null when it's treatable again. */
+  static restLockLabel(wound) {
+    const left = DarkestActor.restLockRemaining(wound);
+    if (left === null) return wound?.system?.restFailedAt ? 'locked' : null;
+    if (left <= 0) return null;
+    const h = Math.floor(left / 60);
+    const m = left % 60;
+    return h ? `${h}h ${m}m` : `${m}m`;
+  }
+
   static _clock() {
     try {
       return game.settings.get('darkest-system', 'travelClock') || null;
@@ -826,15 +852,40 @@ export class DarkestActor extends Actor {
 
     // Locked wounds are those where restFailedAt is set (cleared by player/GM when ready)
     const recoverableWounds = activeWounds.filter(w => !w.system.restFailedAt);
-    const lockedWounds = activeWounds.filter(w => w.system.restFailedAt);
+    // A lock whose 24 hours have elapsed is no lock at all -- it lapses on
+    // its own now rather than waiting to be cleared by hand.
+    const lockedWounds = activeWounds.filter(w => {
+      if (!w.system.restFailedAt) return false;
+      const left = DarkestActor.restLockRemaining(w);
+      return left === null || left > 0;
+    });
+    const lapsed = activeWounds.filter(w =>
+      w.system.restFailedAt && DarkestActor.restLockRemaining(w) === 0
+    );
+    for (const w of lapsed) recoverableWounds.push(w);
 
-    if (recoverableWounds.length === 0) {
-      ui.notifications.warn(`${this.name} cannot rest — all wounds are locked. Unlock them when enough time has passed.`);
+    if (recoverableWounds.length === 0 && lockedWounds.length === 0) {
+      ui.notifications.warn(`${this.name} has no wounds to rest.`);
       return;
     }
 
+    // Locked wounds are OFFERED rather than withheld. The rules give an
+    // explicit way through -- "a character with relevant skill and
+    // appropriate equipment... allows recovery on a wound they failed to
+    // heal without waiting 24 hours" -- so blocking the roll outright would
+    // make a real rule unreachable. Warn, name the wait, and let the GM
+    // decide whether the care on hand is good enough.
     const lockedNote = lockedWounds.length
-      ? `<p class="locked-wounds-note"><i class="fas fa-lock"></i> ${lockedWounds.length} wound(s) locked — unlock when the GM allows.</p>`
+      ? `<div class="locked-wounds-note">
+          <p><i class="fas fa-lock"></i> <strong>${lockedWounds.length} wound(s) failed a recent rest.</strong></p>
+          <ul class="locked-wound-list">${lockedWounds.map(w => {
+            const left = DarkestActor.restLockLabel(w);
+            return `<li>${w.name} (Rating ${w.system.rating})${left ? ` — treatable in ${left}` : ''}</li>`;
+          }).join('')}</ul>
+          <p class="hint">Normally these can't be treated again for 24 hours. A character with
+          relevant skill and proper equipment can try anyway — and rolls their OWN Rating.</p>
+          <label class="rest-override"><input type="checkbox" name="rest-override" /> Treat them anyway (specialised care)</label>
+        </div>`
       : '';
 
     const physicalWounds = recoverableWounds.filter(w => w.system.type === 'physical');
@@ -909,10 +960,22 @@ export class DarkestActor extends Actor {
               const mentBoons = parseInt(html.find('[name="mental-boons"]').val()) || 0;
               const mentBanes = parseInt(html.find('[name="mental-banes"]').val()) || 0;
 
+              // Ticked when a healer with skill and equipment is treating the
+              // locked wounds -- the rules' sanctioned way past the 24 hours.
+              const override = html.find('[name="rest-override"]').is(':checked');
+              const toRoll = override
+                ? [...recoverableWounds, ...lockedWounds]
+                : recoverableWounds;
+
+              if (!toRoll.length) {
+                ui.notifications.warn('Nothing to rest — every wound is still within its 24 hours.');
+                return;
+              }
+
               const { DarkestRoll } = await import('../dice/darkest-roll.mjs');
               const results = [];
 
-              for (const wound of recoverableWounds) {
+              for (const wound of toRoll) {
                 const boons = wound.system.type === 'mental' ? mentBoons : physBoons;
                 const banes = wound.system.type === 'mental' ? mentBanes : physBanes;
                 const roll = DarkestRoll.createActionRoll(characterRating, wound.system.rating, boons, banes, false);
@@ -924,7 +987,16 @@ export class DarkestActor extends Actor {
                 if (success) {
                   await wound.update({ 'system.healed': true, 'system.restFailedAt': null });
                 } else {
-                  await wound.update({ 'system.restFailedAt': true });
+                  // Stamp the CLOCK, not a boolean. The rules say to "note the
+                  // time when recovery can next be attempted", so the lock has
+                  // to know when it lapses -- a bare true could only ever be
+                  // cleared by hand.
+                  const now = DarkestActor._clock();
+                  await wound.update({
+                    'system.restFailedAt': now
+                      ? { day: now.day, minutes: now.minutes }
+                      : true,   // no clock: fall back to the old manual lock
+                  });
                 }
 
                 // Build dice HTML for this wound's roll

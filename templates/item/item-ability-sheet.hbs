@@ -87,6 +87,26 @@
       </div>
       {{/if}}
 
+      {{!-- Some abilities cost the character a wound to use. Recorded here so
+            the price is visible on the sheet rather than remembered. --}}
+      <div class="form-row">
+        <div class="form-group">
+          <label>Wound cost</label>
+          <input type="number" name="system.woundCostRating" value="{{system.woundCostRating}}"
+            data-dtype="Number" min="0" max="10" />
+          <small class="hint">0 = costs nothing</small>
+        </div>
+        {{#if system.woundCostRating}}
+        <div class="form-group">
+          <label>Cost type</label>
+          <select name="system.woundCostType">
+            <option value="physical" {{#if (eq system.woundCostType "physical")}}selected{{/if}}>Physical</option>
+            <option value="mental" {{#if (eq system.woundCostType "mental")}}selected{{/if}}>Mental</option>
+          </select>
+        </div>
+        {{/if}}
+      </div>
+
     </div>
 
   </section>

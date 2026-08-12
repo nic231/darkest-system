@@ -5919,3 +5919,76 @@
   background: var(--darkest-accent, #8b3a3a);
   color: #fff;
 }
+
+/* ============================================================
+   Ability wound cost + rest-lock countdown
+   ============================================================ */
+
+/* The price of an ability, sat beside its uses. Explicit colours because
+   Foundry core styles buttons inside .window-content at a higher
+   specificity than a bare class. */
+.ability-wound-cost {
+  flex: 0 0 auto;
+  width: auto;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border: 1px solid #7a3a3a;
+  border-radius: 3px;
+  background: rgba(90, 30, 30, 0.35);
+  color: #e0a0a0;
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ability-wound-cost:hover {
+  border-color: #b83232;
+  background: rgba(130, 40, 40, 0.55);
+  color: #ffd8d8;
+}
+
+/* The countdown on a locked wound. Muted -- it's information, not an alarm. */
+.wound-locked-badge {
+  margin-left: 6px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.25);
+  color: #b3aa9c;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+/* The locked-wound warning in the Rest dialog. */
+.locked-wounds-note {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid #6a5a3a;
+  border-left: 3px solid #b8923a;
+  border-radius: 3px;
+  background: rgba(60, 50, 30, 0.35);
+  font-size: 11px;
+}
+
+.locked-wounds-note p { margin: 0 0 4px; }
+.locked-wounds-note .hint { font-style: italic; opacity: 0.85; }
+
+.locked-wound-list {
+  margin: 4px 0 6px;
+  padding-left: 18px;
+  list-style: disc;
+}
+
+.rest-override {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  cursor: pointer;
+}
+
+.rest-override input[type="checkbox"] {
+  flex: none;
+  width: auto;
+  margin: 0;
+}
