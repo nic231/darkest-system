@@ -20,6 +20,26 @@ import { TravelGroups } from './travel-groups.mjs';
 const SETTING_LOG = 'sessionLog';
 const MAX_ENTRIES = 2000;  // ~20 sessions; trims oldest first
 
+/**
+ * Past sessions, parsed from Foundry's own chat exports by the content
+ * module's build_chat_history.py. Empty without the module.
+ *
+ * This exists because the chat log is world data with no undo: clearing it
+ * is one click and takes the campaign's whole record with it. Keeping the
+ * history in the MODULE means it survives anything done to the world.
+ */
+export let CHAT_HISTORY = [];
+
+Hooks.once('darkestSystem.registerChatHistory', (data) => {
+  if (Array.isArray(data)) CHAT_HISTORY = data;
+});
+
+// Stamped on every restored message so a second restore can recognise its
+// own work. Without it, running restore twice would double the log -- and
+// the GM most likely to press it is one who has just lost everything and is
+// not sure whether the first press worked.
+const RESTORED_FLAG = 'restoredFrom';
+
 export class SessionLog extends Application {
 
   /** Serialises setting writes; see record(). */
@@ -225,8 +245,297 @@ export class SessionLog extends Application {
   }
 
   /** A transgression fired. */
-  static recordTransgression({ region, level, witch }) {
-    return SessionLog.record({ kind: 'transgression', region, level, witch });
+  static recordTransgression({ region, level, witch, manual = false }) {
+    return SessionLog.record({ kind: 'transgression', region, level, witch, manual });
+  }
+
+  /**
+   * Add or correct a transgression by hand.
+   *
+   * For a campaign where tracking started late, or to fix a mis-recorded
+   * one. Deliberately does NOT post the ominous player message and does NOT
+   * advance the witch's track: both of those already happened at the table,
+   * possibly weeks ago. This is the RECORD catching up with events, not the
+   * events happening again. Set the track itself in the Transgression
+   * Tracker, which is the one place that owns it.
+   *
+   * Pass an existing entry to edit it in place.
+   */
+  static async transgressionDialog(existing = null) {
+    if (!game.user.isGM) return;
+
+    const { TransgressionTracker } = await import('./transgression-tracker.mjs');
+    const regions = TransgressionTracker.getAllRegions();
+    const esc = (v) => foundry.utils.escapeHTML?.(String(v ?? '')) ?? String(v ?? '');
+
+    // Region is a free-typed field backed by a datalist rather than a select:
+    // a log imported from chat carries whatever the witch's card said, which
+    // may not match a region slug at all, and an edit must not silently
+    // rewrite it to the nearest option.
+    const options = Object.entries(regions)
+      .map(([slug, r]) => `<option value="${esc(r.name || slug)}"></option>`)
+      .join('');
+
+    // Imported lazily: travel-clock.mjs imports THIS file, so a static
+    // import would close the cycle at module-evaluation time. Same reason
+    // travel-history.mjs defers its own travel-clock import.
+    let clock = null;
+    try {
+      const { TravelClock } = await import('./travel-clock.mjs');
+      const state = TravelClock.displayState();
+      // A fixed-time region shows a phase label ("dusk") rather than a
+      // clock reading, which an <input type="time"> cannot take.
+      clock = { day: state.day, time: state.fixed ? '' : state.time };
+    } catch { /* no clock: the fields just start empty */ }
+
+    const v = {
+      region: existing?.region ?? '',
+      level: existing?.level ?? 1,
+      witch: existing?.witch ?? '',
+      day: existing?.day ?? clock?.day ?? 1,
+      time: existing?.time ?? clock?.time ?? '',
+    };
+
+    const content = `
+      <form class="darkest-dialog transgression-entry">
+        <p class="hint">Records what already happened. The players see nothing,
+        and the witch's track is not advanced — set that in the Transgression
+        Tracker.</p>
+        <div class="form-group">
+          <label>Region</label>
+          <input type="text" name="region" list="tg-regions" value="${esc(v.region)}" required>
+          <datalist id="tg-regions">${options}</datalist>
+        </div>
+        <div class="form-group">
+          <label>Level</label>
+          <input type="number" name="level" min="1" max="10" value="${esc(v.level)}" required>
+        </div>
+        <div class="form-group">
+          <label>Witch <span class="hint-inline">(optional)</span></label>
+          <input type="text" name="witch" value="${esc(v.witch)}">
+        </div>
+        <div class="form-group">
+          <label>Day <span class="hint-inline">(optional)</span></label>
+          <input type="number" name="day" min="1" value="${esc(v.day)}">
+        </div>
+        <div class="form-group">
+          <label>Time <span class="hint-inline">(optional)</span></label>
+          <input type="time" name="time" value="${esc(v.time)}">
+        </div>
+      </form>`;
+
+    return new Promise((resolve) => {
+      new Dialog({
+        title: existing ? 'Edit transgression' : 'Add transgression',
+        content,
+        buttons: {
+          save: {
+            icon: '<i class="fas fa-check"></i>',
+            label: existing ? 'Save' : 'Add',
+            callback: async (html) => {
+              const form = html[0].querySelector('form');
+              const region = form.region.value.trim();
+              if (!region) {
+                ui.notifications.warn('A transgression needs a region.');
+                return resolve(false);
+              }
+              // If the typed name matches a known region, adopt that
+              // region's witch when none was given -- saves typing, and
+              // keeps imported entries consistent with live ones.
+              const match = Object.values(regions)
+                .find(r => (r.name || '').toLowerCase() === region.toLowerCase());
+              const patch = {
+                region,
+                level: Math.max(1, Math.min(10, Number(form.level.value) || 1)),
+                witch: form.witch.value.trim() || match?.witch || '',
+                day: Number(form.day.value) || null,
+                time: form.time.value || null,
+                manual: true,
+              };
+
+              if (existing) await SessionLog.updateEntry(existing.id, patch);
+              else await SessionLog.record({ kind: 'transgression', ...patch });
+
+              SessionLog.refresh();
+              resolve(true);
+            },
+          },
+          cancel: {
+            icon: '<i class="fas fa-times"></i>',
+            label: 'Cancel',
+            callback: () => resolve(false),
+          },
+        },
+        default: 'save',
+      }).render(true);
+    });
+  }
+
+  /**
+   * Put the chat log back from the module's history.
+   *
+   * Chat messages are WORLD data and clearing them is unrecoverable, so the
+   * history lives in the content module where nothing done to the world can
+   * touch it. Restoring is always a deliberate GM action -- messages
+   * appearing unbidden after a clear the GM meant would be worse than the
+   * clear.
+   *
+   * Idempotent by construction: every restored message carries a flag with
+   * its source id, and ids already present are skipped. Press it twice and
+   * the second press adds nothing. That matters more than it sounds -- the
+   * GM pressing this has just lost their log and does not know whether the
+   * first press worked.
+   *
+   * Timestamps are preserved, so a restored log reads in the order things
+   * happened rather than the order they were re-created.
+   */
+  static async restoreChat({ dryRun = false } = {}) {
+    if (!game.user.isGM) return null;
+    if (!CHAT_HISTORY.length) {
+      ui.notifications.warn('No chat history in the content module. Export a session and rebuild the module.');
+      return null;
+    }
+
+    // What is already here, by source id.
+    const present = new Set();
+    for (const m of game.messages) {
+      const id = m.getFlag('darkest-system', RESTORED_FLAG);
+      if (id) present.add(id);
+    }
+
+    // A stable id per source message. The export gives no message ids, so
+    // one is derived from the parts that identify it: when, who, and the
+    // text. Two identical messages a second apart stay distinct; the same
+    // message seen in two overlapping exports collapses to one.
+    const idOf = (m, i) => `${m.when ?? m.raw ?? i}|${m.who}|${(m.text || '').slice(0, 64)}`;
+
+    const pending = CHAT_HISTORY
+      .map((m, i) => ({ ...m, _id: idOf(m, i) }))
+      .filter(m => !present.has(m._id));
+
+    if (dryRun) return { total: CHAT_HISTORY.length, pending: pending.length, skipped: CHAT_HISTORY.length - pending.length };
+
+    if (!pending.length) {
+      ui.notifications.info(`Chat history already restored — all ${CHAT_HISTORY.length} messages are present.`);
+      return { created: 0, skipped: CHAT_HISTORY.length };
+    }
+
+    const payloads = pending.map((m) => {
+      // Restored transgressions and rolls keep their card styling so a
+      // restored log looks like the log that was lost, not a wall of text.
+      const cls = m.kind === 'transgression' ? 'transgression-message player-ominous'
+        : m.kind === 'stir' ? 'transgression-message player-ominous'
+        : m.kind === 'roll' ? 'darkest-roll action-roll restored'
+        : 'restored-narration';
+      // The original moment, not now -- Foundry sorts chat by this. Omitted
+      // rather than passed as undefined when the export's timestamp did not
+      // parse, so Foundry falls back to its own default instead of storing
+      // a broken value.
+      const t = m.when ? Date.parse(m.when) : NaN;
+      return {
+        content: `<div class="${cls} chat-restored">${SessionLog._restoredBody(m)}</div>`,
+        speaker: { alias: m.who },
+        ...(Number.isFinite(t) ? { timestamp: t } : {}),
+        flags: { 'darkest-system': { [RESTORED_FLAG]: m._id, restored: true } },
+      };
+    });
+
+    // One call: createDocuments batches the socket traffic, where a loop of
+    // creates would fire several hundred separate updates at every client.
+    await ChatMessage.createDocuments(payloads);
+
+    ui.notifications.info(
+      `Restored ${pending.length} message${pending.length === 1 ? '' : 's'}`
+      + (CHAT_HISTORY.length - pending.length
+        ? ` (${CHAT_HISTORY.length - pending.length} already present)` : '')
+    );
+    return { created: pending.length, skipped: CHAT_HISTORY.length - pending.length };
+  }
+
+  /**
+   * Rebuild the log's rolls and transgressions from the module's history.
+   *
+   * Separate from restoreChat: the chat log and the session log are
+   * different records, and a GM may want one without the other. Same
+   * idempotency, by the same derived id.
+   *
+   * Movement is deliberately NOT imported. The chat card prints the arrival
+   * ("The party takes the north trail... It is 12:02 on Day 1") but not the
+   * route slugs the travel log keys on, and inventing them would put wrong
+   * data into the route map and the backtracking check. Legs go in by hand,
+   * through the dialog that knows about real locations.
+   */
+  static async importHistory() {
+    if (!game.user.isGM) return null;
+    if (!CHAT_HISTORY.length) {
+      ui.notifications.warn('No chat history in the content module. Export a session and rebuild the module.');
+      return null;
+    }
+
+    const existing = new Set(
+      SessionLog.getLog().entries.map(e => e.importId).filter(Boolean)
+    );
+    const idOf = (m, i) => `${m.when ?? m.raw ?? i}|${m.who}|${(m.text || '').slice(0, 64)}`;
+
+    const wanted = CHAT_HISTORY
+      .map((m, i) => ({ ...m, _id: idOf(m, i) }))
+      .filter(m => (m.kind === 'roll' || m.kind === 'transgression') && !existing.has(m._id));
+
+    if (!wanted.length) {
+      ui.notifications.info('Session log already holds everything in the history.');
+      return { created: 0 };
+    }
+
+    // The real moment, so an imported session doesn't collapse into the
+    // minute it was imported. Spread as {} rather than {t: undefined} when
+    // the timestamp is unusable: record() sets t before spreading the entry,
+    // so an explicit undefined would CLOBBER it and leave the row unsorted.
+    const stamp = (m) => {
+      const t = m.when ? Date.parse(m.when) : NaN;
+      return Number.isFinite(t) ? { t } : {};
+    };
+
+    let rolls = 0, transgressions = 0;
+    for (const m of wanted) {
+      if (m.kind === 'roll') {
+        await SessionLog.record({
+          kind: 'roll', importId: m._id, imported: true,
+          who: m.who,
+          characterRating: m.characterRating, taskRating: m.taskRating,
+          target: m.target, total: m.total, darkestDie: m.darkestDie,
+          outcome: m.outcome,
+          ...stamp(m),
+        });
+        rolls++;
+      } else {
+        await SessionLog.record({
+          kind: 'transgression', importId: m._id, imported: true, manual: true,
+          region: m.region, level: m.level, witch: m.witch,
+          ...stamp(m),
+        });
+        transgressions++;
+      }
+    }
+
+    SessionLog.refresh();
+    ui.notifications.info(`Imported ${rolls} roll${rolls === 1 ? '' : 's'} and ${transgressions} transgression${transgressions === 1 ? '' : 's'}.`);
+    return { created: wanted.length, rolls, transgressions };
+  }
+
+  /** The body of a restored message, formatted by kind. */
+  static _restoredBody(m) {
+    const esc = (v) => foundry.utils.escapeHTML?.(String(v ?? '')) ?? String(v ?? '');
+    if (m.kind === 'roll') {
+      const mods = [m.boon ? 'boon' : null, m.bane ? 'bane' : null].filter(Boolean).join(', ');
+      return `<div class="restored-roll-head">Action Roll${mods ? ` <span class="log-dim">(${mods})</span>` : ''}</div>
+        <div class="restored-roll-line">Rating ${esc(m.characterRating)} vs Task ${esc(m.taskRating)} · Target ${esc(m.target)}</div>
+        <div class="restored-roll-line">Total <strong>${esc(m.total ?? '—')}</strong> · Darkest Die ${esc(m.darkestDie ?? '—')}</div>
+        <div class="restored-roll-outcome">${esc(m.outcome)}</div>`;
+    }
+    // Narration, stirs and transgressions are text as they were shown.
+    // Newlines become breaks; everything is escaped, because this is
+    // arbitrary text from a file on disk going into innerHTML.
+    return esc(m.text).replace(/\n/g, '<br>');
   }
 
   // ── Display ───────────────────────────────────────────────────────────
@@ -281,15 +590,35 @@ export class SessionLog extends Application {
       transgressions: transgressions.map(t => ({
         id: t.id,
         region: t.region, level: t.level, witch: t.witch,
-        when: SessionLog._clock(t)
+        manual: !!t.manual,
+        when: SessionLog._whenTransgression(t)
       })).reverse(),
-      transgressionCount: transgressions.length
+      transgressionCount: transgressions.length,
+      hasHistory: CHAT_HISTORY.length > 0,
+      historyCount: CHAT_HISTORY.length,
     };
   }
 
   static _clock(e) {
     const d = new Date(e.t);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  /**
+   * When a transgression happened, preferring GAME time.
+   *
+   * A backfilled entry is recorded for the day it happened in the fiction,
+   * and showing the wall-clock moment it was typed would make backfilling
+   * pointless -- five entries added in one sitting would all read as the
+   * same minute. Live entries have no day and fall back to _clock, exactly
+   * as before.
+   *
+   * Not folded into _clock() itself: the moves table renders game time in
+   * its own column, so doing this there would print it twice.
+   */
+  static _whenTransgression(e) {
+    if (e.day != null) return `Day ${e.day}${e.time ? `, ${e.time}` : ''}`;
+    return SessionLog._clock(e);
   }
 
   /**
@@ -569,6 +898,59 @@ export class SessionLog extends Application {
     html.find('.log-add-move').click(async () => {
       const { TravelHistory } = await import('./travel-history.mjs');
       await TravelHistory.addMoveDialog();
+    });
+
+    // Transgressions by hand, for a campaign that started tracking late or
+    // a mis-recorded entry. Records history only -- see transgressionDialog.
+    html.find('.log-add-transgression').click(() => SessionLog.transgressionDialog());
+
+    html.find('.log-edit-transgression').click((ev) => {
+      const id = ev.currentTarget.dataset.id;
+      const entry = SessionLog.getLog().entries.find(e => e.id === id);
+      if (entry) SessionLog.transgressionDialog(entry);
+    });
+
+    // Restore from the module's exported sessions. Asks which record to
+    // rebuild -- the session log and the chat log are separate things, and
+    // a GM who only lost one should not be made to re-create both.
+    html.find('.log-restore').click(async () => {
+      const preview = await SessionLog.restoreChat({ dryRun: true });
+      if (!preview) return;
+
+      const already = preview.skipped
+        ? `<p class="hint">${preview.skipped} of these are already in chat and will be skipped.</p>` : '';
+
+      new Dialog({
+        title: 'Restore from exported sessions',
+        content: `<div class="darkest-dialog">
+          <p>The content module carries <strong>${CHAT_HISTORY.length}</strong> message${CHAT_HISTORY.length === 1 ? '' : 's'} from past sessions.</p>
+          ${already}
+          <p class="hint">Both options can be run more than once — anything already
+          present is skipped rather than duplicated.</p>
+        </div>`,
+        buttons: {
+          both: {
+            icon: '<i class="fas fa-clock-rotate-left"></i>',
+            label: 'Chat and log',
+            callback: async () => {
+              await SessionLog.restoreChat();
+              await SessionLog.importHistory();
+            },
+          },
+          chat: {
+            icon: '<i class="fas fa-comments"></i>',
+            label: 'Chat only',
+            callback: () => SessionLog.restoreChat(),
+          },
+          log: {
+            icon: '<i class="fas fa-list"></i>',
+            label: 'Session log only',
+            callback: () => SessionLog.importHistory(),
+          },
+          cancel: { icon: '<i class="fas fa-times"></i>', label: 'Cancel' },
+        },
+        default: 'both',
+      }).render(true);
     });
 
     // Editing a leg reuses the same dialog. Changing its day or times moves

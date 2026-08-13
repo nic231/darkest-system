@@ -277,11 +277,14 @@
         <tbody>
           {{#each transgressions}}
           <tr>
-            <td>{{region}}</td>
+            <td>{{region}}{{#if manual}} <i class="fas fa-pen log-manual-mark"
+                 data-tooltip="Added by hand"></i>{{/if}}</td>
             <td class="log-level">{{level}}</td>
             <td class="log-dim">{{witch}}</td>
             <td class="log-dim">{{when}}</td>
             <td class="log-row-actions">
+              <button type="button" class="log-edit-transgression" data-id="{{id}}"
+                      data-tooltip="Edit this entry"><i class="fas fa-pen"></i></button>
               <button type="button" class="log-del" data-id="{{id}}"
                       data-tooltip="Delete this entry"><i class="fas fa-times"></i></button>
             </td>
@@ -290,14 +293,22 @@
         </tbody>
       </table>
 
-      <button type="button" class="log-clear-kind" data-kind="transgression">
-        <i class="fas fa-trash"></i> Clear all transgressions
-      </button>
+      <div class="log-actions">
+        <button type="button" class="log-add-transgression">
+          <i class="fas fa-plus"></i> Add transgression
+        </button>
+        <button type="button" class="log-clear-kind" data-kind="transgression">
+          <i class="fas fa-trash"></i> Clear all transgressions
+        </button>
+      </div>
       {{else}}
       <p class="log-empty">
         <i class="fas fa-eye"></i>
         The woods have not stirred yet.
       </p>
+      <button type="button" class="log-add-transgression">
+        <i class="fas fa-plus"></i> Add transgression
+      </button>
       {{/if}}
     </div>
 
@@ -305,6 +316,15 @@
 
   <footer class="log-footer">
     <button type="button" class="log-export"><i class="fas fa-file-export"></i> Export</button>
+    {{#if hasHistory}}
+    {{!-- Only offered when the content module actually carries a history.
+          A dead button on every table that has never exported a session
+          would be worse than no button. --}}
+    <button type="button" class="log-restore"
+            data-tooltip="Rebuild rolls, transgressions and chat from the exported sessions in the content module">
+      <i class="fas fa-clock-rotate-left"></i> Restore ({{historyCount}})
+    </button>
+    {{/if}}
     <button type="button" class="log-clear"><i class="fas fa-trash"></i> Clear log</button>
   </footer>
 

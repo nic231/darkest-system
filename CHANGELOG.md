@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.39.0-alpha (2026-08-13)
+
+**Transgressions can be added and edited by hand.** For a campaign that started tracking partway in, or to correct a mis-recorded one. Region, level, witch, and the game day and time it happened.
+
+It records history and nothing else — no ominous message to the players, no advance of the witch's track. Both of those already happened at the table, possibly weeks ago; this is the *record* catching up with events, not the events happening again. Set the track itself in the Transgression Tracker, which is the one place that owns it. Hand-added entries are marked, and show the game day they happened on rather than the minute they were typed — otherwise five entries added in one sitting would all read as the same moment.
+
+**Past sessions can be restored from the content module.** Foundry's chat log is world data with no undo: clearing it is one click and takes the campaign's record with it. Export your chat after each session into the module's history folder, rebuild the module, and the history lives somewhere nothing done to the world can touch.
+
+*Restore* in the session log then offers three things: rebuild the chat, rebuild the session log's rolls and transgressions, or both. **Any of them can be run twice safely** — every restored message and imported entry carries the id it came from, and anything already present is skipped. That mattered enough to build around: the GM pressing this has just lost their log and has no way of knowing whether the first press worked. It also means a partial restore tops up rather than duplicating.
+
+Original timestamps are kept, so a restored log reads in the order things happened rather than the order they were re-created.
+
+From one real session export, that recovered all 22 rolls with their ratings, targets, totals, Darkest Dice, boons and outcomes, and all 5 transgressions with their region and level.
+
+**Movement is deliberately not imported.** The chat card prints the arrival but not the route slugs the travel log keys on, and guessing them would put wrong data into the route map and the backtracking check. Legs still go in through the "add leg" dialog, which knows about real locations.
+
+**Requires content module 1.11.0**, which carries the history. Update the system first — the module will not activate against an older one.
+
 ## 0.38.1-alpha (2026-08-13)
 
 **The woods no longer stir before the roll that woke them.** "The woods stir and whisper" was landing *above* the card showing the Darkest Die that caused it — the warning arriving before the provocation, which reads as the woods reacting to nothing. Everything a roll causes now waits for the roll to appear first: the stir, the doom notice, and the GM's NPC-damage whisper, which had the same problem.

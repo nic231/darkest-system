@@ -6364,7 +6364,8 @@
 
 .route-expand:hover { color: var(--darkest-text, #d8d0c8); }
 
-.log-row-actions .log-edit-move {
+.log-row-actions .log-edit-move,
+.log-row-actions .log-edit-transgression {
   border: none;
   background: none;
   color: var(--darkest-text-dim, #b3aa9c);
@@ -6374,7 +6375,52 @@
   line-height: 1;
 }
 
-.log-row-actions .log-edit-move:hover { color: #d8a05a; }
+.log-row-actions .log-edit-move:hover,
+.log-row-actions .log-edit-transgression:hover { color: #d8a05a; }
+
+/* The add/clear pair under a tab's table. */
+.session-log-container .log-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* ============================================================
+   Restored chat — messages rebuilt from an exported session
+   ============================================================ */
+
+/* Marked, quietly. A restored message is a record of something that
+   happened weeks ago, and should not be mistaken for something that just
+   did -- but it is still the campaign's own history, so this is a muted
+   left rule rather than a banner. */
+.chat-restored {
+  border-left: 2px solid rgba(184, 146, 58, 0.4);
+  padding-left: 8px;
+}
+
+.chat-restored.restored-narration {
+  font-style: italic;
+  opacity: 0.9;
+}
+
+.chat-restored .restored-roll-head {
+  font-weight: bold;
+  color: var(--darkest-accent-light, #b83232);
+  margin-bottom: 2px;
+}
+
+.chat-restored .restored-roll-line {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.chat-restored .restored-roll-outcome {
+  margin-top: 3px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+}
 
 /* ============================================================
    Travel groups — a split party
