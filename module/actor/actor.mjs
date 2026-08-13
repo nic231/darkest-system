@@ -7,14 +7,29 @@ export class DarkestActor extends Actor {
 
   /** @override */
   prepareBaseData() {
-    // Data modifications in this step occur before processing embedded documents or derived data
+    // MUST call super, even though this system adds nothing of its own here.
+    //
+    // Foundry v14's Actor#prepareBaseData initialises internal state that
+    // later stages depend on -- `tokenActiveEffectChanges` among it, which
+    // applyActiveEffects() then reads. Overriding this with an empty body
+    // left that undefined, so EVERY actor threw during data preparation:
+    //
+    //   Failed data preparation for Actor.<id>
+    //   can't access property "initial", this.tokenActiveEffectChanges is undefined
+    //
+    // Compendium NPCs failed the same way on world load, which is why the
+    // console filled up before anything was even opened. The stub was
+    // harmless on the version it was written against and became a fatal
+    // omission when core started using the hook; there is no reason to
+    // override this at all unless the system has base data to set.
+    super.prepareBaseData();
   }
 
   /** @override */
   prepareDerivedData() {
+    super.prepareDerivedData();
+
     const actorData = this;
-    const systemData = actorData.system;
-    const flags = actorData.flags.darkestSystem || {};
 
     // Prepare data based on actor type
     this._prepareCharacterData(actorData);

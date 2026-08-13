@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.40.1-alpha (2026-08-13)
+
+**Every actor was failing data preparation.** The console filled with `can't access property "initial", this.tokenActiveEffectChanges is undefined` on world load — once per compendium NPC, then again for every actor created or opened.
+
+`DarkestActor` overrode `prepareBaseData()` with an empty body and never called `super`. Foundry v14 initialises internal state there, including `tokenActiveEffectChanges`, which `applyActiveEffects()` reads a moment later. The stub was harmless on the version it was written against and became fatal when core started relying on that step. There was never a reason to override it — this system sets no base data of its own — so it now calls super and does nothing else.
+
+`prepareDerivedData()` on both actors and items had the same omission and now calls super too. `DarkestItem.prepareData()` was removed outright: it did nothing except call super, which is exactly what not overriding it does, and it was one more place for the call to get dropped.
+
+Active effects should behave correctly again — which also means the persistent boons and banes that ride on them.
+
 ## 0.40.0-alpha (2026-08-13)
 
 **The woods get worse as the track rises.** The transgression level already escalated in words — the stir message changes wording at 5 and at 10 — but nothing else did. Now a sound goes under those same two steps, and from level 5 the screen briefly notices.

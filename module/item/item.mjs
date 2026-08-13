@@ -3,13 +3,15 @@
  */
 export class DarkestItem extends Item {
 
-  /** @override */
-  prepareData() {
-    super.prepareData();
-  }
+  // No prepareData() override: it did nothing but call super, which is what
+  // not overriding it does. Removed so there is one less place for a future
+  // edit to drop the super call -- see prepareBaseData in actor.mjs, where
+  // exactly that broke every actor in the world.
 
   /** @override */
   prepareDerivedData() {
+    super.prepareDerivedData();
+
     const itemData = this;
     const systemData = itemData.system;
 
