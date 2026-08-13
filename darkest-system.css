@@ -2682,13 +2682,34 @@
   color: var(--darkest-text, #cec9c0);
 }
 
+/* The count pill. This was dark purple text (--darkest-purple, #4e3f6e -- a
+   SURFACE tone) on a translucent purple background: dark on dark, and the
+   zeroes were all but invisible. Use the lifted purple for the mark and give
+   the pill a real minimum width so single digits sit centred instead of
+   jittering with the number. */
 .doom-tally .character-dooms {
   font-weight: bold;
-  color: var(--darkest-purple);
-  padding: 2px 6px;
-  background: rgba(92, 63, 124, 0.3);
+  color: var(--darkest-purple-light, #9b82c4);
+  padding: 2px 8px;
+  min-width: 26px;
+  text-align: center;
+  background: rgba(92, 63, 124, 0.35);
+  border: 1px solid rgba(155, 130, 196, 0.35);
   border-radius: 3px;
-  font-size: 12px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Nobody with a doom should look like everybody else. A zero recedes; a real
+   count is brighter, on a stronger ground. */
+.doom-tally .character-entry.has-dooms .character-dooms {
+  color: #d9c9f5;
+  background: rgba(92, 63, 124, 0.65);
+  border-color: rgba(155, 130, 196, 0.6);
+}
+
+.doom-tally .character-entry.no-dooms .character-dooms {
+  opacity: 0.55;
 }
 
 .doom-tally .no-characters {
@@ -4555,23 +4576,22 @@
    The doom badge — sits beside the dial
 ---------------------------------------- */
 
-/* Deliberately the dial's shape and height, so the two read as one piece of
-   furniture rather than two competing widgets. `left` and `bottom` are set
-   from JS, which measures the dial and the player list. */
+/* A small panel echoing the Doom Tally window -- the same purple total block
+   over the same per-character list -- rather than a pill, so the docked
+   version and the window read as one thing at two sizes. `left` and `bottom`
+   are set from JS, which measures the dial and the player list. */
 #darkest-doom-badge {
   position: fixed;
   bottom: 220px;
   left: 12px;
   z-index: 70;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 8px 14px 8px 12px;
+  width: 172px;
+  padding: 6px;
   border: 1px solid var(--darkest-border, #4a4038);
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--darkest-bg-dark, #1e1c19);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
-  color: var(--darkest-text, #e8dcc8);
+  color: var(--darkest-text, #cec9c0);
   font-family: var(--font-primary, inherit);
   cursor: pointer;
   user-select: none;
@@ -4579,39 +4599,113 @@
 }
 
 #darkest-doom-badge:hover {
-  border-color: var(--darkest-purple, #5c3f7c);
+  border-color: var(--darkest-purple, #4e3f6e);
   box-shadow: 0 2px 14px rgba(92, 63, 124, 0.5);
 }
 
+/* The window's total block, scaled down. */
+#darkest-doom-badge .badge-total {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, var(--darkest-bg-medium, #2a2723), var(--darkest-purple, #4e3f6e));
+}
+
 #darkest-doom-badge .badge-icon {
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1;
   /* Dim while the count is zero -- an unlit skull says "nothing yet" without
      needing a second look, and stops the badge shouting at an empty table. */
-  color: var(--darkest-text-muted, #7a7268);
-  transition: color 0.3s;
+  color: var(--darkest-text, #cec9c0);
+  opacity: 0.45;
+  transition: opacity 0.3s;
 }
 
 #darkest-doom-badge.has-doom .badge-icon {
-  color: var(--darkest-purple-light, #8b6bb1);
+  opacity: 0.85;
 }
 
-#darkest-doom-badge .badge-readout {
+#darkest-doom-badge .badge-count {
   display: flex;
   flex-direction: column;
-  line-height: 1.15;
+  align-items: center;
+  line-height: 1;
 }
 
 #darkest-doom-badge .badge-number {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 26px;
+  font-weight: bold;
+  line-height: 1;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+#darkest-doom-badge.has-doom .badge-number {
+  text-shadow: 0 0 10px var(--darkest-purple, #4e3f6e);
 }
 
 #darkest-doom-badge .badge-label {
-  font-size: 11px;
-  color: var(--darkest-text-muted, #7a7268);
-  letter-spacing: 0.04em;
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
+  color: var(--darkest-text-dim, #b3aa9c);
+}
+
+/* Who is carrying it.
+   Capped and scrollable: the badge grows upward from the player list, and a
+   table of eight would otherwise climb into the scene controls. Six rows fit
+   before it starts scrolling, which covers any normal party. */
+#darkest-doom-badge .badge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 5px;
+  max-height: 132px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+#darkest-doom-badge .badge-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--darkest-bg-medium, #2a2723);
+  font-size: 11px;
+}
+
+/* Long names truncate rather than wrapping the row onto two lines and
+   pushing the badge over the player list. */
+#darkest-doom-badge .badge-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--darkest-text, #cec9c0);
+}
+
+#darkest-doom-badge .badge-row-count {
+  flex: none;
+  min-width: 18px;
+  text-align: center;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  color: var(--darkest-purple-light, #9b82c4);
+}
+
+/* Someone actually carrying a doom stands out from someone on zero. */
+#darkest-doom-badge .badge-row.has-dooms .badge-row-count {
+  color: #d9c9f5;
+}
+
+#darkest-doom-badge .badge-row.no-dooms {
+  opacity: 0.5;
 }
 
 /* ----------------------------------------

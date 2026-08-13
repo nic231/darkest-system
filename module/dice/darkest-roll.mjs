@@ -344,39 +344,56 @@ export class DarkestRoll extends Roll {
     // by TransgressionTracker.incrementTransgression() once it knows the
     // resulting level, which this roll doesn't. See darkestSystem.transgression
     // hook below and the tiered PUBLIC message in roll-result.hbs.
-    if (this.isDamageRoll && this.isWound && this.targetRating && !this.isPlayerTakingDamage) {
-      const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
-      if (gmIds.length) {
-        const threshold = this.targetRating * 3;
-        let gmContent = `<div class="darkest-roll damage-roll">
+    // Built here, POSTED below -- see the ordering note at the card.
+    let gmContent = null;
+    const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
+    if (this.isDamageRoll && this.isWound && this.targetRating && !this.isPlayerTakingDamage && gmIds.length) {
+      const threshold = this.targetRating * 3;
+      gmContent = `<div class="darkest-roll damage-roll">
           <div class="npc-damage-info gm-only">
             <div class="npc-damage-row"><i class="fas fa-skull"></i><span>NPC defeat threshold: <strong>${threshold}</strong> total wound rating (Rating ${this.targetRating} × 3)</span></div>
             <div class="npc-damage-row wound-dealt-row"><i class="fas fa-heart-broken"></i><span>This wound: <strong>${this.woundRating}</strong> — auto-applied to active NPC in tracker</span></div>
           </div>`;
-        if (this.isInstantKill) {
-          gmContent += `<div class="instant-kill-warning">
+      if (this.isInstantKill) {
+        gmContent += `<div class="instant-kill-warning">
             <i class="fas fa-skull-crossbones"></i> <strong>LETHAL BLOW!</strong>
             <p>Wound Rating ${this.woundRating} is 3+ higher than target Rating ${this.targetRating}.</p>
             <p>Target is instantly killed or knocked unconscious!</p>
           </div>`;
-        }
-        gmContent += `</div>`;
+      }
+      gmContent += `</div>`;
+    }
 
-        if (game.user.isGM) {
-          ChatMessage.create({ content: gmContent, whisper: gmIds, speaker: messageData.speaker });
-        } else {
-          game.socket.emit('system.darkest-system', {
-            type: 'postGmWhisper',
-            content: gmContent,
-            speaker: messageData.speaker,
-          });
-        }
+    // The roll card goes to chat FIRST, and is awaited.
+    //
+    // Everything a roll causes must read after the roll that caused it.
+    // Posting first put "The woods stir and whisper" above the card showing
+    // the Darkest Die that woke them -- the warning arriving before the
+    // provocation, which reads as the woods reacting to nothing.
+    //
+    // The await is what makes this hold for a PLAYER's roll too, and it is
+    // the whole fix. super.toMessage() resolves only once the message exists
+    // server-side, so by the time the socket emits below, the roll card is
+    // already stamped and ordered ahead of anything the GM's client then
+    // posts in response. Firing the effects first meant the GM could author
+    // the stir before the player's card had finished its round trip.
+    const message = await super.toMessage(messageData, options);
+
+    if (gmContent) {
+      if (game.user.isGM) {
+        ChatMessage.create({ content: gmContent, whisper: gmIds, speaker: messageData.speaker });
+      } else {
+        game.socket.emit('system.darkest-system', {
+          type: 'postGmWhisper',
+          content: gmContent,
+          speaker: messageData.speaker,
+        });
       }
     }
 
     this.dispatchRollEffects(messageData.speaker);
 
-    return super.toMessage(messageData, options);
+    return message;
   }
 
   /**

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.38.1-alpha (2026-08-13)
+
+**The woods no longer stir before the roll that woke them.** "The woods stir and whisper" was landing *above* the card showing the Darkest Die that caused it — the warning arriving before the provocation, which reads as the woods reacting to nothing. Everything a roll causes now waits for the roll to appear first: the stir, the doom notice, and the GM's NPC-damage whisper, which had the same problem.
+
+The fix is an `await`, not just a reordering, and that distinction matters for a table with players. A player's roll card travels to the server and back before anyone sees it, while the transgression is handed to the GM's client over a socket. The old code sent that socket message before the card had finished its round trip, so the GM could author the stir first no matter what order the local lines were in. Waiting for the card to exist server-side means it is stamped ahead of anything posted in response — for every client, not just the roller's. Rest rolls had the same bug by a different route and are fixed too; several wounds in one rest still stir in the order they were rolled.
+
+**The on-screen doom counter now looks like the tally window** — the same skull and total block, with the per-character list under it, so the docked version and the window read as one thing at two sizes. It shows who is carrying what, which is the question actually asked after "how many".
+
+**The per-character counts are readable.** They were `--darkest-purple` (`#4e3f6e`, a *surface* tone) on a translucent purple background — dark purple text on dark purple ground, which is why the zeroes were nearly invisible. Same root cause as the character names in 0.38.0. Counts now use the lifted purple, someone actually holding a doom renders brighter than someone on zero, and the figures are tabular so a count going from 9 to 10 doesn't shift the row.
+
+The badge grows upward as characters are added, away from the player list, and caps at six rows before scrolling so a large table can't climb into the scene controls. Long names truncate rather than wrapping a row onto two lines.
+
+**No module update needed** — 1.10.0 still applies.
+
 ## 0.38.0-alpha (2026-08-13)
 
 **The doom count is on screen now**, beside the travel clock and above the player list. Click it to open the full tally. It sits dim while the count is zero and lights when there is something to fear, so an empty table isn't being shouted at. Everyone sees it — the doom count is public information, and the players' own sheets carry the Dooms it adds up. Turn it off per-client under *Show the doom count on screen*: where your screen furniture goes is your business, not the world's.

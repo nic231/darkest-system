@@ -175,6 +175,11 @@ export class DoomTally extends Application {
  * repeats the measurement rather than reading the dial's own position, so the
  * badge still lands correctly when the clock is switched off and there is no
  * dial to sit next to.
+ *
+ * The badge is a panel rather than a pill, and taller than the dial, so the
+ * two are aligned along their BOTTOM edge -- sharing a `bottom` is what makes
+ * them read as one row of furniture. It also means the badge grows upward as
+ * characters are added, away from the player list, instead of down into it.
  */
 function positionDoomBadge(el) {
   const players = document.getElementById('players');
@@ -227,21 +232,36 @@ export function renderDoomBadge() {
   // Nothing to fear yet reads differently from a mounting count.
   el.className = `darkest-doom-badge${shown > 0 ? ' has-doom' : ''}`;
 
-  const breakdown = characters.filter(c => c.dooms > 0)
-    .map(c => `${c.name}: ${c.dooms}`);
   el.title = [
-    `${shown} Doom${shown === 1 ? '' : 's'}`,
-    breakdown.length ? breakdown.join('\n') : 'No dooms held.',
-    adjustment !== 0 ? `(includes a GM adjustment of ${adjustment > 0 ? '+' : ''}${adjustment})` : null,
-    '\nClick to open the Doom Tally',
+    adjustment !== 0
+      ? `Includes a GM adjustment of ${adjustment > 0 ? '+' : ''}${adjustment}.`
+      : null,
+    'Click to open the Doom Tally',
   ].filter(Boolean).join('\n');
 
+  // The window's own total panel and per-character list, at badge size. The
+  // names are the point: "3 Doom" says the table is in trouble, and the list
+  // says who is carrying it -- which is the question actually asked next.
+  //
+  // Escaped: actor names are user input, and this is innerHTML. Guarded the
+  // way the rest of the system guards it -- this runs on every render, and a
+  // missing helper must not take the badge out.
+  const esc = (v) => foundry.utils.escapeHTML?.(String(v ?? '')) ?? String(v ?? '');
+  const rows = characters.map(c => `
+      <div class="badge-row ${c.dooms ? 'has-dooms' : 'no-dooms'}">
+        <span class="badge-row-name">${esc(c.name)}</span>
+        <span class="badge-row-count">${c.dooms}</span>
+      </div>`).join('');
+
   el.innerHTML = `
-    <i class="fas fa-skull badge-icon"></i>
-    <div class="badge-readout">
-      <span class="badge-number">${shown}</span>
-      <span class="badge-label">Doom</span>
-    </div>`;
+    <div class="badge-total">
+      <i class="fas fa-skull badge-icon"></i>
+      <div class="badge-count">
+        <span class="badge-number">${shown}</span>
+        <span class="badge-label">Doom</span>
+      </div>
+    </div>
+    ${rows ? `<div class="badge-list">${rows}</div>` : ''}`;
 
   positionDoomBadge(el);
 }

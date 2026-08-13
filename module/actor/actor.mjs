@@ -998,6 +998,9 @@ export class DarkestActor extends Actor {
 
               const { DarkestRoll } = await import('../dice/darkest-roll.mjs');
               const results = [];
+              // Rolls whose side effects (transgression, doom, session log)
+              // are dispatched after the card below -- see the push site.
+              const pendingEffects = [];
 
               for (const wound of toRoll) {
                 const boons = wound.system.type === 'mental' ? mentBoons : physBoons;
@@ -1029,10 +1032,12 @@ export class DarkestActor extends Actor {
                 // only inside toMessage(), which this card never calls -- so
                 // a rest that woke the woods silently did nothing.
                 //
-                // Speaker is passed explicitly: dispatchRollEffects falls
-                // back to getSpeaker(), which on a player's client resolves
-                // to their selected token rather than the resting actor.
-                roll.dispatchRollEffects(ChatMessage.getSpeaker({ actor: this }));
+                // HELD until the rest card has been posted, rather than
+                // dispatched here: the woods stirring must read after the
+                // roll that woke them, and this card is built and posted
+                // some way below. Collected in roll order so several wounds
+                // still stir in the order they were rolled.
+                pendingEffects.push(roll);
 
                 // Build dice HTML for this wound's roll
                 const diceResults = roll.dice[0]?.results || [];
@@ -1122,6 +1127,14 @@ export class DarkestActor extends Actor {
                 speaker: ChatMessage.getSpeaker({ actor: this }),
                 content
               });
+
+              // Now the card is up, let the woods answer it.
+              //
+              // Speaker is passed explicitly: dispatchRollEffects falls back
+              // to getSpeaker(), which on a player's client resolves to their
+              // selected token rather than the resting actor.
+              const restSpeaker = ChatMessage.getSpeaker({ actor: this });
+              for (const roll of pendingEffects) roll.dispatchRollEffects(restSpeaker);
 
               resolve(true);
             }

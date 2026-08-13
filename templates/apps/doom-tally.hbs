@@ -24,7 +24,8 @@
     </div>
     <div class="character-list">
       {{#each characters}}
-      <div class="character-entry" data-actor-id="{{id}}" title="Click to open sheet">
+      <div class="character-entry {{#if dooms}}has-dooms{{else}}no-dooms{{/if}}"
+           data-actor-id="{{id}}" title="Click to open sheet">
         <span class="character-name">{{name}}</span>
         <span class="character-dooms">{{dooms}}</span>
       </div>
