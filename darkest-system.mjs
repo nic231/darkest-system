@@ -248,9 +248,8 @@ async function _preloadHandlebarsTemplates() {
     'systems/darkest-system/templates/apps/session-log.hbs',
     'systems/darkest-system/templates/apps/route-map.hbs',
 
-    // Dialogs - NOT preloaded due to inline scripts
-    // They are rendered dynamically via renderTemplate() instead
-    'systems/darkest-system/templates/dialog/damage-dialog.hbs'
+    // Dialogs are deliberately NOT listed here. They carry inline scripts and
+    // are rendered on demand via renderTemplate() instead.
   ];
 
   return loadTemplates(templatePaths);
@@ -262,11 +261,10 @@ async function _preloadHandlebarsTemplates() {
 Hooks.once('ready', function() {
   console.log('The Darkest System | Ready');
 
-  // Store the transgression tracker instance
-  game.darkestSystem.transgressionTracker = null;
-
-  // Store the doom tally instance
-  game.darkestSystem.doomTally = null;
+  // NB: there are deliberately no stored window instances here. Two used to
+  // sit at this spot (transgressionTracker, doomTally), both only ever
+  // assigned null -- so DoomTally.refresh() silently did nothing. Windows are
+  // found through ui.windows when they need re-rendering.
 
   // Expose GM tools globally for macros
   game.darkestSystem.TransgressionTracker = TransgressionTracker;
@@ -312,20 +310,12 @@ Hooks.once('ready', function() {
   game.socket.on('system.darkest-system', (data) => {
     if (!data?.type) return;
     switch (data.type) {
-      case 'applyWound':
-        if (isPrimaryGM()) {
-          const actor = game.actors.get(data.actorId);
-          if (actor) actor.addWound(data.rating, data.woundType, data.description);
-        }
-        break;
-
-      case 'applyDoom':
-        if (isPrimaryGM()) {
-          const actor = game.actors.get(data.actorId);
-          if (actor) actor.addDoom(data.description, data.source);
-        }
-        break;
-
+      // There were 'applyWound' and 'applyDoom' cases here. Nothing ever
+      // emitted them: wounds and dooms are applied from chat-card buttons,
+      // which only a GM sees, so the player-to-GM hop they existed for never
+      // happens. They are gone rather than kept "just in case" -- a socket
+      // case with no emitter is an invitation to send an unvalidated message
+      // that writes to any actor.
       case 'applyNpcDamage':
         if (isPrimaryGM()) {
           NpcTracker.applyDamage(data.woundRating);
@@ -397,8 +387,13 @@ Hooks.once('ready', function() {
 
       case 'logRoll':
         // Players can't write the GM-scoped session log, so their rolls
-        // arrive here for a GM client to record.
-        if (isPrimaryGM()) SessionLog.recordRoll(data.entry);
+        // arrive here for a GM client to record. The damping cooldown counts
+        // rolls, and this is where a player's roll becomes visible to the
+        // single client that owns that counter.
+        if (isPrimaryGM()) {
+          SessionLog.recordRoll(data.entry);
+          TransgressionTracker.noteRoll();
+        }
         break;
 
       case 'postGmWhisper':
@@ -452,7 +447,10 @@ Hooks.once('ready', function() {
             },
             default: 'ok'
           }).render(true);
-          AudioHelper.play({ src: 'sounds/lock.wav', volume: 0.8, loop: false }, false);
+          // Through DarkestAudio for the guarded AudioHelper lookup: the bare
+          // global this used to call was removed in v14, so every whisper
+          // threw on the player's client and no sound played.
+          DarkestAudio.playAlert();
         }
         break;
     }
@@ -590,7 +588,7 @@ Hooks.on('darkestSystem.transgression', async (actor, roll) => {
 // Hook for when a Deal Damage roll produces a wound — auto-apply to active NPC in tracker.
 // The NPC tracker's data lives in a world-scoped setting, and players usually
 // can't write those directly, so this delegates to the GM's client over the
-// socket -- same player-to-GM pattern as applyWound/applyDoom below. Applying
+// socket -- the same player-to-GM pattern the roll code uses. Applying
 // directly here would silently do nothing on a player's own client and never
 // reach the GM's tracker at all.
 Hooks.on('darkestSystem.damageDealt', async (roll) => {
@@ -620,9 +618,15 @@ Hooks.on('updateItem', async (item, changes, options, userId) => {
   const actor = item.parent;
   if (!actor || actor.documentName !== 'Actor') return;
 
-  // Only one client should issue the follow-up update; the GM (if present)
-  // is the natural owner, otherwise let whoever made this change do it.
-  if (game.users.some(u => u.isGM && u.active) && !game.user.isGM) return;
+  // Exactly one client issues the follow-up update.
+  //
+  // The GM is the natural owner when one is connected -- the PRIMARY GM
+  // specifically, or a GM plus an assistant would both write. With no GM at
+  // all it falls to whoever actually made the change: the old check let
+  // EVERY connected player through in that case, and the ones who don't own
+  // the actor hit permission errors on every heal.
+  const gmOnline = game.users.some(u => u.isGM && u.active);
+  if (gmOnline ? !isPrimaryGM() : userId !== game.user.id) return;
 
   const hasPhysicalWound = actor.items.some(i => i.type === 'wound' && i.system.type === 'physical' && !i.system.healed);
   const hasMentalWound = actor.items.some(i => i.type === 'wound' && i.system.type === 'mental' && !i.system.healed);

@@ -59,14 +59,18 @@ const SETTING_BIRDSONG_VOLUME = 'birdsongVolume';
  *
  * @returns {Promise<Sound>|null} The pending sound, or null if it can't play.
  */
-function playLocal(src, volume, { loop = false } = {}) {
+function playLocal(src, volume, { loop = false, channel = 'environment' } = {}) {
   if (!src || volume <= 0) return null;
   const Helper = foundry?.audio?.AudioHelper ?? globalThis.AudioHelper;
   if (!Helper?.play) return null;
   try {
     // socketOptions false: callers fan out over our own socket, so letting
     // Foundry broadcast as well would double every sound.
-    return Helper.play({ src, volume, loop, autoplay: true, channel: 'environment' }, false);
+    //
+    // Environment by default -- ambience and birdsong belong under Foundry's
+    // ambient slider. An alert is interface chrome, not part of the world,
+    // so it passes 'interface' and follows that slider instead.
+    return Helper.play({ src, volume, loop, autoplay: true, channel }, false);
   } catch (err) {
     console.warn('Darkest System | audio playback failed', src, err);
     return null;
@@ -106,6 +110,21 @@ export const DarkestAudio = {
   /** Is there anything to play for this bird? Drives the play button. */
   hasBirdsong(birdKey) {
     return !!DarkestAudio.findSound('birdsong', birdKey);
+  },
+
+  /**
+   * A short interface noise -- "the GM is talking to you".
+   *
+   * Goes through playLocal for the guarded AudioHelper lookup. The whisper
+   * alert used to call the bare `AudioHelper` global directly, which v14
+   * removed: every whispered message threw a ReferenceError on the player's
+   * client and played nothing.
+   */
+  playAlert(src = 'sounds/lock.wav') {
+    // Fixed volume, not one of the ambience sliders: this is a notification,
+    // and a GM who has turned birdsong down has not asked to stop being
+    // told when they are spoken to.
+    return !!playLocal(src, 0.8, { channel: 'interface' });
   },
 
   /**

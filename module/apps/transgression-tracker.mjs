@@ -293,10 +293,15 @@ export class TransgressionTracker extends Application {
         reason = `held — ${left} more minute${left === 1 ? '' : 's'} of cooldown`;
       }
     } else if (cfg.mode === 'rolls') {
-      state.rollsSinceAdvance = (state.rollsSinceAdvance ?? 999) + 1;
-      if (state.rollsSinceAdvance <= cfg.rolls) {
+      // READ the counter; noteRoll() is what increments it, once per actual
+      // action roll. This used to increment here instead -- which meant it
+      // counted TRANSGRESSIONS, not rolls, so a "3 roll" cooldown really
+      // suppressed the next three triggers (roughly a dozen rolls at the
+      // usual trigger rate) and only every fourth transgression landed.
+      const since = state.rollsSinceAdvance ?? 999;
+      if (since < cfg.rolls) {
         advance = false;
-        const left = cfg.rolls - state.rollsSinceAdvance + 1;
+        const left = cfg.rolls - since;
         reason = `held — ${left} more roll${left === 1 ? '' : 's'} of cooldown`;
       }
     } else if (cfg.mode === 'threshold') {
@@ -314,6 +319,30 @@ export class TransgressionTracker extends Application {
     }
     await game.settings.set('darkest-system', SETTING_DAMPING_STATE, state);
     return { advance, reason };
+  }
+
+  /**
+   * An action roll happened. Feeds the 'rolls' damping mode.
+   *
+   * Counted here rather than inside _checkDamping, because that only runs
+   * when a transgression actually triggers -- so counting there measured
+   * transgressions and called them rolls. Every action roll reaches this: the
+   * roller's own client if they are the GM, otherwise the GM's client via the
+   * logRoll socket, so it is counted exactly once however it arrived.
+   *
+   * Shares _dampingQueue with the check, so a roll landing at the same moment
+   * as a trigger can't lose either write.
+   */
+  static async noteRoll() {
+    if (TransgressionTracker.dampingConfig().mode !== 'rolls') return;
+    TransgressionTracker._dampingQueue = TransgressionTracker._dampingQueue
+      .catch(() => {})
+      .then(async () => {
+        const state = foundry.utils.deepClone(TransgressionTracker.dampingConfig().state);
+        state.rollsSinceAdvance = (state.rollsSinceAdvance ?? 999) + 1;
+        await game.settings.set('darkest-system', SETTING_DAMPING_STATE, state);
+      });
+    return TransgressionTracker._dampingQueue;
   }
 
   /** Clear any accumulated cooldown, so the next trigger lands. */
@@ -481,17 +510,33 @@ export class TransgressionTracker extends Application {
   /**
    * Advance the house action counter and post the next action to chat (House mode).
    */
+  /** The house level read-modify-write, serialised. Returns the new state. */
+  static async _advanceHouseLevel() {
+    TransgressionTracker._levelQueue = TransgressionTracker._levelQueue
+      .catch(() => {})  // a failed write must not wedge the queue
+      .then(async () => {
+        const data = TransgressionTracker.getHouseActions();
+        data.level++;
+        if (data.level > 10) {
+          data.level = 1;
+          data.loops = (data.loops || 0) + 1;
+          ui.notifications.warn(`The house has cycled through all actions — starting over (cycle ${data.loops}).`);
+        }
+        await TransgressionTracker.setHouseActions(data);
+        // A copy: the caller only reads it, and handing back the live object
+        // would let a later queued advance mutate it mid-message.
+        return { level: data.level, loops: data.loops };
+      });
+    return TransgressionTracker._levelQueue;
+  }
+
   static async _incrementHouseAction() {
-    const data = this.getHouseActions();
-
-    data.level++;
-    if (data.level > 10) {
-      data.level = 1;
-      data.loops = (data.loops || 0) + 1;
-      ui.notifications.warn(`The house has cycled through all actions — starting over (cycle ${data.loops}).`);
-    }
-
-    await this.setHouseActions(data);
+    // Queued, for the same reason the Woods track is: this is a
+    // read-modify-write on one setting, and two triggers landing together
+    // both read level N and both write N+1, losing an advance. Only the
+    // write is inside the queue -- holding it across the chat round-trips
+    // below would serialise every trigger behind a message.
+    const data = await TransgressionTracker._advanceHouseLevel();
 
     // Public ominous message, tiered by the new level -- everyone sees this,
     // GM included; it never names the house's actual scripted action.
@@ -870,7 +915,7 @@ export function registerTransgressionSettings() {
   // to tell a damped trigger from a live one. Only the LEVEL is held back.
   game.settings.register('darkest-system', SETTING_DAMPING_MODE, {
     name: 'Transgression pacing',
-    hint: 'Optional house rule. Stops the transgression track advancing several times in quick succession. The woods still stir on every trigger; only the tracker is held back.',
+    hint: 'Optional house rule, Darkest Woods mode only. Stops the transgression track advancing several times in quick succession. The woods still stir on every trigger; only the tracker is held back.',
     scope: 'world',
     config: true,
     type: String,
@@ -896,7 +941,7 @@ export function registerTransgressionSettings() {
 
   game.settings.register('darkest-system', SETTING_DAMPING_ROLLS, {
     name: 'Pacing: cooldown rolls',
-    hint: 'For "Cooldown in rolls". Unaffected by how fast your table plays. ~3 turns a five-round fight into roughly three advances instead of five.',
+    hint: 'For "Cooldown in rolls". How many action rolls must pass after the track advances before it can advance again — unaffected by how fast your table plays. ~3 turns a five-round fight into roughly three advances instead of five.',
     scope: 'world',
     config: true,
     type: Number,

@@ -48,8 +48,8 @@ export class DarkestItem extends Item {
     }
 
     // Derived, not a stored flag: usesPerDay is the single source of truth
-    // for whether an ability has limited uses (useAbility()/refreshUses()
-    // already key off it directly). Sheets check system.unlimited to decide
+    // for whether an ability has limited uses (useAbility() already keys off
+    // it directly). Sheets check system.unlimited to decide
     // whether to show a "N/M uses" tag.
     systemData.unlimited = !(systemData.usesPerDay > 0);
   }
@@ -105,14 +105,9 @@ export class DarkestItem extends Item {
     return true;
   }
 
-  /**
-   * Refresh ability uses (for daily reset)
-   */
-  async refreshUses() {
-    if (this.type !== 'ability') return;
-
-    if (this.system.usesPerDay > 0) {
-      await this.update({ 'system.usesRemaining': this.system.usesPerDay });
-    }
-  }
+  // A refreshUses() lived here for a "daily reset" that was never wired to the
+  // clock -- no caller, on any hook. Uses are restored by clicking the pips on
+  // the character sheet, which is what actually happens at the table: the GM
+  // decides when a day's rest counts. Removed rather than left as a method
+  // implying an automatic reset that has never run.
 }

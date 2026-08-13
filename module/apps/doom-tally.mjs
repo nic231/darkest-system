@@ -62,15 +62,6 @@ export class DoomTally extends Application {
     await game.settings.set('darkest-system', 'doomTallyAdjustment', value);
   }
 
-  /**
-   * Get total doom count including adjustment
-   */
-  static getTotalWithAdjustment() {
-    const { total } = DoomTally.calculateTotalDooms();
-    const adjustment = DoomTally.getManualAdjustment();
-    return Math.max(0, total + adjustment);
-  }
-
   /** @override */
   async getData() {
     const { total, characters } = DoomTally.calculateTotalDooms();
@@ -159,9 +150,13 @@ export class DoomTally extends Application {
    * Refresh the doom tally display
    */
   static refresh() {
-    if (game.darkestSystem?.doomTally) {
-      game.darkestSystem.doomTally.render();
-    }
+    // Find the open window rather than trusting a stored handle: nothing ever
+    // assigned one (the scene-control button just does `new DoomTally()`), so
+    // this used to be a no-op and an open tally never updated -- Dooms gained
+    // or spent only appeared after closing and reopening it. Same lookup
+    // NpcTracker uses.
+    const tally = Object.values(ui.windows).find(w => w instanceof DoomTally);
+    if (tally) tally.render(false);
     ui.players?.render();
   }
 }

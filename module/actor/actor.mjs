@@ -138,9 +138,11 @@ export class DarkestActor extends Actor {
     let boons = options.boons || 0;
     let banes = options.banes || 0;
 
-    // Check for abilities that grant boons
-    const abilities = this.items.filter(i => i.type === 'ability' && i.system.grantsBoon);
-    // GM decides which abilities apply
+    // Boon-granting abilities are deliberately NOT auto-applied. Whether an
+    // ability bears on this particular task is a judgement call, so it stays
+    // the GM's -- they add the boon in the dialog. (A filter for them was
+    // computed here and never used; the decision, not the list, is what
+    // matters.)
 
     const { DarkestRoll } = await import('../dice/darkest-roll.mjs');
 
@@ -654,7 +656,7 @@ export class DarkestActor extends Actor {
     // always visible to its own author regardless of the `whisper` list --
     // so if this player's own client created it, the player would still
     // see it. Delegate to a GM client via socket so a GM actually authors
-    // the message (same pattern used for applyWound/applyDoom/applyNpcDamage).
+    // the message (same pattern used for postGmWhisper/applyNpcDamage).
     const gmWhisperContent = `<div class="darkest-doom-spent-gm"><i class="fas fa-skull"></i> <strong>${this.name} has spent a Doom!</strong>
         <p>You may now inflict something terrible upon them:</p>
         <ul>
@@ -843,6 +845,12 @@ export class DarkestActor extends Actor {
   async rollRest() {
     const characterRating = this.system.rating || 3;
     const woundBanes = this.system.banes || 0;
+    // "Include any Boon or Bane in effect" applies here as much as to an
+    // action roll -- a bane that lasts the day hinders resting too. Every
+    // other roll dialog pre-fills these; this one used to ignore them.
+    const effectBoons = this.system.effectBoons || 0;
+    const effectBanes = this.system.effectBanes || 0;
+    const activeEffects = this.system.activeEffects || [];
 
     const activeWounds = this.items.filter(i => i.type === 'wound' && !i.system.healed);
     if (activeWounds.length === 0) {
@@ -904,7 +912,7 @@ export class DarkestActor extends Actor {
         <label>Boons</label>
         <div class="counter-controls">
           <button type="button" class="counter-btn decrement" data-field="${prefix}-boons"><i class="fas fa-minus"></i></button>
-          <input type="number" name="${prefix}-boons" value="0" min="0" max="5" readonly />
+          <input type="number" name="${prefix}-boons" value="${effectBoons}" min="0" max="5" readonly />
           <button type="button" class="counter-btn increment" data-field="${prefix}-boons"><i class="fas fa-plus"></i></button>
         </div>
       </div>
@@ -915,21 +923,36 @@ export class DarkestActor extends Actor {
           <input type="number" name="${prefix}-banes" value="${baseBanes}" min="${baseBanes}" max="10" readonly />
           <button type="button" class="counter-btn increment" data-field="${prefix}-banes"><i class="fas fa-plus"></i></button>
         </div>
-        ${baseBanes ? `<small class="hint locked-banes"><i class="fas fa-lock"></i> ${baseBanes} from wounds (cannot reduce)</small>` : ''}
+        ${baseBanes ? `<small class="hint locked-banes"><i class="fas fa-lock"></i> ${baseBanes} already applied (cannot reduce)</small>` : ''}
       </div>`;
+
+    // Why the counters start where they do. Without this the GM sees a
+    // number with no explanation and can't tell a stale effect from a
+    // deliberate one -- the same note the action roll dialog carries.
+    const effectsNote = activeEffects.length ? `
+      <div class="form-group active-effects-note">
+        <label>In effect</label>
+        <ul class="active-effects-list">
+          ${activeEffects.map(e => `
+            <li class="effect-${e.kind}">
+              <i class="fas ${e.kind === 'boon' ? 'fa-plus' : 'fa-minus'}"></i>
+              ${e.name} <span class="effect-duration">(${e.label})</span>
+            </li>`).join('')}
+        </ul>
+      </div>` : '';
 
     const physicalSection = physicalWounds.length ? `
       <div class="rest-type-section">
         <h4 class="rest-type-header physical"><i class="fas fa-fist-raised"></i> Physical Wounds</h4>
         <ul class="rest-wound-list">${buildWoundList(physicalWounds)}</ul>
-        ${buildBoonBane('physical', woundBanes)}
+        ${buildBoonBane('physical', woundBanes + effectBanes)}
       </div>` : '';
 
     const mentalSection = mentalWounds.length ? `
       <div class="rest-type-section">
         <h4 class="rest-type-header mental"><i class="fas fa-brain"></i> Mental Wounds</h4>
         <ul class="rest-wound-list">${buildWoundList(mentalWounds)}</ul>
-        ${buildBoonBane('mental', woundBanes)}
+        ${buildBoonBane('mental', woundBanes + effectBanes)}
       </div>` : '';
 
     const dialogContent = `
@@ -942,6 +965,7 @@ export class DarkestActor extends Actor {
         ${lockedNote}
         ${physicalSection}
         ${mentalSection}
+        ${effectsNote}
       </form>`;
 
     if (this._restDialog?.rendered) await this._restDialog.close();
@@ -999,6 +1023,17 @@ export class DarkestActor extends Actor {
                   });
                 }
 
+                // The rules put the Darkest Die on a rest roll like any
+                // other: "Include any Boon or Bane in effect; roll the
+                // Darkest Die as normal." These side effects used to live
+                // only inside toMessage(), which this card never calls -- so
+                // a rest that woke the woods silently did nothing.
+                //
+                // Speaker is passed explicitly: dispatchRollEffects falls
+                // back to getSpeaker(), which on a player's client resolves
+                // to their selected token rather than the resting actor.
+                roll.dispatchRollEffects(ChatMessage.getSpeaker({ actor: this }));
+
                 // Build dice HTML for this wound's roll
                 const diceResults = roll.dice[0]?.results || [];
                 const keptDice = diceResults.filter(r => !r.discarded);
@@ -1007,7 +1042,12 @@ export class DarkestActor extends Actor {
                   `<span class="die d6 damage-die${r.discarded ? ' discarded' : ''}">${r.result}</span>`
                 ).join('');
 
-                results.push({ success, label: woundLabel, total: roll.total, target: roll.targetNumber, diceHtml, rating: characterRating, keptDice, discardedDice });
+                results.push({
+                  success, label: woundLabel, total: roll.total, target: roll.targetNumber,
+                  diceHtml, rating: characterRating, keptDice, discardedDice,
+                  darkestDie: roll.darkestDieResult,
+                  isTransgression: roll.isTransgression,
+                });
               }
 
               const allSuccess = results.every(r => r.success);
@@ -1055,6 +1095,11 @@ export class DarkestActor extends Actor {
                       <span class="rest-roll-cell-label">Target</span>
                       <span class="rest-target-number">${r.target}</span>
                     </div>
+                    ${r.darkestDie == null ? '' : `
+                    <div class="rest-roll-cell">
+                      <span class="rest-roll-cell-label">Darkest</span>
+                      <span class="die d6 darkest${r.isTransgression ? ' highest' : ''}" title="Darkest Die">${r.darkestDie}</span>
+                    </div>`}
                   </div>
                   ${r.success ? '' : '<div class="rest-locked-note"><i class="fas fa-lock"></i> Locked — unlock when GM allows</div>'}
                 </div>`;

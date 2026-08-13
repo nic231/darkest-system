@@ -28,7 +28,6 @@
  * what is still out there.
  */
 
-import { SessionLog } from './session-log.mjs';
 import { TravelGroups } from './travel-groups.mjs';
 import { TravelHistory } from './travel-history.mjs';
 
@@ -129,6 +128,30 @@ export const RouteMap = {
   },
 
   /**
+   * Does `outer` contain `inner`, following the area nesting?
+   *
+   * True when they are the same area, or when `outer` is an ancestor of
+   * `inner` -- The Lost contains the Ghost Caves, the overview contains The
+   * Lost. Walks the chain rather than checking one hop up, because the nesting
+   * is three deep and a Ghost Caves room seen while the overview is drawn is
+   * the same situation one level further out.
+   *
+   * The loop guard is not paranoia about the data (areas.json is a clean tree)
+   * but about a future content update introducing a cycle: that would hang
+   * Foundry on render with no clue why.
+   */
+  _contains(outer, inner) {
+    if (!outer || !inner) return false;
+    const parents = MAP_DATA.areaParents || {};
+    let cur = inner;
+    for (let hops = 0; cur && hops < 10; hops++) {
+      if (cur === outer) return true;
+      cur = parents[cur];
+    }
+    return false;
+  },
+
+  /**
    * Where a slug sits, and on which map.
    *
    * `prefer` keeps a run on the map it started on: 41 locations are pinned on
@@ -145,20 +168,29 @@ export const RouteMap = {
       return pin ? { map: mapSlug, x: pin.x, y: pin.y, kind: pin.kind } : null;
     };
 
-    // STAY ON THE MAP WE ARE ALREADY DRAWING, when it has the pin.
+    // STAY ON THE MAP WE ARE ALREADY DRAWING -- but only OUTWARDS.
     //
     // The region maps draw their interiors as a bounded inset -- the Ghost
     // Caves are a box down the left of The Lost, with all four rooms in it --
     // and that reads better than cutting away to a separate screen for four
-    // rooms. So a run stays put wherever the parent map can carry it.
+    // rooms. So a run inside the caves stays on The Lost when The Lost is
+    // already up.
     //
-    // Not every sub-area can: the Ghost Caves and A Town Called Dismal are
-    // pinned in full on their parents, the Rootrealm only partly, and the
-    // Temple of the Moon not at all. Those fall through to their own map and
-    // the replay cuts to it -- which is why the crossing machinery still
-    // exists rather than being deleted.
+    // The inverse is not true, and used to happen. The Ghost Caves map also
+    // pins glorys-cabin and the-abandoned-campsite (they are the ways out), so
+    // a journey whose FIRST point was a cave room left `prefer` set to the
+    // cave map, and every later leg across The Lost was then drawn on the
+    // caves -- a whole region's travel squeezed into an inset. Preferring a
+    // map only when it CONTAINS the location (it is the home area, or an
+    // ancestor of it) keeps the approved inset behaviour and drops that.
+    //
+    // Not every sub-area is pinned in full on its parent: the Ghost Caves and
+    // A Town Called Dismal are, the Rootrealm only partly, and the Temple of
+    // the Moon not at all. Those fall through to their own map and the replay
+    // cuts to it -- which is why the crossing machinery still exists.
     const home = MAP_DATA.locationArea?.[slug];
-    const hit = (prefer && on(prefer)) || (home && on(home))
+    const hit = (RouteMap._contains(prefer, home) && on(prefer))
+      || (home && on(home))
       || Object.keys(maps).map(on).find(Boolean);
     if (hit) return hit;
 
@@ -218,6 +250,12 @@ export const RouteMap = {
       };
 
       for (const leg of legs) {
+        // When this leg happened, in whole minutes of game time. Carried on
+        // every step so the finished plan can be sequenced across groups --
+        // see the merge below. Departure where known, arrival otherwise;
+        // undated legs get null and hold their recorded order.
+        const when = RouteMap._legTime(leg);
+
         // A stay: no line, a ring on the pin. Its slug can be null when time
         // was skipped on a scene with no location (an area map, the
         // travelling scene), in which case it belongs where the group last
@@ -227,7 +265,7 @@ export const RouteMap = {
             ? place(leg.toSlug, leg.toTitle)
             : (lastPlaced ? { ...lastPlaced, assumed: true } : null);
           if (at) {
-            steps.push({ type: 'stay', ...at, minutes: leg.minutes || 0, day: leg.day });
+            steps.push({ type: 'stay', ...at, minutes: leg.minutes || 0, day: leg.day, when });
             lastPlaced = at;
           }
           continue;
@@ -236,13 +274,13 @@ export const RouteMap = {
         // A break: this leg starts somewhere the group was not. Drawn as a
         // break rather than a line, or the map invents a journey.
         if (previousEnd && leg.fromSlug && leg.fromSlug !== previousEnd) {
-          steps.push({ type: 'break', from: previousEnd, to: leg.fromSlug });
+          steps.push({ type: 'break', from: previousEnd, to: leg.fromSlug, when });
           currentMap = null;
         }
 
         if (!steps.length || steps[steps.length - 1]?.type === 'break') {
           const start = place(leg.fromSlug, leg.fromTitle);
-          if (start) { steps.push({ type: 'point', ...start, day: leg.departDay ?? leg.day }); lastPlaced = start; }
+          if (start) { steps.push({ type: 'point', ...start, day: leg.departDay ?? leg.day, when }); lastPlaced = start; }
         }
 
         const end = place(leg.toSlug, leg.toTitle);
@@ -262,10 +300,10 @@ export const RouteMap = {
               type: 'point', map: end.crossedFrom,
               x: doorOut.x, y: doorOut.y,
               slug: end.slug, title: end.title, doorway: true,
-              day: leg.day, minutes: leg.minutes || 0,
+              day: leg.day, minutes: leg.minutes || 0, when,
             });
           }
-          steps.push({ type: 'cross', from: end.crossedFrom, to: end.map, at: end.slug, title: end.title });
+          steps.push({ type: 'cross', from: end.crossedFrom, to: end.map, at: end.slug, title: end.title, when });
         }
         if (end) {
           // Don't repeat a point the line is already sitting on. A leg that
@@ -276,7 +314,7 @@ export const RouteMap = {
           if (!(last?.type === 'point' && last.slug === end.slug)) {
             steps.push({
               type: 'point', ...end, day: leg.day,
-              minutes: leg.minutes || 0, label: leg.label || '',
+              minutes: leg.minutes || 0, label: leg.label || '', when,
             });
           }
           lastPlaced = end;
@@ -294,7 +332,49 @@ export const RouteMap = {
       }
     }
 
-    return { groups, maps: [...usedMaps] };
+    // ── One playhead across every group ──────────────────────────────────
+    //
+    // Number every step in a single merged ordering by game time. Two things
+    // depend on this and both were broken without it:
+    //
+    //  - The replay reveals by sequence, not by counting into a per-map
+    //    list. Counting broke the moment a journey crossed maps, because the
+    //    count was global while the list was filtered -- so the second map
+    //    arrived fully drawn.
+    //  - Groups interleave. Drawing them one after another made a split
+    //    party look like one group waiting for the other to finish.
+    //
+    // Stable sort, so steps of the same leg (and undated legs, which compare
+    // equal) keep the order they were built in.
+    const order = groups.flatMap(g => g.steps);
+    order
+      .map((step, i) => ({ step, i }))
+      .sort((a, b) => {
+        const aw = a.step.when, bw = b.step.when;
+        if (aw == null || bw == null) return a.i - b.i;
+        return (aw - bw) || (a.i - b.i);
+      })
+      .forEach((entry, seq) => { entry.step.seq = seq; });
+
+    return { groups, maps: [...usedMaps], totalSteps: order.length };
+  },
+
+  /**
+   * When a leg happened, in minutes of game time, or null if it is undated.
+   *
+   * Departure where recorded, arrival otherwise -- the same precedence
+   * SessionLog._chronological uses, so the map and the log can never disagree
+   * about what order things happened in.
+   */
+  _legTime(leg) {
+    const day = leg.departDay ?? leg.day;
+    if (day == null) return null;
+    const raw = String(leg.departTime ?? leg.time ?? '');
+    const m = /^(\d{1,2}):(\d{2})$/.exec(raw);
+    // Fixed-time regions store a phase label ("Endless Night") rather than a
+    // clock reading; those sort by day alone, which is the honest answer.
+    const mins = m ? (Number(m[1]) * 60) + Number(m[2]) : 0;
+    return (day * 1440) + mins;
   },
 };
 
@@ -318,14 +398,60 @@ function wobble(seed, i) {
 }
 
 /**
+ * The map behind the route: aged paper, or the real art knocked back.
+ *
+ * Separated out so the replay can paint it once to an offscreen canvas and
+ * blit it each frame -- 260 speckle rects or a full-size image per frame is
+ * the bulk of the drawing cost, and none of it changes while the line moves.
+ */
+export function paintBackdrop(ctx, { width, height, style = 'sketch', image = null } = {}) {
+  if (style === 'real' && image) {
+    ctx.drawImage(image, 0, 0, width, height);
+    // Knock the art back so the route reads over it.
+    ctx.fillStyle = 'rgba(10, 8, 6, 0.35)';
+    ctx.fillRect(0, 0, width, height);
+    return;
+  }
+  // Sketch: aged paper, nothing of the real map at all. This is the
+  // player-facing view precisely because the real art names every location
+  // they haven't found yet.
+  const g = ctx.createLinearGradient(0, 0, 0, height);
+  g.addColorStop(0, '#e8dfc8');
+  g.addColorStop(1, '#d6c9aa');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = 'rgba(120, 90, 50, 0.06)';
+  for (let i = 0; i < 260; i++) {
+    const x = ((i * 7919) % 1000) / 1000 * width;
+    const y = ((i * 104729) % 1000) / 1000 * height;
+    ctx.fillRect(x, y, 2, 2);
+  }
+}
+
+/**
  * Draw a route plan onto a 2D context.
  *
- * `t` is how much of the journey to show, 0..1 across ALL groups against a
- * shared clock -- so two groups animate concurrently and a split reads as a
- * split rather than as one party teleporting.
+ * `revealSeq` is the playhead: a position in the plan's single merged
+ * ordering (see buildPlan). A step draws when its `seq` is behind the
+ * playhead, wherever it sits and whichever group walked it.
+ *
+ * This has to be a SEQUENCE and not a fraction-of-this-map's-steps. The old
+ * version counted a global budget down against a per-map list, so the instant
+ * a journey crossed onto a second map the whole of that map's route was
+ * already "paid for" and appeared at once. Sequencing also gets group
+ * concurrency for free: two groups' steps interleave in the merged order, so
+ * both lines advance together instead of one waiting for the other.
+ *
+ * Omit `revealSeq` for the finished map.
+ *
+ * `holdSeq`/`phase` name the stay the replay is currently paused on and how
+ * far through that pause it is (0..1). They drive the stay flourishes. A still
+ * render passes neither, so every ring draws at rest and an exported map never
+ * depends on frame timing.
  */
 export function drawRoute(ctx, plan, {
-  t = 1, width, height, style = 'sketch', mapSlug = null, images = {},
+  revealSeq = Infinity, width, height, style = 'sketch', mapSlug = null,
+  images = {}, backdrop = null, holdSeq = null, phase = 0,
 } = {}) {
   ctx.clearRect(0, 0, width, height);
 
@@ -334,49 +460,37 @@ export function drawRoute(ctx, plan, {
   const py = (pct) => (pct / 100) * height;
 
   // ── Backdrop ───────────────────────────────────────────────────────────
-  if (style === 'real' && images[mapSlug]) {
-    ctx.drawImage(images[mapSlug], 0, 0, width, height);
-    // Knock the art back so the route reads over it.
-    ctx.fillStyle = 'rgba(10, 8, 6, 0.35)';
-    ctx.fillRect(0, 0, width, height);
-  } else {
-    // Sketch: aged paper, nothing of the real map at all. This is the
-    // player-facing view precisely because the real art names every location
-    // they haven't found yet.
-    const g = ctx.createLinearGradient(0, 0, 0, height);
-    g.addColorStop(0, '#e8dfc8');
-    g.addColorStop(1, '#d6c9aa');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, width, height);
-    ctx.fillStyle = 'rgba(120, 90, 50, 0.06)';
-    for (let i = 0; i < 260; i++) {
-      const x = ((i * 7919) % 1000) / 1000 * width;
-      const y = ((i * 104729) % 1000) / 1000 * height;
-      ctx.fillRect(x, y, 2, 2);
-    }
-  }
+  // Pre-painted by the caller when there is one to reuse (the replay paints
+  // it once); drawn straight in otherwise, for one-off renders and exports.
+  if (backdrop) ctx.drawImage(backdrop, 0, 0, width, height);
+  else paintBackdrop(ctx, { width, height, style, image: images[mapSlug] });
 
   const ink = style === 'real' ? '#f0e6d2' : '#3a3026';
   const dim = style === 'real' ? 'rgba(240,230,210,0.55)' : 'rgba(58,48,38,0.5)';
 
-  // How much to reveal, shared across groups so they move together.
-  //
-  // FRACTIONAL, not whole steps. Revealing a step at a time made the line
-  // jump from pin to pin; carrying the fraction lets the last segment be
-  // drawn part-way, so the line CREEPS the way a route does in an old
-  // adventure serial.
-  const total = Math.max(1, plan.groups.reduce((n, g) => n + g.steps.length, 0));
-  let budget = total * Math.max(0, Math.min(1, t));
+  // The playhead, split into the step under it and how far into that step we
+  // are. The fraction is what lets the final segment be drawn part-way, so
+  // the line CREEPS rather than snapping from pin to pin.
+  const headSeq = Math.floor(revealSeq);
+  const partial = Number.isFinite(revealSeq) ? revealSeq - headSeq : 0;
 
   for (const group of plan.groups) {
+    // Only this map's steps are drawn, but they keep their global `seq`, so
+    // "has the playhead reached this?" stays a question about the whole
+    // journey rather than about this map's slice of it.
     const steps = group.steps.filter(s => !s.map || s.map === mapSlug);
     if (!steps.length) continue;
 
-    const reveal = Math.min(steps.length, Math.max(0, budget));
-    budget -= steps.length;
-    if (reveal <= 0) continue;
-    const show = Math.ceil(reveal);          // steps touched at all
-    const partial = reveal - Math.floor(reveal);   // how far into the last one
+    // Steps whose sequence is behind the playhead. `show` is an index into
+    // the FILTERED list; seq is the position in the merged order.
+    let show = 0;
+    while (show < steps.length && steps[show].seq <= headSeq) show++;
+    if (show <= 0) continue;
+
+    // The head is only live when the step under the playhead is one of ours,
+    // on this map -- otherwise another group (or another map) has it and our
+    // line simply rests at its last pin.
+    const headIsHere = partial > 0 && steps[show - 1]?.seq === headSeq;
 
     ctx.strokeStyle = group.colour;
     ctx.lineWidth = style === 'real' ? 3 : 2.5;
@@ -407,7 +521,7 @@ export function drawRoute(ctx, plan, {
 
       // The head of the line: draw only part-way into the final segment, so
       // it advances smoothly rather than snapping to the next pin.
-      const isHead = (i === show - 1) && partial > 0 && drawing;
+      const isHead = (i === show - 1) && headIsHere && drawing;
       if (isHead) {
         const prev = steps[i - 1];
         if (prev && (prev.type === 'point' || prev.type === 'stay')) {
@@ -427,7 +541,7 @@ export function drawRoute(ctx, plan, {
     // ── Pins, stays and labels ───────────────────────────────────────────
     // The final pin only appears once the line has actually reached it, so
     // the destination isn't revealed before they get there.
-    const pinsToShow = partial > 0 ? show - 1 : show;
+    const pinsToShow = headIsHere ? show - 1 : show;
     for (let i = 0; i < pinsToShow; i++) {
       const s = steps[i];
       if (s.type === 'break' || s.type === 'cross') continue;
@@ -437,11 +551,34 @@ export function drawRoute(ctx, plan, {
       // A stay: a ring sized by how long they were there. Two days at the
       // Dark Lodge is a heavy mark; a fifteen-minute pause barely shows.
       if (s.type === 'stay') {
-        const r = 7 + Math.min(14, Math.log10(1 + (s.minutes || 0) / 15) * 7);
+        let r = 7 + Math.min(14, Math.log10(1 + (s.minutes || 0) / 15) * 7);
+        let alpha = 0.55;
+
+        // The flourish, while the playhead is actually sitting on this stay.
+        // A night's sleep BREATHES -- two slow cycles across the pause, so it
+        // reads as time passing rather than as the replay having stalled. An
+        // hour or two gets a single quiet pulse that settles. Anything shorter
+        // gets nothing: every fifteen-minute search would otherwise throb, and
+        // the point is to distinguish sleeping from waiting, not to decorate.
+        //
+        // Size and opacity both move, because on the real map the ring sits
+        // over busy art where a size change alone is easy to miss.
+        const kind = holdSeq != null && s.seq === holdSeq ? stayKind(s.minutes) : null;
+        if (kind === 'sleep') {
+          const breath = Math.sin(phase * Math.PI * 4);
+          r *= 1 + breath * 0.13;
+          alpha += breath * 0.2;
+        } else if (kind === 'pause') {
+          // One half-sine: swells and returns, rather than ending mid-throb.
+          const pulse = Math.sin(Math.min(1, phase * 1.6) * Math.PI);
+          r *= 1 + pulse * 0.1;
+          alpha += pulse * 0.18;
+        }
+
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.strokeStyle = group.colour;
-        ctx.globalAlpha = 0.55;
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
         ctx.lineWidth = 2;
         ctx.stroke();
         ctx.globalAlpha = 1;
@@ -451,8 +588,8 @@ export function drawRoute(ctx, plan, {
       // small dot reads as a speck. On the real map the art is already busy,
       // so the marker stays modest.
       const r = style === 'sketch'
-        ? (i === show - 1 ? 9 : 7)
-        : (i === show - 1 ? 5.5 : 4);
+        ? (i === pinsToShow - 1 ? 9 : 7)
+        : (i === pinsToShow - 1 ? 5.5 : 4);
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
       // An approximate position (no pin in the source) is hollow, so it is
@@ -532,7 +669,9 @@ export class RouteMapApp extends Application {
     this.style = 'sketch';
     this.mapSlug = null;
     this.playing = false;
-    this._t = 1;
+    // The playhead, in merged-sequence space. Infinity draws the finished
+    // map, which is what a freshly opened window should show.
+    this._seq = Infinity;
     this._images = {};
     this._raf = null;
   }
@@ -550,7 +689,11 @@ export class RouteMapApp extends Application {
   }
 
   getData() {
-    const plan = RouteMap.buildPlan();
+    // A plan that arrived over the socket wins over rebuilding one: this
+    // window is replaying what the GM sent, and a locally-built plan could
+    // differ (a mid-write log, different party place-names) which would put
+    // the clients quietly out of step.
+    const plan = this._injectedPlan ?? RouteMap.buildPlan();
     // Default to the map the party has spent the most steps on -- almost
     // always where they are.
     if (!this.mapSlug || !plan.maps.includes(this.mapSlug)) {
@@ -682,19 +825,59 @@ export class RouteMapApp extends Application {
     });
   }
 
-  async _redraw(t = this._t) {
+  async _redraw(revealSeq = this._seq, { holdSeq = null, phase = 0 } = {}) {
     if (!this._canvas || !this._plan) return;
     await this._loadImages();
     const ctx = this._canvas.getContext('2d');
     const map = MAP_DATA.maps?.[this.mapSlug];
-    // Match the canvas to the map's aspect so nothing is stretched.
-    const w = this._canvas.width = this._canvas.clientWidth || 860;
+
+    // Reading clientWidth forces a layout, so it is measured once per resize
+    // rather than once per frame -- at 60fps during a replay that is the
+    // single most expensive thing in the loop.
+    if (!this._w || this._w !== (this._canvas.clientWidth || 860)) {
+      this._w = this._canvas.clientWidth || 860;
+    }
+    const w = this._w;
     const ratio = map ? (map.height / map.width) : 0.75;
-    const h = this._canvas.height = Math.round(w * ratio);
+    const h = Math.round(w * ratio);
+    // Assigning width/height also CLEARS the canvas, so only do it when the
+    // size actually changed; otherwise it is a needless full-buffer reset
+    // every frame.
+    if (this._canvas.width !== w || this._canvas.height !== h) {
+      this._canvas.width = w;
+      this._canvas.height = h;
+    }
+
     drawRoute(ctx, this._plan, {
-      t, width: w, height: h, style: this.style,
+      revealSeq, width: w, height: h, style: this.style,
       mapSlug: this.mapSlug, images: this._images,
+      backdrop: this._backdrop(w, h),
+      holdSeq, phase,
     });
+  }
+
+  /**
+   * The map behind the route, painted once and reused.
+   *
+   * The sketch backdrop is a gradient plus 260 speckles and the real one is a
+   * full image plus a scrim -- repainting either every frame is pure waste,
+   * since neither changes while the line advances. Keyed on everything that
+   * can change it, so a style or map switch simply misses the cache.
+   */
+  _backdrop(w, h) {
+    const key = `${this.style}:${this.mapSlug}:${w}x${h}`;
+    if (this._backdropKey === key && this._backdropCanvas) return this._backdropCanvas;
+
+    const off = document.createElement('canvas');
+    off.width = w;
+    off.height = h;
+    paintBackdrop(off.getContext('2d'), {
+      width: w, height: h, style: this.style,
+      image: this._images[this.mapSlug],
+    });
+    this._backdropKey = key;
+    this._backdropCanvas = off;
+    return off;
   }
 
   /**
@@ -708,11 +891,14 @@ export class RouteMapApp extends Application {
     this.stop();
     this.playing = true;
 
-    // The whole journey, in order, ACROSS maps -- not filtered to the one
-    // being viewed. The replay follows the party: it draws them reaching the
-    // cave mouth, cuts into the caves, and cuts back out when they leave.
-    // Filtering to a single map is what made them vanish at the boundary.
-    const steps = this._plan.groups.flatMap(g => g.steps);
+    // The whole journey in MERGED order, across maps and across groups --
+    // steps[i] is the step whose seq is i. Two things depend on that: the
+    // replay follows the party between maps instead of losing them at the
+    // boundary, and two groups' legs interleave by game time instead of one
+    // group waiting for the other to finish.
+    const steps = this._plan.groups
+      .flatMap(g => g.steps)
+      .sort((a, b) => a.seq - b.seq);
     if (!steps.length) return;
 
     // From the setting: how long the line takes to cross one leg. The
@@ -740,31 +926,47 @@ export class RouteMapApp extends Application {
       // while the ring is on screen -- the pause reads as time passing
       // rather than as the animation stalling.
       let acc = 0, progress = 0;
+      // The stay currently being held on, and how far through the hold we
+      // are. Tracked separately from `progress` because a stay deliberately
+      // advances the playhead to i+1 (the line rests AT the pin, so the pin
+      // must count as reached) -- which means the stay is never the step the
+      // reveal logic calls the head, and the flourish cannot be keyed on it.
+      let holdSeq = null, holdPhase = 0;
       for (let i = 0; i < durations.length; i++) {
         const d = durations[i];
         if (elapsed >= acc + d) { progress = i + 1; acc += d; continue; }
         const into = Math.max(0, elapsed - acc) / d;
-        progress = i + (steps[i].type === 'stay' ? 1 : into);
+        if (steps[i].type === 'stay') {
+          progress = i + 1;
+          holdSeq = steps[i].seq;
+          holdPhase = into;
+        } else {
+          progress = i + into;
+        }
         acc = Infinity;
         break;
       }
 
-      // Follow the party onto whichever map they are on now. The last
-      // 'cross' the replay has passed decides what we are looking at.
-      const reached = Math.floor(progress);
-      let onMap = null;
-      for (let i = 0; i < Math.min(reached + 1, steps.length); i++) {
-        if (steps[i].type === 'cross') onMap = steps[i].to;
-        else if (steps[i].map && onMap === null) onMap = steps[i].map;
-      }
+      // Follow the party onto whichever map they are on now. With a merged
+      // playhead this is simply the map of the step under it -- no scanning
+      // for the last crossing, which also means a gap that changes maps
+      // (and so emits no 'cross') is followed correctly.
+      const under = steps[Math.min(Math.floor(progress), steps.length - 1)];
+      const onMap = under?.map ?? (under?.type === 'cross' ? under.to : null);
       if (onMap && onMap !== this.mapSlug) {
         this.mapSlug = onMap;
         this._loadImages();          // fire and forget; next frame draws it
       }
 
-      this._t = Math.min(1, progress / steps.length);
-      this._redraw(this._t);
-      if (elapsed >= total) { this.playing = false; this._t = 1; this._redraw(1); this.render(false); return; }
+      this._seq = progress;
+      this._redraw(progress, { holdSeq, phase: holdPhase });
+      if (elapsed >= total) {
+        this.playing = false;
+        this._seq = steps.length;
+        this._redraw(steps.length);
+        this.render(false);
+        return;
+      }
       this._raf = requestAnimationFrame(tick);
     };
     tick();
@@ -785,8 +987,10 @@ export class RouteMapApp extends Application {
    * Play it on every client at once.
    *
    * Sends the PLAN, not frames -- each client animates locally from a shared
-   * start time, exactly as the travel veil does. Players cannot read the
-   * GM-scoped log, so the plan has to travel; it is a few tens of KB, once.
+   * start time, exactly as the travel veil does. Sending the plan (rather
+   * than letting each client build its own) is what guarantees everyone
+   * replays the same journey: a client rebuilding mid-write, or one whose
+   * party place-names differ, would otherwise animate something subtly else.
    *
    * Always the sketch style: the real art names every location they have not
    * found and draws the secret paths in red.
@@ -800,14 +1004,22 @@ export class RouteMapApp extends Application {
       mapSlug: this.mapSlug,
       startedAt,
     });
-    RouteMapApp.playShared({ plan: this._plan, mapSlug: this.mapSlug, startedAt });
+    // Play in THIS window rather than opening another. playShared() spawns a
+    // fresh app, and since every RouteMapApp shares one DOM id the GM ended
+    // up with a second window stacked on the one they clicked from.
+    this.style = 'sketch';
+    this.play({ startedAt });
+    this.render(false);
     ui.notifications.info('Playing the route for everyone.');
   }
 
-  /** Open a replay window and run it. Used by the socket handler too. */
+  /** Open a replay window and run it. Used by the socket handler. */
   static playShared({ plan, mapSlug, startedAt }) {
     const app = new RouteMapApp();
-    app._plan = plan;
+    // Injected, not just assigned: render() calls getData(), which would
+    // otherwise rebuild the plan locally and throw this one away -- making
+    // the whole socket payload dead weight.
+    app._injectedPlan = plan;
     app.mapSlug = mapSlug;
     app.style = 'sketch';
     app.render(true);

@@ -116,11 +116,11 @@ export const SceneDarkness = {
     }
   },
 
-  /** Hand a scene back to the GM, leaving its current level alone. */
-  async release(scene = canvas?.scene) {
-    if (!scene || !game.user.isGM) return;
-    await scene.unsetFlag('darkest-system', OWNED_FLAG);
-  },
+  // A release() lived here to hand a scene back to the GM by clearing
+  // OWNED_FLAG. Nothing called it and no UI offered it. The flag is set the
+  // first time the clock dims a scene and is only ever read to decide whether
+  // this system owns that scene's darkness -- so the way to take a scene back
+  // is to turn the setting off, which is the control the GM already has.
 };
 
 export function registerSceneDarknessSettings() {

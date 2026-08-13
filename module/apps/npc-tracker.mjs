@@ -87,24 +87,26 @@ export class NpcTracker extends Application {
    * slots. Batching sidesteps it entirely.
    */
   static async addNpcs(actorIds) {
-    const data = NpcTracker.getData_();
-    const room = MAX_SLOTS - data.slots.length;
-    if (room <= 0) {
-      ui.notifications.warn(`NPC Tracker is full (${MAX_SLOTS} slots). Remove an NPC first.`);
-      return;
-    }
-    // Duplicates are allowed on purpose. Three wolves are three separate
-    // creatures with their own wound totals, and blocking the second one
-    // made a pack impossible to track at all. Quick-create numbers them
-    // ("Wolf 1", "Wolf 2") so the slots stay tellable apart; dragging the
-    // same actor in twice is the GM's call.
-    for (const actorId of actorIds.slice(0, room)) {
-      data.slots.push({ actorId, woundTotal: 0, defeated: false });
-    }
-    // Auto-select the first one added, if nothing was selected before.
-    if (data.activeSlot === null && data.slots.length) data.activeSlot = 0;
-    await NpcTracker.setData(data);
-    NpcTracker._refresh();
+    return NpcTracker._queued(async () => {
+      const data = NpcTracker.getData_();
+      const room = MAX_SLOTS - data.slots.length;
+      if (room <= 0) {
+        ui.notifications.warn(`NPC Tracker is full (${MAX_SLOTS} slots). Remove an NPC first.`);
+        return;
+      }
+      // Duplicates are allowed on purpose. Three wolves are three separate
+      // creatures with their own wound totals, and blocking the second one
+      // made a pack impossible to track at all. Quick-create numbers them
+      // ("Wolf 1", "Wolf 2") so the slots stay tellable apart; dragging the
+      // same actor in twice is the GM's call.
+      for (const actorId of actorIds.slice(0, room)) {
+        data.slots.push({ actorId, woundTotal: 0, defeated: false });
+      }
+      // Auto-select the first one added, if nothing was selected before.
+      if (data.activeSlot === null && data.slots.length) data.activeSlot = 0;
+      await NpcTracker.setData(data);
+      NpcTracker._refresh();
+    });
   }
 
   /**
@@ -189,58 +191,82 @@ export class NpcTracker extends Application {
     NpcTracker._refresh();
   }
 
+  /**
+   * Run a read-modify-write on the tracker, one at a time.
+   *
+   * EVERY mutator goes through this, not just the socketed one. A GM clicking
+   * +1 while a player's damage roll lands is the same race the queue was
+   * added for -- both read the same slots, and one write is lost. The
+   * .catch() comes first so a single failed write can't wedge the queue for
+   * the rest of the session.
+   */
+  static _queued(fn) {
+    NpcTracker._writeQueue = NpcTracker._writeQueue
+      .catch(() => {})
+      .then(fn);
+    return NpcTracker._writeQueue;
+  }
+
   static async removeNpc(index) {
-    const data = NpcTracker.getData_();
-    data.slots.splice(index, 1);
-    // Fix active slot index
-    if (data.activeSlot !== null) {
-      if (data.slots.length === 0) {
-        data.activeSlot = null;
-      } else if (data.activeSlot >= data.slots.length) {
-        data.activeSlot = data.slots.length - 1;
+    return NpcTracker._queued(async () => {
+      const data = NpcTracker.getData_();
+      data.slots.splice(index, 1);
+      // Fix active slot index
+      if (data.activeSlot !== null) {
+        if (data.slots.length === 0) {
+          data.activeSlot = null;
+        } else if (data.activeSlot >= data.slots.length) {
+          data.activeSlot = data.slots.length - 1;
+        }
       }
-    }
-    await NpcTracker.setData(data);
-    NpcTracker._refresh();
+      await NpcTracker.setData(data);
+      NpcTracker._refresh();
+    });
   }
 
   static async setActive(index) {
-    const data = NpcTracker.getData_();
-    data.activeSlot = index;
-    await NpcTracker.setData(data);
-    NpcTracker._refresh();
+    return NpcTracker._queued(async () => {
+      const data = NpcTracker.getData_();
+      data.activeSlot = index;
+      await NpcTracker.setData(data);
+      NpcTracker._refresh();
+    });
   }
 
   static async resetNpc(index) {
-    const data = NpcTracker.getData_();
-    if (data.slots[index]) {
-      data.slots[index].woundTotal = 0;
-      data.slots[index].defeated = false;
-      data.slots[index].lethalBlow = false;
-    }
-    await NpcTracker.setData(data);
-    NpcTracker._refresh();
+    return NpcTracker._queued(async () => {
+      const data = NpcTracker.getData_();
+      if (data.slots[index]) {
+        data.slots[index].woundTotal = 0;
+        data.slots[index].defeated = false;
+        data.slots[index].lethalBlow = false;
+      }
+      await NpcTracker.setData(data);
+      NpcTracker._refresh();
+    });
   }
 
   static async adjustDamage(index, delta) {
-    const data = NpcTracker.getData_();
-    const slot = data.slots[index];
-    if (!slot) return;
-    slot.woundTotal = Math.max(0, slot.woundTotal + delta);
+    return NpcTracker._queued(async () => {
+      const data = NpcTracker.getData_();
+      const slot = data.slots[index];
+      if (!slot) return;
+      slot.woundTotal = Math.max(0, slot.woundTotal + delta);
 
-    const actor = game.actors.get(slot.actorId);
-    if (actor) {
-      const threshold = (actor.system.rating || 3) * 3;
-      // Only auto-set defeated when threshold is newly crossed — never auto-clear it.
-      // The Reset button is the only way to un-defeat an NPC.
-      if (slot.woundTotal >= threshold && !slot.defeated) {
-        slot.defeated = true;
-        NpcTracker._notifyDefeated(actor.name, slot.woundTotal, threshold);
+      const actor = game.actors.get(slot.actorId);
+      if (actor) {
+        const threshold = (actor.system.rating || 3) * 3;
+        // Only auto-set defeated when threshold is newly crossed — never auto-clear it.
+        // The Reset button is the only way to un-defeat an NPC.
+        if (slot.woundTotal >= threshold && !slot.defeated) {
+          slot.defeated = true;
+          NpcTracker._notifyDefeated(actor.name, slot.woundTotal, threshold);
+        }
       }
-    }
 
-    await NpcTracker.setData(data);
-    NpcTracker._refresh();
+      await NpcTracker.setData(data);
+      NpcTracker._refresh();
+    });
   }
 
   /**
@@ -248,10 +274,7 @@ export class NpcTracker extends Application {
    * Applies woundRating to the active NPC slot.
    */
   static async applyDamage(woundRating) {
-    NpcTracker._writeQueue = NpcTracker._writeQueue
-      .catch(() => {})  // one failed write must not wedge the queue
-      .then(() => NpcTracker._applyDamageUnsafe(woundRating));
-    return NpcTracker._writeQueue;
+    return NpcTracker._queued(() => NpcTracker._applyDamageUnsafe(woundRating));
   }
 
   /** The actual read-modify-write. Only ever called through the queue. */

@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.36.0-alpha (2026-08-13)
+
+A pass over the whole codebase, fixing what the last review found. Most of these are things that only went wrong under conditions the table actually meets — a party that splits, a second GM logging in, a journey that starts underground.
+
+**Rest rolls count as rolls again.** A Darkest Die on a rest roll did nothing: no transgression, no doom, no line in the session log. Resting is where the woods are most likely to be provoked, and the one place the system was quietly ignoring the die. Rest rolls now go through the same machinery as every other roll. The rest dialog also shows the boons and banes already in effect and lists what is applying them, instead of silently starting from your wounds alone.
+
+**"Every N rolls" damping now counts rolls.** It counted *triggers* — so it only released after N transgressions had been provoked, which is the opposite of the setting's promise and made it far stricter than the number suggested. Set it to 4 and four rolls now release the hold, as it always said.
+
+**The replay follows a split party in real time.** Each group's legs were replayed one group after the other, so a party that split and rejoined looked like two consecutive journeys rather than two simultaneous ones. Every step is now sequenced by *game time* across all groups, so both lines advance against the same clock — and the same change fixes a replay that crossed onto a second map showing that map's entire route at once, already finished, before the party got there.
+
+**A journey that starts underground no longer drags the region onto the cave map.** The Ghost Caves map also pins Glory's Cabin and the Abandoned Campsite — they are the ways out — so a session that opened inside the caves kept every later leg across The Lost squeezed into that small inset. A map is now only preferred when it actually *contains* the place, which keeps cave rooms drawing on The Lost while stopping the inverse.
+
+**Time spent somewhere reads as time passing.** A night's sleep breathes on the map while the replay holds on it; an hour or two gives a single quiet pulse and settles. Under an hour gets nothing — every fifteen-minute search stopping to throb would wreck the pacing. The distinction is between sleeping and waiting, not decoration.
+
+**Play for all no longer plays twice on the GM's screen.** And the shared replay now sends the route with it, so players — who cannot read the session log at all — see the journey rather than an empty map.
+
+**Two GMs no longer double-apply.** With a GM and an assistant both connected, a wound clearing itself could be written twice. The house level could also be advanced twice at once by two things landing together, losing one of them. Both now go through a single writer.
+
+**Manual log entries remember which group walked them.** A leg added by hand was filed against no group at all, so it went missing from that group's route on the map. Editing an existing leg still leaves its group alone — that is a correction, not a re-assignment. The markdown export now writes one path per group as well, rather than merging a split party's journeys into a single chain that nobody walked.
+
+**The whispered-alert sound works again.** It called a global Foundry v14 removed, so every whispered GM message threw an error on the player's client and played nothing.
+
+**Also:** the Doom Tally refreshes live instead of only when reopened; the NPC tracker's writes are serialised, so two quick clicks can no longer lose one; the replay caches its backdrop rather than repainting the map art and 260 speckles every frame.
+
+**Housekeeping.** Removed two socket handlers nothing ever sent (a socket case with no sender is an invitation to write to any actor), a preloaded dialog template that was never used and still carried a target-armour field the rules do not have, a sheet for an actor type that does not exist, and three methods with no callers. One of those was `refreshUses()`, a daily reset for ability uses that was never wired to the clock and has never run — uses are restored by clicking the pips on the sheet, which is what has always actually happened.
+
+**Build fix, worth naming.** The module zip was created *before* the map data was regenerated, so the module on disk could be correct while the zip uploaded to Forge carried the previous build's coordinates. The build now runs the data emitters first and refuses to zip if either fails.
+
+**Requires content module 1.9.0** for the area nesting the sub-map fix reads. Update the system first — the module will not activate against an older one.
+
 ## 0.35.0-alpha (2026-08-12)
 
 **Replay speed is yours to set** — Brisk, Walking, Slow or Credits, from the map window or system settings. Your eight-leg session runs anywhere from six seconds to half a minute; a sixty-leg campaign from 1.3 to 4.5 minutes. The default was far too quick to follow.

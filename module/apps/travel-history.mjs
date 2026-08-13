@@ -14,6 +14,8 @@
 
 import { SessionLog } from './session-log.mjs';
 import { TransgressionTracker } from './transgression-tracker.mjs';
+// Safe: travel-groups imports nothing, so it cannot cycle back to here.
+import { TravelGroups } from './travel-groups.mjs';
 
 const SETTING_BACKTRACK = 'backtrackSensitivity';
 
@@ -287,12 +289,22 @@ export const TravelHistory = {
               };
 
               if (editing) {
-                // Region is deliberately not touched on an edit: it records
-                // the ground crossed at the time, which a correction to the
-                // times doesn't change.
+                // Region and groupId are deliberately not touched on an edit:
+                // both record circumstances at the time, which correcting the
+                // times or the destination doesn't change. (groupId is absent
+                // from `fields` for exactly this reason -- updateEntry merges,
+                // so including it would overwrite who actually walked it.)
                 await SessionLog.updateEntry(existing.id, fields);
               } else {
-                await SessionLog.recordMove({ ...fields, region: null });
+                // Stamped with whoever is travelling, exactly as a real
+                // journey is. Without this a hand-added leg belonged to no
+                // group at all, and the session log and the route map then
+                // disagreed about where to put it the moment the party split.
+                await SessionLog.recordMove({
+                  ...fields,
+                  region: null,
+                  groupId: TravelGroups.activeId(),
+                });
               }
 
               // Correcting the record should surface the rule too -- a leg

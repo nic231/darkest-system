@@ -419,16 +419,22 @@ export class SessionLog extends Application {
    * every handover. Split first, then chain.
    */
   static _routesByGroup(moves) {
+    // Legs from before groups existed, and any added by hand before they were
+    // stamped, belong to the FIRST group -- at the time there was only one.
+    //
+    // This has to be the same answer RouteMap.buildPlan() gives. It used to
+    // bucket them under a '__legacy__' sentinel instead, so the same journey
+    // appeared as its own nameless route block in the log while the map
+    // folded it into the party -- two truths about who walked it.
+    const firstGroup = TravelGroups.all()[0]?.id ?? 'party';
     const byGroup = new Map();
     for (const m of moves) {
-      // Legs from before groups existed belong to the first group, which is
-      // what they were recorded as.
-      const key = m.groupId ?? '__legacy__';
+      const key = m.groupId ?? firstGroup;
       if (!byGroup.has(key)) byGroup.set(key, []);
       byGroup.get(key).push(m);
     }
     return [...byGroup.entries()].map(([groupId, legs]) => ({
-      groupId: groupId === '__legacy__' ? null : groupId,
+      groupId,
       ...SessionLog._routeSummary(legs),
     }));
   }
@@ -655,17 +661,26 @@ export class SessionLog extends Application {
 
   /** Dump the log as Markdown, for pasting into notes or a map tool. */
   _export() {
-    const { moves, route, stats, transgressions } = this.getData();
+    const { moves, route, routes, multipleGroups, stats, transgressions } = this.getData();
     const lines = ['# Darkest Woods — session log', ''];
 
-    if (route.chain.length) {
-      lines.push('## Path walked', '', route.plainText, '');
-      if (route.gapCount) {
-        lines.push(`> **${route.gapCount} gap${route.gapCount === 1 ? '' : 's'} in the record:** `
-          + route.gaps.join('; '), '');
+    // One path per group once the party has split. Exporting the merged
+    // chain instead produced exactly the zig-zag between two parties -- and
+    // a phantom gap at every handover -- that per-group routes exist to
+    // avoid; the display had been fixed and the export left behind.
+    const sections = multipleGroups
+      ? routes.map(r => ({ heading: `Path walked — ${r.groupName}`, ...r }))
+      : [{ heading: 'Path walked', ...route }];
+
+    for (const s of sections) {
+      if (!s.chain?.length) continue;
+      lines.push(`## ${s.heading}`, '', s.plainText, '');
+      if (s.gapCount) {
+        lines.push(`> **${s.gapCount} gap${s.gapCount === 1 ? '' : 's'} in the record:** `
+          + s.gaps.join('; '), '');
       }
-      if (route.revisited.length) {
-        lines.push(`**Revisited:** ${route.revisited.join(', ')}`, '');
+      if (s.revisited.length) {
+        lines.push(`**Revisited:** ${s.revisited.join(', ')}`, '');
         lines.push('_Retracing the same path on consecutive days is a transgression._', '');
       }
     }

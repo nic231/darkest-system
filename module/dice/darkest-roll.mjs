@@ -1,4 +1,7 @@
 import { SessionLog } from '../apps/session-log.mjs';
+// Safe one-way: transgression-tracker imports travel-clock and session-log,
+// never the dice, so there is no cycle back to here.
+import { TransgressionTracker } from '../apps/transgression-tracker.mjs';
 
 /** The Darkest Die's distinctive purple, shared by every client. */
 export const DARKEST_DIE_APPEARANCE = {
@@ -301,7 +304,7 @@ export class DarkestRoll extends Roll {
       //
       // So mirror the sequence ourselves: tell other clients to replay the
       // same two-stage animation locally, then run it here. Same socket
-      // delegation pattern as postGmWhisper/applyWound.
+      // delegation pattern as postGmWhisper/applyNpcDamage.
       game.socket.emit('system.darkest-system', {
         type: 'darkestDiceAnimation',
         mainRoll: this.toJSON(),
@@ -334,7 +337,7 @@ export class DarkestRoll extends Roll {
     // so creating the message directly on this client would let the roller
     // see their own "GM-only" whisper. Delegate to a GM client via the
     // system.darkest-system socket (postGmWhisper case, same pattern used
-    // for applyWound/applyDoom/applyNpcDamage) so a GM actually authors it.
+    // for applyNpcDamage) so a GM actually authors it.
     //
     // Transgressions do NOT get a roll-level GM whisper here -- the actual
     // useful GM-only info (the witch's next scripted action) is whispered
@@ -371,11 +374,33 @@ export class DarkestRoll extends Roll {
       }
     }
 
+    this.dispatchRollEffects(messageData.speaker);
+
+    return super.toMessage(messageData, options);
+  }
+
+  /**
+   * Everything a roll does BESIDES appearing in chat: the session log, the
+   * transgression, and any Doom gained.
+   *
+   * Separate from toMessage() because not every roll goes through it. Rest
+   * recovery rolls build their own combined chat card -- and because these
+   * side effects lived inside toMessage(), a rest roll whose Darkest Die came
+   * up highest silently dropped its transgression, contrary to the rules:
+   * "Include any Boon or Bane in effect; roll the Darkest Die as normal."
+   *
+   * Every delegation below exists because Hooks.call() fires only on the
+   * calling client and the session log is a GM-scoped setting players cannot
+   * write. Rest rolls are made by the resting PLAYER, so these socket paths
+   * are load-bearing here, not just on action rolls.
+   */
+  dispatchRollEffects(speakerData = null) {
+    const speaker = speakerData || ChatMessage.getSpeaker();
+
     // Record the roll in the GM-only session log. Players roll most of the
     // time and the log is a GM-scoped world setting they can't write, so
-    // delegate to a GM client (same pattern as postGmWhisper below).
+    // delegate to a GM client (same pattern as postGmWhisper above).
     if (!this.isDamageRoll) {
-      const speaker = messageData.speaker || ChatMessage.getSpeaker();
       const entry = {
         who: speaker.alias || game.user.name,
         characterRating: this.characterRating,
@@ -390,6 +415,10 @@ export class DarkestRoll extends Roll {
       };
       if (game.user.isGM) {
         SessionLog.recordRoll(entry);
+        // The damping cooldown counts rolls. A player's roll gets counted on
+        // the GM's client via the logRoll socket case; this is the same
+        // count for a roll the GM made themselves.
+        TransgressionTracker.noteRoll();
       } else {
         game.socket.emit('system.darkest-system', { type: 'logRoll', entry });
       }
@@ -400,9 +429,8 @@ export class DarkestRoll extends Roll {
     // rolls are made by players, so their client firing this hook would
     // never reach the GM's client at all. Delegate over the socket when
     // this isn't already a GM's own client (same pattern as
-    // applyWound/applyDoom/applyNpcDamage).
+    // postGmWhisper/applyNpcDamage).
     if (this.isTransgression && !this.isDamageRoll) {
-      const speaker = messageData.speaker || ChatMessage.getSpeaker();
       const actor = game.actors.get(speaker.actor);
       if (game.user.isGM) {
         Hooks.callAll('darkestSystem.transgression', actor, this);
@@ -417,7 +445,6 @@ export class DarkestRoll extends Roll {
     // creates the Doom fine (they own their own actor), but the GM would
     // never see the notification, so delegate that half over the socket.
     if (this.gainsDoom) {
-      const speaker = messageData.speaker || ChatMessage.getSpeaker();
       const actor = game.actors.get(speaker.actor);
       Hooks.callAll('darkestSystem.doomGained', actor, this);
       if (!game.user.isGM && actor) {
@@ -427,8 +454,6 @@ export class DarkestRoll extends Roll {
         });
       }
     }
-
-    return super.toMessage(messageData, options);
   }
 }
 
