@@ -151,11 +151,36 @@ export const TransgressionFx = {
    * can be active before its global exists, the same race region-weather.js
    * documents for FXMaster.
    */
+  /**
+   * Does Sequencer's database actually hold this effect?
+   *
+   * Checked BEFORE playing, not caught afterwards. `Sequence.play()` resolves
+   * as soon as the effect is queued and only then fails asynchronously when
+   * the texture 404s -- so a try/catch around it never sees the error, the
+   * failure surfaces as an unhandled rejection, and the FXMaster fallback is
+   * skipped entirely. Asking the database first is the only reliable gate.
+   *
+   * A path with no database entry (a bare filename) is assumed playable and
+   * left to Sequencer; this guard exists for the `module.category.name` form,
+   * which is what a missing JB2A library produces.
+   */
+  _hasAsset(path) {
+    if (!path) return false;
+    const db = globalThis.Sequencer?.Database;
+    if (!db) return true;                 // no database to ask; let it try
+    if (!path.includes('.')) return true; // a real file path, not a db key
+    try {
+      return !!db.entryExists?.(path);
+    } catch {
+      return false;
+    }
+  },
+
   async _screen(tier) {
     const spec = TRANSGRESSION_FX[tier] ?? TRANSGRESSION_FX[String(tier)];
     if (!spec) return;   // tier 1 is deliberately silent on screen
 
-    if (globalThis.Sequence && spec.sequencer) {
+    if (globalThis.Sequence && spec.sequencer && TransgressionFx._hasAsset(spec.sequencer.effect)) {
       try {
         await new Sequence()
           .effect()
@@ -168,9 +193,6 @@ export const TransgressionFx = {
           .play();
         return;
       } catch (err) {
-        // Most likely a missing effect file (JB2A not installed, or the free
-        // version lacking this one). Fall through to FXMaster rather than
-        // leaving the tier with no visual at all.
         console.warn('Darkest System | Sequencer effect failed, trying FXMaster', err);
       }
     }

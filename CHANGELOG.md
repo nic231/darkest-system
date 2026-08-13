@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.40.2-alpha (2026-08-13)
+
+**The screen effects now use an asset that exists.** Both tiers referenced JB2A files from the Patreon library — the free library carries `energy_field` in blue only and has no `dark_red` at all, so they 404'd and nothing showed. Both now use `jb2a.darkness.black` at two weights: lighter and shorter at tier 2, heavier and longer at tier 3.
+
+That is also a better choice than what it replaced. A creeping dark reads as the woods closing in; a red energy field read as a spell going off.
+
+**A missing asset no longer swallows the fallback.** `Sequence.play()` resolves as soon as the effect is queued and only *then* fails asynchronously when the texture cannot load — so the `try/catch` around it never fired, the failure surfaced as an unhandled rejection, and the FXMaster fallback was skipped. The result was the worst of both: no visual, and a console error. Sequencer's database is now asked whether the asset exists *before* playing, so anything missing falls straight through to FXMaster as designed.
+
+The verification suite now checks every effect name against the free JB2A library, so a Patreon-only asset can't ship silently again.
+
+**Requires content module 1.12.1** for the corrected effect names.
+
 ## 0.40.1-alpha (2026-08-13)
 
 **Every actor was failing data preparation.** The console filled with `can't access property "initial", this.tokenActiveEffectChanges is undefined` on world load — once per compendium NPC, then again for every actor created or opened.
