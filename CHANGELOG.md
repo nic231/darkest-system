@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.40.4-alpha (2026-08-13)
+
+**The stingers are all one-shots now.** Four of them weren't sounds at all but looping atmospheres — *Eerie swamp*, *Deep underwater*, *Snowy wind*, *Blizzard winds*. They started at a transgression and never stopped, so the woods quietly acquired a second soundscape running under the scene's own until someone noticed.
+
+The catalogue distinguishes these (14,033 `oneshot` against 35,374 looping `sfx`) and the first pass simply ignored that column, picking on name alone. Every one of the 27 elements has been re-chosen from `oneshot` only, and the check now enforces it so it cannot come back. The witches keep their character: The Lost runs distant howls to a baleful howl close by, The Keepers a far abbey bell to a great bell with whispering under it, Old Jenny a drip to blood to a wet stab.
+
+**A stinger fired twice now plays twice.** `playing` is a state flag, not a trigger — setting it true on a sound already marked true does nothing, so the second identical transgression in a session was silent. Worse, nothing ever set it back: a Syrinscape sound has no local audio, so Foundry never sees playback end and the row stayed lit for the rest of the night. Each stinger is now reset before firing and cleared again afterwards.
+
+**Two elements can play together.** The playlist was in sequential mode, which stops the previous sound when the next starts — so the tier-3 cues that deliberately layer two elements were being cut to one, and the sidebar refused to play two at once. It is now simultaneous, like the ambience playlists.
+
+**The `Can't add events during a curve event` error is gone.** Syrinscape Controller turns a non-zero fade into a Web Audio gain curve, and the second element of a two-element tier arrived while that curve was still open. The stingers no longer carry a fade; they are short and want to arrive at full volume anyway.
+
+**Requires content module 1.14.0.**
+
 ## 0.40.3-alpha (2026-08-13)
 
 **The stingers no longer loop.** They were built with `repeat: true`, inherited from the ambience beds where a track ending mid-scene would leave a hole in the soundscape. A stinger is a one-shot, so a wolf howl started at a transgression would still be howling when the party reached the next region. They are also given a short non-zero fade: Syrinscape Controller feeds the fade duration to `setValueCurveAtTime`, which throws on zero.

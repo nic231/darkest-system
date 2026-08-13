@@ -166,12 +166,58 @@ export const TransgressionFx = {
         continue;
       }
       try {
+        // `playing` is STATE, not a trigger. Setting it true on a sound that
+        // is already true is a no-op, so the same stinger fired twice in a
+        // session played once and then never again -- and the row sat lit in
+        // the sidebar for the rest of the night because nothing ever set it
+        // back. Syrinscape's own player has finished long before; Foundry
+        // just never hears about it, since a Syrinscape sound has no local
+        // audio whose `ended` event could clear the flag.
+        //
+        // So: force it off, then on. The off is awaited because the two
+        // updates must not coalesce into a single no-op write.
+        if (sound.playing) await sound.update({ playing: false });
         await sound.update({ playing: true });
+
+        // And clear it again once the one-shot has had time to finish, so
+        // the row does not stay lit and the NEXT trigger starts from a
+        // known-off state rather than relying on the reset above.
+        TransgressionFx._scheduleStop(sound);
       } catch (err) {
         console.warn(`Darkest System | could not play stinger ${id}`, err);
       }
     }
   },
+
+  /**
+   * Put a fired stinger back to `playing: false` after it has had time to
+   * run.
+   *
+   * A Syrinscape PlaylistSound has no local audio, so Foundry never sees an
+   * `ended` event and the flag would stay true forever -- leaving the row lit
+   * in the sidebar and, worse, making the next identical trigger a no-op.
+   *
+   * The timeout is a guess at the length of a one-shot, deliberately generous.
+   * Clearing it early would cut nothing short (Syrinscape owns playback; this
+   * flag is only Foundry's bookkeeping) but clearing it LATE would swallow a
+   * repeat trigger, so the timer is the shorter risk in only one direction.
+   */
+  _scheduleStop(sound, ms = 12000) {
+    const uuid = sound.uuid;
+    clearTimeout(TransgressionFx._stopTimers.get(uuid));
+    TransgressionFx._stopTimers.set(uuid, setTimeout(async () => {
+      TransgressionFx._stopTimers.delete(uuid);
+      try {
+        const live = fromUuidSync(uuid);
+        if (live?.playing) await live.update({ playing: false });
+      } catch (err) {
+        console.warn('Darkest System | could not clear stinger state', err);
+      }
+    }, ms));
+  },
+
+  /** uuid -> pending reset, so a re-trigger replaces its own timer. */
+  _stopTimers: new Map(),
 
   /**
    * The screen effect, through whichever FX module is installed.
