@@ -2,7 +2,7 @@
   "id": "darkest-system",
   "title": "The Darkest System",
   "description": "An unofficial fan-made system implementing the mechanics for The Darkest Woods and The Darkest House by Monte Cook Games. Features Rating-based task resolution, the Darkest Die, Boons/Banes, Wounds, Doom, and a Transgression Tracker. No game content included — you must own the source material. Not affiliated with or endorsed by Monte Cook Games, LLC. Fan use policy: https://www.montecookgames.com/fan-support/fan-use-policy/",
-  "version": "0.42.0-alpha",
+  "version": "0.42.1-alpha",
   "compatibility": {
     "minimum": "11",
     "verified": "14"
@@ -35,6 +35,6 @@
   "secondaryTokenAttribute": null,
   "background": "systems/darkest-system/assets/background.svg",
   "manifest": "https://raw.githubusercontent.com/nic231/darkest-system/master/system.json",
-  "download": "https://github.com/nic231/darkest-system/archive/refs/tags/v0.42.0-alpha.zip",
+  "download": "https://github.com/nic231/darkest-system/archive/refs/tags/v0.42.1-alpha.zip",
   "flags": {}
 }

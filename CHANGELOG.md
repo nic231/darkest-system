@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.42.1-alpha (2026-08-13)
+
+**All three tiers show a vignette now, and the difference between them is actually visible.**
+
+Two faults, reported as one. Tier 1 had no visual at all — a deliberate choice on the grounds that a level-1 transgression happens often enough for a screen effect to lose its force, and wrong in play: the cue felt incomplete without it. And tier 2's was there but imperceptible, because `reach` only moved the gradient's clear centre from 45% to 29% while peak opacity stayed pinned at 0.95 for every tier. The one number meant to carry the escalation was barely doing anything.
+
+`reach` now drives the radius *and* the weight together, across a range wide enough to see: the clear centre runs 59% → 42% → 20% and the darkness 0.59 → 0.79 → 0.95. Tier 1 is a quick breath at the edges, tier 2 comes properly in and lingers, tier 3 is unchanged in character but now has somewhere to escalate *from*.
+
+The suite checks that reach increases strictly and that each step is large enough to register, so a future tweak can't quietly flatten the tiers again.
+
+**Requires content module 1.15.1.**
+
+*(The Lost's tier 1/2 order was already swapped in 0.42.0 — tier 1 is Wolf howls, tier 2 Distant howls. If you are still hearing the old order, the content module has not been re-uploaded.)*
+
 ## 0.42.0-alpha (2026-08-13)
 
 **The screen effect is a vignette now — darkness closing in from the edges and easing back out.**

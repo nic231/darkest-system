@@ -300,6 +300,23 @@ export const TransgressionFx = {
     const ID = 'darkest-transgression-vignette';
     document.getElementById(ID)?.remove();   // a re-trigger replaces its own
 
+    // `reach` drives BOTH how far in the dark comes and how heavy it gets.
+    //
+    // It used to drive the radius alone, against a fixed 0.95 peak opacity,
+    // and the radius barely moved: reach 0.35 shifted the clear centre from
+    // 45% to 29%, which is invisible on a real screen. Only tier 3 read as
+    // anything, which is exactly what the table reported. Scaling opacity
+    // with it as well gives the tiers somewhere to actually differ.
+    //
+    // The open state is 80%: a wide, faint frame rather than nothing, so the
+    // fade-in has something to travel from.
+    const OPEN = 80;
+    const inner = Math.round(OPEN - reach * 70);        // 80% -> 10% at full reach
+    const peak = Math.min(0.95, 0.35 + reach * 0.8);    // faint -> near-opaque
+
+    const gradient = (stop, alpha) =>
+      `radial-gradient(ellipse at center, rgba(${colour},0) ${stop}%, rgba(${colour},${alpha}) 100%)`;
+
     const el = document.createElement('div');
     el.id = ID;
     Object.assign(el.style, {
@@ -309,8 +326,7 @@ export const TransgressionFx = {
       pointerEvents: 'none',
       opacity: '0',
       transition: `opacity ${fade}ms ease-in-out, background ${fade}ms ease-in-out`,
-      // Starts wide open: the dark is only at the very corners.
-      background: `radial-gradient(ellipse at center, rgba(${colour},0) 45%, rgba(${colour},0.95) 100%)`,
+      background: gradient(OPEN, peak),
     });
     document.body.appendChild(el);
 
@@ -318,18 +334,15 @@ export const TransgressionFx = {
     // style and the transition into one paint and nothing animates.
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-    // Closing in: the transparent centre shrinks toward `reach`.
-    const inner = Math.round((1 - reach) * 45);
+    // Closing in.
     el.style.opacity = '1';
-    el.style.background =
-      `radial-gradient(ellipse at center, rgba(${colour},0) ${inner}%, rgba(${colour},0.95) 100%)`;
+    el.style.background = gradient(inner, peak);
 
     await new Promise(r => setTimeout(r, fade + hold));
 
     // And letting go.
     el.style.opacity = '0';
-    el.style.background =
-      `radial-gradient(ellipse at center, rgba(${colour},0) 45%, rgba(${colour},0.95) 100%)`;
+    el.style.background = gradient(OPEN, peak);
 
     await new Promise(r => setTimeout(r, fade));
     el.remove();
