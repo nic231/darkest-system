@@ -32,10 +32,11 @@
  *
  * EVERY INTEGRATION HERE IS OPTIONAL, and each is probed separately at call
  * time. With no content module there are no ids and nothing plays; without
- * Syrinscape Controller the playlist entries are inert; without FXMaster or
- * Sequencer the screen simply doesn't change. The chat message always posts.
- * Nothing in this file is allowed to throw into the caller -- a failed
- * flourish must never stop a transgression being recorded.
+ * Syrinscape Controller the playlist entries are inert. The screen effect
+ * needs nothing installed at all -- it is a vignette this system draws. The
+ * chat message always posts. Nothing in this file is allowed to throw into
+ * the caller -- a failed flourish must never stop a transgression being
+ * recorded.
  *
  * ONLY THE PRIMARY GM DRIVES THIS. Syrinscape's own session sync carries
  * audio to players, and the screen effects fan out over their own modules'
@@ -260,42 +261,78 @@ export const TransgressionFx = {
   _stopTimers: new Map(),
 
   /**
-   * The screen effect, through whichever FX module is installed.
+   * The screen effect.
    *
-   * Sequencer is preferred where present: it plays a timed effect and cleans
-   * up after itself, which is exactly the shape wanted here. FXMaster is the
-   * fallback because it is already a soft dependency for region weather --
-   * but its filters are SCENE-PERSISTENT, so anything applied has to be
-   * removed on a timer or the scene keeps it forever. region-weather.js
-   * learned that the hard way.
+   * The vignette below needs nothing installed. FXMaster remains only as a
+   * fallback for a client where the overlay cannot be drawn -- and its
+   * filters are SCENE-PERSISTENT, so anything applied has to be removed on a
+   * timer or the scene keeps it forever. region-weather.js learned that the
+   * hard way.
    *
-   * Both globals are probed rather than the module's `active` flag: a module
+   * The global is probed rather than the module's `active` flag: a module
    * can be active before its global exists, the same race region-weather.js
    * documents for FXMaster.
    */
+  // A _hasAsset() guard lived here, checking Sequencer's database before
+  // playing a JB2A file. Gone with the sprite it protected: the vignette is
+  // drawn by this system and has no asset to be missing.
+
   /**
-   * Does Sequencer's database actually hold this effect?
+   * Darkness closing in from the edges of the screen, then letting go.
    *
-   * Checked BEFORE playing, not caught afterwards. `Sequence.play()` resolves
-   * as soon as the effect is queued and only then fails asynchronously when
-   * the texture 404s -- so a try/catch around it never sees the error, the
-   * failure surfaces as an unhandled rejection, and the FXMaster fallback is
-   * skipped entirely. Asking the database first is the only reliable gate.
+   * A single fixed-position div carrying a radial gradient: transparent at
+   * the centre, opaque at the corners. Animating the gradient's inner radius
+   * makes the dark advance and retreat, which is the shape of "the woods are
+   * closing in" -- where a sprite in the middle of the screen was the shape
+   * of "something is standing in front of you".
    *
-   * A path with no database entry (a bare filename) is assumed playable and
-   * left to Sequencer; this guard exists for the `module.category.name` form,
-   * which is what a missing JB2A library produces.
+   * pointer-events none throughout: this must never eat a click. It sits
+   * above the UI so the effect reaches chat and the sidebars too, not just
+   * the map canvas the way an FXMaster filter would.
+   *
+   * @param {object} v
+   * @param {number} v.reach     how far in the darkness comes, 0..1
+   * @param {number} v.hold      ms to sit at full reach
+   * @param {number} v.fade      ms of the ease in and of the ease out
+   * @param {string} [v.colour]  the dark, so a witch can tint it
    */
-  _hasAsset(path) {
-    if (!path) return false;
-    const db = globalThis.Sequencer?.Database;
-    if (!db) return true;                 // no database to ask; let it try
-    if (!path.includes('.')) return true; // a real file path, not a db key
-    try {
-      return !!db.entryExists?.(path);
-    } catch {
-      return false;
-    }
+  async _vignette({ reach = 0.5, hold = 400, fade = 700, colour = '0, 0, 0' } = {}) {
+    const ID = 'darkest-transgression-vignette';
+    document.getElementById(ID)?.remove();   // a re-trigger replaces its own
+
+    const el = document.createElement('div');
+    el.id = ID;
+    Object.assign(el.style, {
+      position: 'fixed',
+      inset: '0',
+      zIndex: '1000',              // above the UI, below dialogs
+      pointerEvents: 'none',
+      opacity: '0',
+      transition: `opacity ${fade}ms ease-in-out, background ${fade}ms ease-in-out`,
+      // Starts wide open: the dark is only at the very corners.
+      background: `radial-gradient(ellipse at center, rgba(${colour},0) 45%, rgba(${colour},0.95) 100%)`,
+    });
+    document.body.appendChild(el);
+
+    // Two frames before the first change, or the browser folds the initial
+    // style and the transition into one paint and nothing animates.
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    // Closing in: the transparent centre shrinks toward `reach`.
+    const inner = Math.round((1 - reach) * 45);
+    el.style.opacity = '1';
+    el.style.background =
+      `radial-gradient(ellipse at center, rgba(${colour},0) ${inner}%, rgba(${colour},0.95) 100%)`;
+
+    await new Promise(r => setTimeout(r, fade + hold));
+
+    // And letting go.
+    el.style.opacity = '0';
+    el.style.background =
+      `radial-gradient(ellipse at center, rgba(${colour},0) 45%, rgba(${colour},0.95) 100%)`;
+
+    await new Promise(r => setTimeout(r, fade));
+    el.remove();
   },
 
   async _screen(tier, verbose = false) {
@@ -310,25 +347,26 @@ export const TransgressionFx = {
     }
 
     if (verbose) {
-      console.log('Darkest System |   Sequencer:', !!globalThis.Sequence,
-        '| asset present:', TransgressionFx._hasAsset(spec.sequencer?.effect),
-        '| FXMaster:', !!(globalThis.FXMASTER ?? globalThis.FXMaster));
+      console.log('Darkest System |   vignette:', !!spec.vignette,
+        '| FXMaster fallback:', !!(globalThis.FXMASTER ?? globalThis.FXMaster));
     }
 
-    if (globalThis.Sequence && spec.sequencer && TransgressionFx._hasAsset(spec.sequencer.effect)) {
+    // The vignette, drawn by this system rather than by a module.
+    //
+    // This replaced a JB2A sprite played through Sequencer, which put a round
+    // black blob in the middle of the screen -- one centred sprite, whatever
+    // the screen's shape. What the woods closing in actually wants is the
+    // EDGES darkening, and that is a radial gradient, not a picture.
+    //
+    // Drawing it here means no JB2A, no Sequencer, nothing to 404, nothing to
+    // install, and it covers the whole viewport by construction. FXMaster is
+    // still tried below when this is unavailable for any reason.
+    if (spec.vignette) {
       try {
-        await new Sequence()
-          .effect()
-          .file(spec.sequencer.effect)
-          .screenSpace()
-          .screenSpaceAboveUI()
-          .opacity(spec.sequencer.opacity ?? 0.4)
-          .duration(spec.sequencer.duration ?? 2000)
-          .fadeOut(spec.sequencer.fadeOut ?? 800)
-          .play();
+        await TransgressionFx._vignette(spec.vignette);
         return;
       } catch (err) {
-        console.warn('Darkest System | Sequencer effect failed, trying FXMaster', err);
+        console.warn('Darkest System | vignette failed, trying FXMaster', err);
       }
     }
 
@@ -352,7 +390,7 @@ export const TransgressionFx = {
 export function registerTransgressionFxSettings() {
   game.settings.register('darkest-system', SETTING_ENABLED, {
     name: 'Transgression stingers',
-    hint: 'What the speaker button on each row of the Transgression Tracker plays: a sound chosen for that region\'s witch, and from level 5 a brief mark on the screen. Tiers follow the track and match the chat message — 1–4, 5–9, and 10. Triggered by you, never automatically, so a Darkest Die landing mid-sentence does not step on the table. Needs the content module for the sounds, Syrinscape Controller to play them, and Sequencer or FXMaster for the screen effect; anything missing is simply skipped.',
+    hint: 'What the speaker button on each row of the Transgression Tracker plays: a sound chosen for that region\'s witch, and from level 5 a brief mark on the screen. Tiers follow the track and match the chat message — 1–4, 5–9, and 10. Triggered by you, never automatically, so a Darkest Die landing mid-sentence does not step on the table. Needs the content module for the sounds and Syrinscape Controller to play them; the screen effect needs nothing. Anything missing is simply skipped.',
     scope: 'world',
     config: true,
     type: String,

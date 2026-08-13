@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.42.0-alpha (2026-08-13)
+
+**The screen effect is a vignette now — darkness closing in from the edges and easing back out.**
+
+What was there was a JB2A sprite played through Sequencer, and the approach was wrong rather than the asset. `screenSpace()` centres a *single sprite*, so whatever the file, the result was a round black blob in the middle of the screen: the shape of something standing in front of you, not of the woods closing in. Two earlier picks were also Patreon-only assets that 404'd on the free library.
+
+A radial gradient the system draws itself has none of those failure modes. It needs no module, cannot 404, covers the whole viewport by construction, and sits above the UI so it reaches chat and the sidebars rather than only the map. Tier 2 comes in shallow and briefly; tier 3 reaches much further, holds, and is tinted slightly toward blood. FXMaster stays as a fallback for a client where the overlay cannot be drawn.
+
+**Sound corrections from play:**
+
+- **The Lost** — tiers 1 and 2 swapped. *Wolf howls* is the further-off of the pair despite the name, so it opens and *Distant howls* answers.
+- **The Dismal** — *Distant drip* was almost inaudible. A recording of a distant sound is not the same as a cue that reads as distant; tier 1 is now *Close drip*, and the tiers escalate in wetness rather than volume.
+- **Winter's Mercy** — owls back at tier 1. Tier 2 is *Icicle drop* rather than the Frostmaiden's whisper, which was too soft to register. Tier 3 was *Winter wolf howls*, which turned out to be the opening of a long piece and produced nothing audible inside a cue window; it is now *Avalanche!!!*, a complete event that lands at once.
+
+**Requires content module 1.15.0.**
+
 ## 0.41.2-alpha (2026-08-13)
 
 **Cue length now defaults to 12 seconds** rather than 6 — enough for a howl or a bell to land properly. Still adjustable from 2 to 30.
