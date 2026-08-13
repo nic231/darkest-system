@@ -83,9 +83,9 @@ export const TransgressionFx = {
   cueLength() {
     try {
       const s = game.settings.get('darkest-system', SETTING_CUE_SECONDS);
-      return Math.max(1, Number(s) || 6) * 1000;
+      return Math.max(1, Number(s) || 12) * 1000;
     } catch {
-      return 6000;
+      return 12000;
     }
   },
 
@@ -236,8 +236,9 @@ export const TransgressionFx = {
    * says next. Cutting them at a fixed length makes every cue behave like a
    * cue regardless of the source material.
    *
-   * The default is deliberately short. A stinger is punctuation; if a GM
-   * wants a whole soundscape they have the Playlists sidebar.
+   * The default gives a cue room to land without running under the next
+   * thing said at the table. A GM who wants a whole soundscape has the
+   * Playlists sidebar; this is the bounded version.
    */
   _scheduleStop(sound, ms = TransgressionFx.cueLength()) {
     const uuid = sound.uuid;
@@ -370,11 +371,11 @@ export function registerTransgressionFxSettings() {
   // cue is cut off after this long.
   game.settings.register('darkest-system', SETTING_CUE_SECONDS, {
     name: 'Transgression cue length',
-    hint: 'How long a transgression cue plays before it is stopped, in seconds. Syrinscape labels these one-shots, which only means they do not loop — several run far longer than a sting should. 6 keeps them to punctuation; raise it if you want a cue to breathe.',
+    hint: 'How long a transgression cue plays before it is stopped, in seconds. Syrinscape labels these one-shots, which only means they do not loop — several run far longer than a sting should. 12 lets a cue breathe without talking over the table; drop it to 5 or 6 if you want sharper punctuation.',
     scope: 'world',
     config: true,
     type: Number,
     range: { min: 2, max: 30, step: 1 },
-    default: 6,
+    default: 12,
   });
 }

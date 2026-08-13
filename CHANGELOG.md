@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.41.2-alpha (2026-08-13)
+
+**Cue length now defaults to 12 seconds** rather than 6 — enough for a howl or a bell to land properly. Still adjustable from 2 to 30.
+
+Note that the setting is world-scoped, so a world where it has already been saved keeps whatever it holds; change it under *Transgression cue length* if you want the new default.
+
 ## 0.41.1-alpha (2026-08-13)
 
 **Cues are cut off after six seconds now**, with a setting to change it (2–30).
