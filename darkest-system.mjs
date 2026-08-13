@@ -48,6 +48,10 @@ import {
   registerSceneAmbienceSettings,
   registerSceneAmbienceHooks,
 } from './module/apps/scene-ambience.mjs';
+import {
+  TransgressionFx,
+  registerTransgressionFxSettings,
+} from './module/apps/transgression-fx.mjs';
 
 /* ----------------------------------------
    Initialize System
@@ -106,6 +110,8 @@ Hooks.once('init', function() {
   registerSceneDarknessSettings();
 
   registerSceneAmbienceSettings();
+
+  registerTransgressionFxSettings();
 
   registerTravelHistorySettings();
 
@@ -271,6 +277,9 @@ Hooks.once('ready', function() {
   game.darkestSystem.DoomTally = DoomTally;
   game.darkestSystem.NpcTracker = NpcTracker;
   game.darkestSystem.SessionLog = SessionLog;
+  // Exposed so a GM can audition the escalation without provoking the woods:
+  //   game.darkestSystem.TransgressionFx.play('the-lost', 10)
+  game.darkestSystem.TransgressionFx = TransgressionFx;
   game.darkestSystem.TravelTool = TravelTool;
   game.darkestSystem.TravelClock = TravelClock;
   // Ambience.preview([ids]) auditions an assignment from a macro before

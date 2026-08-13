@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.40.0-alpha (2026-08-13)
+
+**The woods get worse as the track rises.** The transgression level already escalated in words — the stir message changes wording at 5 and at 10 — but nothing else did. Now a sound goes under those same two steps, and from level 5 the screen briefly notices.
+
+**The sounds are chosen per witch, not per region**, so what the players hear is the thing actually hunting them. The Isolating Pack starts with wolf howls far off and does not keep them far off. Old Jenny runs from dripping to squelching to the theatre of flesh. The Moon is deliberately *not* ugly — chimes, serene then crystalline then choral-and-wrong — because the Moon's dread is beautiful. Forsaken Mullock drowns; Queen Owl freezes; Baba Yaga cackles; the Madman laughs.
+
+Three tiers, matching the chat exactly: **1–4**, **5–9**, **10**. That boundary is now checked automatically against the message code, because if the two ever drift the players would get tier-3 words over a tier-2 sound at the most dramatic moment on the track.
+
+**Tier 1 has no screen effect at all**, deliberately. A level-1 transgression happens several times a session and a visual on each would stop meaning anything by the third.
+
+Everything here is optional and probed separately. No content module, no sounds. No Syrinscape Controller, the playlist entries sit inert. No Sequencer, it falls back to FXMaster; no FXMaster either, the screen simply doesn't change. The chat message always posts, and a flourish that fails is logged and swallowed — it can never stop a transgression being recorded. The whole thing has an off switch, plus a sound-only setting.
+
+Audition without provoking anything: `game.darkestSystem.TransgressionFx.play('the-lost', 10)`.
+
+**Requires content module 1.12.0**, which carries the sound ids and the new *Transgression stingers* playlist. Update the system first.
+
 ## 0.39.1-alpha (2026-08-13)
 
 **A restore now leaves a GM-only note in chat**, saying how many messages came back, how many were whispered, and how many were skipped as already present. A toast is gone the moment it fades; this stays in the record it just rebuilt, and survives into the next export — so the history itself knows it was restored. The note is dropped when the history is rebuilt, so it cannot accumulate a notice about a notice on every cycle.

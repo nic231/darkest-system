@@ -5,6 +5,7 @@
  */
 import { TravelClock, BIRDSONGS } from './travel-clock.mjs';
 import { SessionLog } from './session-log.mjs';
+import { TransgressionFx } from './transgression-fx.mjs';
 
 const SETTING_DAMPING_MODE = 'transgressionDamping';
 const SETTING_DAMPING_MINUTES = 'transgressionCooldownMinutes';
@@ -591,6 +592,17 @@ export class TransgressionTracker extends Application {
         content: `<div class="transgression-message player-ominous"><i class="fas fa-tree"></i> ${stirMessage}</div>`
       });
     }
+
+    // The sound and the screen, on the same tier the message just used.
+    //
+    // Fired even when `silent` -- silent means "the prompt already posted
+    // the words", not "this transgression is a quiet one". The GM pressing
+    // Apply is the moment the woods actually take the level, so it is the
+    // moment they should be heard doing it.
+    //
+    // Not awaited: a flourish must never delay or fail the record. Every
+    // failure inside is swallowed and logged.
+    TransgressionFx.play(regionSlug, region.level);
 
     // Post the triggered event to GM chat
     const regionData = ALL[regionSlug];
