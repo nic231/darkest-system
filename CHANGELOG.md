@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.42.2-alpha (2026-08-13)
+
+**The vignette actually animates now.** The real fault was not the tier values — it was that **CSS cannot interpolate between two radial gradients**. `background` is not an animatable property in any browser, so the gradient snapped to its final size and the only thing genuinely moving was opacity.
+
+That explains the symptom precisely. Tier 3 read fine because 0.95 alpha is obvious even when it appears instantly; tiers 1 and 2 at 0.59 and 0.79 faded in and out with no motion at all and were easy to miss. It also explains why raising the reach values in 0.42.1 changed nothing — a bigger number fed into a property that was never animating.
+
+The gradient is now painted once at its closed-in size and the element is **scaled** instead: 1.21× down to 1× at tier 1, 1.38× at tier 2, 1.60× at tier 3. Transform and opacity are both compositor properties, so they interpolate smoothly and cost nothing per frame. The darkness genuinely travels inward.
+
+Tiers 1 and 2 also fade slower now. A faint effect needs *more* time to be noticed than a heavy one, not less — the earlier 450ms fade on the quietest tier was working against itself.
+
+**Sound and screen start together.** Playing the stinger awaits a document update per element, which round-trips to the server; the screen effect was waiting behind that, so the darkness arrived noticeably after the sound.
+
+The suite now checks that `background` never appears in the transition and that the two halves run in parallel.
+
+**Requires content module 1.15.2.**
+
 ## 0.42.1-alpha (2026-08-13)
 
 **All three tiers show a vignette now, and the difference between them is actually visible.**

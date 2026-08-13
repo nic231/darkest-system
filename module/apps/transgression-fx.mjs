@@ -149,8 +149,14 @@ export const TransgressionFx = {
         console.warn(`Darkest System |   "${regionSlug}" has no stingers. Known: ${Object.keys(TRANSGRESSION_SOUNDS).join(', ')}`);
       }
     }
-    await this._stinger(regionSlug, tier, verbose);
-    if (this.mode() === 'all') await this._screen(tier, verbose);
+    // Started TOGETHER, not one after the other. _stinger awaits a document
+    // update per element, which round-trips to the server; awaiting it first
+    // delayed the vignette by however long that took, so the sound and the
+    // darkness arrived at visibly different moments.
+    const screen = this.mode() === 'all'
+      ? this._screen(tier, verbose)
+      : Promise.resolve();
+    await Promise.all([this._stinger(regionSlug, tier, verbose), screen]);
   },
 
   /**
@@ -317,6 +323,23 @@ export const TransgressionFx = {
     const gradient = (stop, alpha) =>
       `radial-gradient(ellipse at center, rgba(${colour},0) ${stop}%, rgba(${colour},${alpha}) 100%)`;
 
+    // TRANSFORM, not `background`.
+    //
+    // CSS cannot interpolate between two radial gradients -- `background` is
+    // not an animatable property, in any browser. The first version animated
+    // both opacity and background together, so the gradient SNAPPED and only
+    // the fade was real. Tier 3 still read, because 0.95 alpha is obvious
+    // even when it appears instantly; tiers 1 and 2 at 0.59 and 0.79 faded in
+    // and out too fast to notice. That is exactly the "only tier 3 does
+    // anything" the table saw, and it is why raising the reach values alone
+    // did not fix it.
+    //
+    // So the gradient is painted ONCE at its closed-in size, and the element
+    // is scaled instead. transform and opacity are both compositor
+    // properties: they interpolate smoothly and cost nothing per frame.
+    // Starting oversized and settling to 1 makes the dark travel inward.
+    const OPEN_SCALE = 1 + (OPEN - inner) / 100;   // wider when reach is deeper
+
     const el = document.createElement('div');
     el.id = ID;
     Object.assign(el.style, {
@@ -325,8 +348,10 @@ export const TransgressionFx = {
       zIndex: '1000',              // above the UI, below dialogs
       pointerEvents: 'none',
       opacity: '0',
-      transition: `opacity ${fade}ms ease-in-out, background ${fade}ms ease-in-out`,
-      background: gradient(OPEN, peak),
+      willChange: 'opacity, transform',
+      transform: `scale(${OPEN_SCALE})`,
+      transition: `opacity ${fade}ms ease-in-out, transform ${fade}ms ease-in-out`,
+      background: gradient(inner, peak),
     });
     document.body.appendChild(el);
 
@@ -334,15 +359,15 @@ export const TransgressionFx = {
     // style and the transition into one paint and nothing animates.
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-    // Closing in.
+    // Closing in: the oversized gradient settles to its true size.
     el.style.opacity = '1';
-    el.style.background = gradient(inner, peak);
+    el.style.transform = 'scale(1)';
 
     await new Promise(r => setTimeout(r, fade + hold));
 
-    // And letting go.
+    // And letting go, back out the way it came.
     el.style.opacity = '0';
-    el.style.background = gradient(OPEN, peak);
+    el.style.transform = `scale(${OPEN_SCALE})`;
 
     await new Promise(r => setTimeout(r, fade));
     el.remove();
