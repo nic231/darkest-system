@@ -7,6 +7,15 @@
  * escalation is felt three ways rather than three schedules being kept in
  * sync.
  *
+ * TRIGGERED BY THE GM, NOT BY THE DICE. These fired automatically when the
+ * track advanced, which sounds right and plays badly: a Darkest Die can land
+ * mid-sentence, in the middle of another player's turn, or three rolls deep
+ * into a combat round, and a howl arriving there steps on the table instead
+ * of landing on it. The tracker now carries a speaker button per region and
+ * the GM plays the cue when it will land. Recording a transgression is
+ * unchanged -- the track advances and the players get their stir message
+ * exactly as before.
+ *
  *     tier 1   levels 1-4    a stinger, brief and low. No visual: a level-1
  *                            transgression happens several times a session,
  *                            and a screen effect on each stops being ominous
@@ -67,6 +76,19 @@ export const TransgressionFx = {
   enabled() {
     try { return game.settings.get('darkest-system', SETTING_ENABLED) !== 'off'; }
     catch { return false; }
+  },
+
+  /**
+   * Has this region got any cue at all?
+   *
+   * Drives whether the tracker shows a play button on the row. A custom
+   * region the GM added has no witch sounds, and offering a button that can
+   * only ever do nothing is worse than offering none.
+   */
+  hasSounds(regionSlug) {
+    const tiers = TRANSGRESSION_SOUNDS[regionSlug];
+    if (!tiers) return false;
+    return Object.values(tiers).some(ids => Array.isArray(ids) && ids.length);
   },
 
   /** What the setting allows: 'off' | 'sound' | 'all'. */
@@ -312,7 +334,7 @@ export const TransgressionFx = {
 export function registerTransgressionFxSettings() {
   game.settings.register('darkest-system', SETTING_ENABLED, {
     name: 'Transgression stingers',
-    hint: 'As a region\'s transgression track rises, play a sound chosen for that region\'s witch — and, at level 5 and above, briefly mark the screen. Tiers match the chat message: 1–4, 5–9, and 10. Needs the content module for the sounds, Syrinscape Controller to play them, and Sequencer or FXMaster for the screen effect; anything missing is simply skipped.',
+    hint: 'What the speaker button on each row of the Transgression Tracker plays: a sound chosen for that region\'s witch, and from level 5 a brief mark on the screen. Tiers follow the track and match the chat message — 1–4, 5–9, and 10. Triggered by you, never automatically, so a Darkest Die landing mid-sentence does not step on the table. Needs the content module for the sounds, Syrinscape Controller to play them, and Sequencer or FXMaster for the screen effect; anything missing is simply skipped.',
     scope: 'world',
     config: true,
     type: String,

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.41.0-alpha (2026-08-13)
+
+**The transgression cue is yours to play now.** Each region row in the Transgression Tracker has a speaker button; press it and that region's witch sounds at whatever level the track is currently on — tier 1 below 5, tier 2 from 5, tier 3 at 10.
+
+It no longer fires on its own when the track advances. That sounded right and played badly: a Darkest Die can land mid-sentence, in the middle of another player's turn, or three rolls deep into a combat round, and a howl arriving there steps on the table rather than landing on it. The moment a transgression is *recorded* is often not the moment it should be *felt*.
+
+Nothing else changed. A Darkest Die still advances the track and the players still get their stir message exactly as before — only the sound and the screen wait for you.
+
+The button appears only where there is actually a cue, so a custom region you have added yourself doesn't get a dead control, and it holds itself disabled for a moment after a press so a double-click can't hit the silent no-op.
+
+**On sounds that run long:** the reset timer added in 0.40.4 only clears Foundry's own bookkeeping flag. Syrinscape owns playback and never sees it, so a long cue plays to its natural end — the timer exists purely so the next press isn't swallowed.
+
 ## 0.40.4-alpha (2026-08-13)
 
 **The stingers are all one-shots now.** Four of them weren't sounds at all but looping atmospheres — *Eerie swamp*, *Deep underwater*, *Snowy wind*, *Blizzard winds*. They started at a transgression and never stopped, so the woods quietly acquired a second soundscape running under the scene's own until someone noticed.

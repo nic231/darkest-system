@@ -5,7 +5,7 @@
  */
 import { TravelClock, BIRDSONGS } from './travel-clock.mjs';
 import { SessionLog } from './session-log.mjs';
-import { TransgressionFx } from './transgression-fx.mjs';
+import { TransgressionFx, tierOf } from './transgression-fx.mjs';
 
 const SETTING_DAMPING_MODE = 'transgressionDamping';
 const SETTING_DAMPING_MINUTES = 'transgressionCooldownMinutes';
@@ -593,16 +593,18 @@ export class TransgressionTracker extends Application {
       });
     }
 
-    // The sound and the screen, on the same tier the message just used.
+    // NO automatic flourish here, deliberately.
     //
-    // Fired even when `silent` -- silent means "the prompt already posted
-    // the words", not "this transgression is a quiet one". The GM pressing
-    // Apply is the moment the woods actually take the level, so it is the
-    // moment they should be heard doing it.
+    // The sound and screen used to fire from this point, on the tier the
+    // message had just used. They are now the GM's to trigger, from the
+    // speaker button on each region row in the tracker -- because the moment
+    // a transgression is *recorded* is often not the moment it should be
+    // *felt*. A Darkest Die can land mid-sentence, in the middle of someone
+    // else's turn, or three rolls deep into a combat round; a howl arriving
+    // there steps on the table rather than landing on it.
     //
-    // Not awaited: a flourish must never delay or fail the record. Every
-    // failure inside is swallowed and logged.
-    TransgressionFx.play(regionSlug, region.level, { verbose: false });
+    // Everything else about a transgression is unchanged: the track advances
+    // and the players get their stir message exactly as before.
 
     // Post the triggered event to GM chat
     const regionData = ALL[regionSlug];
@@ -741,6 +743,12 @@ export class TransgressionTracker extends Application {
         isWarning: transgression.loops >= 2,
         isCritical: transgression.loops >= 3,
         isCustom: !WITCHES[slug],
+        // The speaker button only appears where there is actually a cue to
+        // play -- a custom region the GM added has no witch sounds, and a
+        // dead button would be worse than none. fxTier is shown in the
+        // tooltip so the GM knows what they are about to get.
+        hasFx: TransgressionFx.hasSounds(slug),
+        fxTier: tierOf(transgression.level),
         // Each dot carries its own level's event text, so the GM can read
         // what a level does by hovering it rather than opening the events
         // panel and counting rows.
@@ -911,6 +919,28 @@ export class TransgressionTracker extends Application {
       transgressions[regionSlug] = { level: 0, loops: 0 };
       await TransgressionTracker.setTransgressions(transgressions);
       this.render();
+    });
+
+    // Play this region's cue at whatever level the track is on.
+    //
+    // Manual by design -- see the note where the automatic call used to sit
+    // in incrementTransgression(). Nothing is recorded and the track does not
+    // move; this is purely the sound and the screen, when the GM wants them.
+    html.find('.stinger-btn').click(async (ev) => {
+      ev.stopPropagation();   // the row itself toggles the active region
+      const btn = ev.currentTarget;
+      const regionSlug = btn.dataset.region;
+      const level = TransgressionTracker.getTransgressions()[regionSlug]?.level ?? 0;
+
+      // Disabled for the length of the cue: a second press while the first is
+      // still going would hit the same "already playing" no-op that made
+      // repeat triggers silent, and look like the button was broken.
+      btn.disabled = true;
+      try {
+        await TransgressionFx.play(regionSlug, level, { verbose: false });
+      } finally {
+        setTimeout(() => { btn.disabled = false; }, 1500);
+      }
     });
 
     // Click region summary to set as active — click again to deactivate

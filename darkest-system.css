@@ -3152,6 +3152,20 @@
   border-color: var(--darkest-border-strong);
 }
 
+/* The manual cue button. Purple like the doom marks rather than red like
+   increment -- it changes nothing, it only makes a noise. */
+.transgression-tracker .stinger-btn:hover:not(:disabled) {
+  color: var(--darkest-purple-light, #9b82c4);
+  border-color: rgba(155, 130, 196, 0.5);
+}
+
+/* Held disabled for the length of the cue, so a second press can't hit the
+   "already playing" no-op and look like a broken button. */
+.transgression-tracker .stinger-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .transgression-tracker .increment-btn:hover {
   color: #c47a7a;
   border-color: var(--darkest-danger);

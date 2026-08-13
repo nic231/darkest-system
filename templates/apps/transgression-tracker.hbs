@@ -159,6 +159,16 @@
           <button type="button" class="reset-btn" data-region="{{slug}}" title="Reset">
             <i class="fas fa-undo"></i>
           </button>
+          {{#if hasFx}}
+          {{!-- Deliberately NOT fired when the track advances: a Darkest Die
+                can land mid-sentence or three rolls into a combat round, and
+                a howl arriving there steps on the table. The GM plays it when
+                it will land. --}}
+          <button type="button" class="stinger-btn" data-region="{{slug}}"
+                  title="Play this region's transgression cue at its current level (tier {{fxTier}})">
+            <i class="fas fa-volume-high"></i>
+          </button>
+          {{/if}}
         </div>
 
       </div>
