@@ -43,9 +43,17 @@ export let TRAVEL_ROUTES = [];
 // in which case arrivals fall back to REGION_ARRIVAL.
 export let ARRIVAL_LINES = {};
 
+// What changed on the way, for a journey that leaves one region for another.
+// Keyed "fromSlug::toSlug" because the crossings are DIRECTIONAL -- the walk
+// into Winter's Mercy is water hardening to snow, and the walk out is snow
+// softening to water. Empty without the content module, in which case
+// crossings simply pass without comment, as they did before.
+export let TRANSITION_LINES = {};
+
 Hooks.once('darkestSystem.registerTravelRoutes', (data) => {
   if (Array.isArray(data?.routes)) TRAVEL_ROUTES = data.routes;
   if (data?.arrivalLines) ARRIVAL_LINES = data.arrivalLines;
+  if (data?.transitionLines) TRANSITION_LINES = data.transitionLines;
 });
 
 // The birds whose songs unlock secret trails. One route in the book is a
@@ -416,6 +424,22 @@ function regionFlavour(regionSlug, boating = false, driving = false) {
  */
 function arrivalFlavour(locationSlug, regionSlug) {
   return ARRIVAL_LINES[locationSlug] || REGION_ARRIVAL[regionSlug] || null;
+}
+
+/**
+ * What changed on the way, when a leg crosses out of its region.
+ *
+ * Looked up by the exact route rather than by region pair: several pairs are
+ * joined by more than one road (the Keepers and the Temple of the Moon have
+ * two), and each direction reads differently.
+ *
+ * Returns null for the overwhelming majority of journeys -- 35 of 318 routes
+ * cross a region boundary -- which is the point. A line on every hop would
+ * stop the crossings feeling like anything.
+ */
+function transitionFlavour(route) {
+  if (!route?.fromSlug || !route?.toSlug) return null;
+  return TRANSITION_LINES[`${route.fromSlug}::${route.toSlug}`] ?? null;
 }
 
 const VEIL_ID = 'darkest-transition-veil';
@@ -2237,9 +2261,15 @@ export class TravelTool extends Application {
     const showText = game.settings.get('darkest-system', SETTING_ARRIVAL_TEXT);
     const region = scene?.getFlag('darkest-woods', 'region') ?? null;
     const line = showText ? arrivalFlavour(route.toSlug, region) : null;
+    // The crossing, on the rare leg that makes one. Sits ABOVE the arrival
+    // line and reads in that order: what changed on the road, then what they
+    // are standing in. Gated on the same setting -- a GM who has turned
+    // arrival text off wants to narrate the whole beat themselves.
+    const crossing = showText ? transitionFlavour(route) : null;
 
     let content = `<div class="travel-chat travel-chat-arrival">
       <div class="travel-chat-head"><i class="fas fa-map-pin"></i> The party arrives.</div>
+      ${crossing ? `<div class="travel-chat-crossing">${crossing}</div>` : ''}
       ${line ? `<div class="travel-chat-flavour">${line}</div>` : ''}
       <div class="travel-chat-body">${timeLine}</div>`;
 

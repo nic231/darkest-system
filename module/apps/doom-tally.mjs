@@ -157,8 +157,93 @@ export class DoomTally extends Application {
     // NpcTracker uses.
     const tally = Object.values(ui.windows).find(w => w instanceof DoomTally);
     if (tally) tally.render(false);
+    renderDoomBadge();
     ui.players?.render();
   }
+}
+
+/* ----------------------------------------
+   The docked badge
+---------------------------------------- */
+
+/**
+ * Sit the badge beside the travel dial.
+ *
+ * Both are anchored to the player list, which grows upward as people connect
+ * -- a fixed offset works at an empty table and is covered at a full one, so
+ * the real element gets measured. The dial does the same; this deliberately
+ * repeats the measurement rather than reading the dial's own position, so the
+ * badge still lands correctly when the clock is switched off and there is no
+ * dial to sit next to.
+ */
+function positionDoomBadge(el) {
+  const players = document.getElementById('players');
+  if (!players) return;
+  el.style.bottom = `${players.offsetHeight + 10}px`;
+
+  // To the RIGHT of the dial when it's there, hard left when it isn't.
+  const dial = document.getElementById('darkest-travel-dial');
+  el.style.left = dial ? `${dial.offsetLeft + dial.offsetWidth + 8}px` : '12px';
+}
+
+/**
+ * The always-visible doom badge.
+ *
+ * A plain DOM node docked to the UI, not an Application -- same reasoning as
+ * the travel dial: it occupies no window slot and needs no opening. The full
+ * window still exists for the per-character breakdown and the GM's
+ * adjustment; this is the at-a-glance number.
+ *
+ * Everyone sees it. The doom count is public information at the table -- the
+ * players' own sheets carry the Dooms it adds up.
+ */
+export function renderDoomBadge() {
+  if (!game.ready) return;
+
+  let el = document.getElementById('darkest-doom-badge');
+
+  if (!game.settings.get('darkest-system', 'showDoomBadge')) {
+    el?.remove();
+    return;
+  }
+
+  const { total, characters } = DoomTally.calculateTotalDooms();
+  const adjustment = DoomTally.getManualAdjustment();
+  const shown = Math.max(0, total + adjustment);
+
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'darkest-doom-badge';
+    document.body.appendChild(el);
+    // Opens the full tally -- the breakdown and, for a GM, the adjustment.
+    // Everyone gets this: the window is not GM-only either.
+    el.addEventListener('click', () => {
+      const existing = Object.values(ui.windows).find(w => w instanceof DoomTally);
+      if (existing) existing.bringToTop();
+      else new DoomTally().render(true);
+    });
+  }
+
+  // Nothing to fear yet reads differently from a mounting count.
+  el.className = `darkest-doom-badge${shown > 0 ? ' has-doom' : ''}`;
+
+  const breakdown = characters.filter(c => c.dooms > 0)
+    .map(c => `${c.name}: ${c.dooms}`);
+  el.title = [
+    `${shown} Doom${shown === 1 ? '' : 's'}`,
+    breakdown.length ? breakdown.join('\n') : 'No dooms held.',
+    adjustment !== 0 ? `(includes a GM adjustment of ${adjustment > 0 ? '+' : ''}${adjustment})` : null,
+    '\nClick to open the Doom Tally',
+  ].filter(Boolean).join('\n');
+
+  el.innerHTML = `
+    <i class="fas fa-skull badge-icon"></i>
+    <div class="badge-readout">
+      <span class="badge-number">${shown}</span>
+      <span class="badge-label">Doom</span>
+    </div>`;
+
+  positionDoomBadge(el);
 }
 
 /**
@@ -172,6 +257,20 @@ export function registerDoomTallySettings() {
     config: false,
     type: Number,
     default: 0
+  });
+
+  // Client-scoped, unlike most of this system's settings: where a GM wants
+  // their screen furniture is not a property of the world, and a player who
+  // finds a skull in the corner distracting can drop it without changing
+  // anything for anyone else.
+  game.settings.register('darkest-system', 'showDoomBadge', {
+    name: 'Show the doom count on screen',
+    hint: 'Keeps the total beside the travel clock, above the player list. Click it to open the full tally. Turning this off does not change the tally itself.',
+    scope: 'client',
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: () => renderDoomBadge(),
   });
 }
 
@@ -198,10 +297,45 @@ export function registerDoomTallyHooks() {
     }
   });
 
+  // The tally counts player-OWNED characters, so it changes when an actor
+  // arrives, leaves, or has its ownership edited -- not only when a Doom
+  // does. Without these the badge could sit on a stale number for the rest
+  // of the session, which is worse than not showing one at all.
+  Hooks.on('createActor', (actor) => {
+    if (actor.type === 'character') DoomTally.refresh();
+  });
+
+  Hooks.on('deleteActor', (actor) => {
+    if (actor.type === 'character') DoomTally.refresh();
+  });
+
+  Hooks.on('updateActor', (actor, changes) => {
+    if (actor.type === 'character' && changes.ownership) DoomTally.refresh();
+  });
+
   // Listen for doom tally updates from other clients
   game.socket.on('system.darkest-system', (data) => {
     if (data.type === 'doomTallyUpdate') {
       DoomTally.refresh();
     }
   });
+
+  // The player list changes height as people connect, and the badge sits on
+  // top of it -- re-measure whenever it redraws.
+  //
+  // The badge also anchors to the RIGHT of the travel dial, which this same
+  // hook repositions. Registration order decides who measures whom, and this
+  // file's hooks are registered BEFORE the clock's, so on this tick the dial
+  // has not moved yet. Defer to the end of the frame rather than reordering
+  // the two registrations -- that ordering is not this file's to depend on,
+  // and a future edit could silently flip it back.
+  Hooks.on('renderPlayerList', () => requestAnimationFrame(() => renderDoomBadge()));
+
+  // Called directly, not via Hooks.on('ready'): this runs FROM the ready
+  // handler, and Foundry never replays a hook that has already fired.
+  //
+  // Deferred for the same reason as above -- the travel dial is created
+  // later in that same handler, so measuring it now would find nothing and
+  // park the badge hard left.
+  requestAnimationFrame(() => renderDoomBadge());
 }

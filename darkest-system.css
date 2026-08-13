@@ -33,6 +33,9 @@
 
   /* Doom/supernatural — the unseen creature's ash tone */
   --darkest-purple: #4e3f6e;
+  /* Lifted for small marks on the near-black docked furniture: the base tone
+     is a surface colour and disappears at icon size against #1e1c19. */
+  --darkest-purple-light: #9b82c4;
 
   /* Borders — dark crimson tint, barely visible */
   --darkest-border: rgba(140, 40, 40, 0.3);
@@ -2607,7 +2610,7 @@
 
 .doom-tally .adjustment-indicator {
   text-align: center;
-  color: var(--darkest-text-muted);
+  color: var(--darkest-text-dim, #b3aa9c);
   font-size: 11px;
   margin-bottom: 10px;
 }
@@ -2619,11 +2622,14 @@
   margin-bottom: 10px;
 }
 
+/* text-dim, not text-muted: this window is a dark surface, and the palette
+   notes text-muted is meant for the pale parchment sheet. */
 .doom-tally .breakdown-header {
   font-size: 11px;
   font-weight: bold;
   text-transform: uppercase;
-  color: var(--darkest-text-muted);
+  letter-spacing: 0.04em;
+  color: var(--darkest-text-dim, #b3aa9c);
   margin-bottom: 6px;
   padding-bottom: 4px;
   border-bottom: 1px solid var(--darkest-border);
@@ -2639,12 +2645,15 @@
   gap: 4px;
 }
 
+/* bg-medium, not bg-dark: the window itself is bg-dark, so a bg-dark row was
+   invisible against it and the names had no surface to sit on. */
 .doom-tally .character-entry {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 8px;
-  background: var(--darkest-bg-dark);
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--darkest-bg-medium);
   border-radius: 3px;
   cursor: pointer;
   transition: background 0.2s;
@@ -2654,8 +2663,23 @@
   background: var(--darkest-bg-light);
 }
 
+/* Foundry's .window-content sets its own colour between .doom-tally and this,
+   so the system palette never reached the name -- it inherited core's default
+   against our dark row and came out muddy. Set it explicitly here, and lift
+   the size and weight: this is the one piece of text in the window a GM reads
+   at a glance across the table. */
 .doom-tally .character-name {
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--darkest-text, #cec9c0);
+}
+
+/* Same root cause, same fix -- the whole window was inheriting core's text
+   colour rather than ours. */
+.app.doom-tally .window-content,
+.application.doom-tally .window-content {
+  background: var(--darkest-bg-dark, #1e1c19);
+  color: var(--darkest-text, #cec9c0);
 }
 
 .doom-tally .character-dooms {
@@ -2668,7 +2692,7 @@
 }
 
 .doom-tally .no-characters {
-  color: var(--darkest-text-muted);
+  color: var(--darkest-text-dim, #b3aa9c);
   font-style: italic;
   font-size: 11px;
   text-align: center;
@@ -2685,7 +2709,7 @@
   font-size: 11px;
   font-weight: bold;
   text-transform: uppercase;
-  color: var(--darkest-text-muted);
+  color: var(--darkest-text-dim, #b3aa9c);
   margin-bottom: 6px;
   text-align: center;
 }
@@ -4528,6 +4552,69 @@
 }
 
 /* ----------------------------------------
+   The doom badge — sits beside the dial
+---------------------------------------- */
+
+/* Deliberately the dial's shape and height, so the two read as one piece of
+   furniture rather than two competing widgets. `left` and `bottom` are set
+   from JS, which measures the dial and the player list. */
+#darkest-doom-badge {
+  position: fixed;
+  bottom: 220px;
+  left: 12px;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 14px 8px 12px;
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 999px;
+  background: var(--darkest-bg-dark, #1e1c19);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+  color: var(--darkest-text, #e8dcc8);
+  font-family: var(--font-primary, inherit);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#darkest-doom-badge:hover {
+  border-color: var(--darkest-purple, #5c3f7c);
+  box-shadow: 0 2px 14px rgba(92, 63, 124, 0.5);
+}
+
+#darkest-doom-badge .badge-icon {
+  font-size: 20px;
+  line-height: 1;
+  /* Dim while the count is zero -- an unlit skull says "nothing yet" without
+     needing a second look, and stops the badge shouting at an empty table. */
+  color: var(--darkest-text-muted, #7a7268);
+  transition: color 0.3s;
+}
+
+#darkest-doom-badge.has-doom .badge-icon {
+  color: var(--darkest-purple-light, #8b6bb1);
+}
+
+#darkest-doom-badge .badge-readout {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+#darkest-doom-badge .badge-number {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+#darkest-doom-badge .badge-label {
+  font-size: 11px;
+  color: var(--darkest-text-muted, #7a7268);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ----------------------------------------
    Travel & Time — the GM tool
 ---------------------------------------- */
 /* The window itself is dark.
@@ -4615,6 +4702,26 @@
   border-left: 2px solid var(--darkest-border, #4a4038);
   font-style: italic;
   color: var(--darkest-text-muted, #7a7268);
+}
+
+/* The region crossing, on the rare leg that makes one. Sits directly above
+   the arrival line and shares its shape so the two read as one passage --
+   what changed on the road, then what they are standing in. Marked apart by
+   a warmer rule and slightly dimmer text: it describes the journey they have
+   just finished, not the place they are now in. */
+.travel-chat-crossing {
+  margin: 4px 0 2px;
+  padding-left: 8px;
+  border-left: 2px solid rgba(184, 146, 58, 0.45);
+  font-style: italic;
+  opacity: 0.85;
+  color: var(--darkest-text-muted, #7a7268);
+}
+
+/* Sunless days recolour the arrival line; the crossing follows it. */
+.travel-chat-sunless .travel-chat-crossing {
+  border-left-color: #4a5878 !important;
+  color: #8fa0c0 !important;
 }
 
 .travel-group {

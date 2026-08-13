@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.38.0-alpha (2026-08-13)
+
+**The doom count is on screen now**, beside the travel clock and above the player list. Click it to open the full tally. It sits dim while the count is zero and lights when there is something to fear, so an empty table isn't being shouted at. Everyone sees it — the doom count is public information, and the players' own sheets carry the Dooms it adds up. Turn it off per-client under *Show the doom count on screen*: where your screen furniture goes is your business, not the world's.
+
+**The doom tally is readable.** Character names were inheriting Foundry's own text colour rather than this system's — the window sets a colour, but Foundry's `.window-content` sits between it and the names and overrode it. On top of that the rows were the same colour as the window behind them, so the names had no surface to sit on, and four labels used the palette's *light-surface* muted tone against a dark window, which the palette itself warns against. Names are now larger, weighted, and set explicitly; rows have their own surface; the labels use the tone meant for dark windows.
+
+**Crossing between regions is described.** A journey that leaves one region for another now says what changed on the way — above the arrival line, in the same card. Walking from the Flood into Winter's Mercy, the standing water thins as the path climbs, then stops moving altogether. Walking back, the snow goes to slush and the slush to water that rises with every mile.
+
+Thirty-five routes cross a region boundary, out of 318. All thirty-five are written, and each **direction** is written separately — the same road walked the other way is a different transition, and several region pairs are joined by more than one road. The rest of the map stays silent, which is what keeps a crossing feeling like one.
+
+The lines follow the arrival-line rules: two sentences at most, never naming the place or the region, never naming the bird on a birdsong-gated path, and no distances — the card prints those directly above. They describe the journey, not the destination; the arrival line already covers where the party ended up. Interior crossings (the Ghost Caves, the Rootrealm, the Temple of the Moon) describe enclosure rather than weather.
+
+They are covered by the same *Show arrival text* setting: a GM who narrates the whole beat themselves gets nothing extra.
+
+**Requires content module 1.10.0** for the transition lines. Update the system first — the module will not activate against an older one.
+
 ## 0.37.0-alpha (2026-08-13)
 
 **Ask before each transgression.** A new setting under Transgression pacing. With it on, a Darkest Die whispers you a prompt — *apply it, or let it pass* — instead of advancing the track on its own. The prompt names the region, the level it would reach, and the witch's scripted action for that level, so the call can be made without opening the tracker.
