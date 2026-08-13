@@ -932,14 +932,14 @@ export class TransgressionTracker extends Application {
       const regionSlug = btn.dataset.region;
       const level = TransgressionTracker.getTransgressions()[regionSlug]?.level ?? 0;
 
-      // Disabled for the length of the cue: a second press while the first is
-      // still going would hit the same "already playing" no-op that made
-      // repeat triggers silent, and look like the button was broken.
+      // Disabled for the length of the cue, so the button matches what is
+      // audible: pressing again mid-cue would stop and restart it, which
+      // reads as a stutter rather than as a second sting.
       btn.disabled = true;
       try {
         await TransgressionFx.play(regionSlug, level, { verbose: false });
       } finally {
-        setTimeout(() => { btn.disabled = false; }, 1500);
+        setTimeout(() => { btn.disabled = false; }, TransgressionFx.cueLength());
       }
     });
 

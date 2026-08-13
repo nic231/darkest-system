@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.41.1-alpha (2026-08-13)
+
+**Cues are cut off after six seconds now**, with a setting to change it (2–30).
+
+Syrinscape's `oneshot` label means "does not loop" — it does *not* mean "is short". Several of the chosen cues are perfectly good sounds that simply run long: screams and roars, a crushing wave, the Tomb of the Nine Gods stinger. Left alone they play over whatever the GM says next, which is the opposite of punctuation.
+
+Restricting the selection to brief sounds was the wrong fix — it would rule out most of the good material, and the catalogue publishes no durations to select on anyway. Every cue is now stopped after a fixed length instead, so it behaves like a sting regardless of the source.
+
+The stop is a real one: Syrinscape Controller intercepts `playing: false` and ends the element, the same mechanism the scene ambience uses to swap layers. The correction matters — the 0.40.4 note said this timer was only Foundry's bookkeeping and could not cut a sound short. That was wrong, and it is exactly what was needed.
+
+The tracker's play button now stays disabled for the cue's length rather than a fixed moment, so the control matches what is audible.
+
 ## 0.41.0-alpha (2026-08-13)
 
 **The transgression cue is yours to play now.** Each region row in the Transgression Tracker has a speaker button; press it and that region's witch sounds at whatever level the track is currently on — tier 1 below 5, tier 2 from 5, tier 3 at 10.

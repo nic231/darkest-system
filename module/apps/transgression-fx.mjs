@@ -45,6 +45,7 @@
 import { isPrimaryGM } from '../helpers/gm.mjs';
 
 const SETTING_ENABLED = 'transgressionFx';
+const SETTING_CUE_SECONDS = 'transgressionCueSeconds';
 
 // Injected by the darkest-woods module. Empty without it, which means this
 // whole file does nothing rather than erroring.
@@ -76,6 +77,16 @@ export const TransgressionFx = {
   enabled() {
     try { return game.settings.get('darkest-system', SETTING_ENABLED) !== 'off'; }
     catch { return false; }
+  },
+
+  /** How long a cue is allowed to run, in ms, before it is stopped. */
+  cueLength() {
+    try {
+      const s = game.settings.get('darkest-system', SETTING_CUE_SECONDS);
+      return Math.max(1, Number(s) || 6) * 1000;
+    } catch {
+      return 6000;
+    }
   },
 
   /**
@@ -198,12 +209,11 @@ export const TransgressionFx = {
         //
         // So: force it off, then on. The off is awaited because the two
         // updates must not coalesce into a single no-op write.
-        if (sound.playing) await sound.update({ playing: false });
+        if (sound.playing) await sound.update({ playing: false, pausedTime: null });
         await sound.update({ playing: true });
 
-        // And clear it again once the one-shot has had time to finish, so
-        // the row does not stay lit and the NEXT trigger starts from a
-        // known-off state rather than relying on the reset above.
+        // Cut it off after the cue length. "oneshot" means "does not loop",
+        // not "is short" -- several of these run long enough to talk over.
         TransgressionFx._scheduleStop(sound);
       } catch (err) {
         console.warn(`Darkest System | could not play stinger ${id}`, err);
@@ -212,26 +222,33 @@ export const TransgressionFx = {
   },
 
   /**
-   * Put a fired stinger back to `playing: false` after it has had time to
-   * run.
+   * Stop a fired stinger after its allotted time.
    *
-   * A Syrinscape PlaylistSound has no local audio, so Foundry never sees an
-   * `ended` event and the flag would stay true forever -- leaving the row lit
-   * in the sidebar and, worse, making the next identical trigger a no-op.
+   * This is a REAL STOP, not just bookkeeping. Syrinscape Controller
+   * intercepts `playing: false` on its PlaylistSound and stops the element,
+   * exactly as scene-ambience._stopUuid relies on -- an earlier version of
+   * this comment claimed otherwise and it was wrong.
    *
-   * The timeout is a guess at the length of a one-shot, deliberately generous.
-   * Clearing it early would cut nothing short (Syrinscape owns playback; this
-   * flag is only Foundry's bookkeeping) but clearing it LATE would swallow a
-   * repeat trigger, so the timer is the shorter risk in only one direction.
+   * That matters because "oneshot" in Syrinscape's catalogue means "does not
+   * loop", NOT "is short". Several perfectly good cues -- screams and roars,
+   * a crushing wave, the Tomb of the Nine Gods stinger -- run far longer than
+   * a punctuation mark should, and left alone they play over whatever the GM
+   * says next. Cutting them at a fixed length makes every cue behave like a
+   * cue regardless of the source material.
+   *
+   * The default is deliberately short. A stinger is punctuation; if a GM
+   * wants a whole soundscape they have the Playlists sidebar.
    */
-  _scheduleStop(sound, ms = 12000) {
+  _scheduleStop(sound, ms = TransgressionFx.cueLength()) {
     const uuid = sound.uuid;
     clearTimeout(TransgressionFx._stopTimers.get(uuid));
     TransgressionFx._stopTimers.set(uuid, setTimeout(async () => {
       TransgressionFx._stopTimers.delete(uuid);
       try {
         const live = fromUuidSync(uuid);
-        if (live?.playing) await live.update({ playing: false });
+        // pausedTime null: Syrinscape cannot resume, so a stop is a stop
+        // rather than a pause. scene-ambience._stopUuid does the same.
+        if (live?.playing) await live.update({ playing: false, pausedTime: null });
       } catch (err) {
         console.warn('Darkest System | could not clear stinger state', err);
       }
@@ -344,5 +361,20 @@ export function registerTransgressionFxSettings() {
       off: 'Off',
     },
     default: 'all',
+  });
+
+  // Syrinscape's "oneshot" means "does not loop", NOT "is short" -- several
+  // of the chosen cues run long enough to talk over. Rather than restrict the
+  // selection to brief sounds (which would rule out most of the good ones,
+  // and the catalogue does not publish durations to select on anyway), every
+  // cue is cut off after this long.
+  game.settings.register('darkest-system', SETTING_CUE_SECONDS, {
+    name: 'Transgression cue length',
+    hint: 'How long a transgression cue plays before it is stopped, in seconds. Syrinscape labels these one-shots, which only means they do not loop — several run far longer than a sting should. 6 keeps them to punctuation; raise it if you want a cue to breathe.',
+    scope: 'world',
+    config: true,
+    type: Number,
+    range: { min: 2, max: 30, step: 1 },
+    default: 6,
   });
 }
