@@ -420,6 +420,8 @@ export class SessionLog extends Application {
       return { created: 0, skipped: CHAT_HISTORY.length };
     }
 
+    const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
+
     const payloads = pending.map((m) => {
       // Restored transgressions and rolls keep their card styling so a
       // restored log looks like the log that was lost, not a wall of text.
@@ -432,10 +434,19 @@ export class SessionLog extends Application {
       // parse, so Foundry falls back to its own default instead of storing
       // a broken value.
       const t = m.when ? Date.parse(m.when) : NaN;
+
+      // A transgression card is the witch's SCRIPTED ACTION -- GM-only when
+      // it fired, and it has to go back that way. Foundry's export records
+      // no whisper information at all, so the parser infers it from the
+      // kind; without this every restored transgression would be re-posted
+      // publicly and hand the players the whole table at once.
+      const whisper = m.gmOnly ? gmIds : undefined;
+
       return {
         content: `<div class="${cls} chat-restored">${SessionLog._restoredBody(m)}</div>`,
         speaker: { alias: m.who },
         ...(Number.isFinite(t) ? { timestamp: t } : {}),
+        ...(whisper ? { whisper } : {}),
         flags: { 'darkest-system': { [RESTORED_FLAG]: m._id, restored: true } },
       };
     });
@@ -443,6 +454,21 @@ export class SessionLog extends Application {
     // One call: createDocuments batches the socket traffic, where a loop of
     // creates would fire several hundred separate updates at every client.
     await ChatMessage.createDocuments(payloads);
+
+    // A GM-only marker in chat itself, so a restore leaves a trace in the
+    // record it just rebuilt. A toast is gone the moment it fades and tells
+    // a GM opening the world tomorrow nothing; this survives, and survives
+    // into the NEXT export -- so the history knows it was restored once.
+    //
+    // Not flagged as restorable itself: re-creating old "restored N
+    // messages" notices on a later restore would be noise about noise. The
+    // parser leaves it as narration, and the id-skip keeps it single.
+    const gmCount = pending.filter(m => m.gmOnly).length;
+    await SessionLog._postRestoreNote({
+      created: pending.length,
+      skipped: CHAT_HISTORY.length - pending.length,
+      gmOnly: gmCount,
+    });
 
     ui.notifications.info(
       `Restored ${pending.length} message${pending.length === 1 ? '' : 's'}`
@@ -520,6 +546,33 @@ export class SessionLog extends Application {
     SessionLog.refresh();
     ui.notifications.info(`Imported ${rolls} roll${rolls === 1 ? '' : 's'} and ${transgressions} transgression${transgressions === 1 ? '' : 's'}.`);
     return { created: wanted.length, rolls, transgressions };
+  }
+
+  /**
+   * A GM-only note in chat saying a restore happened.
+   *
+   * Whispered, and timestamped NOW rather than back-dated like the messages
+   * around it -- it records the restore, not the session, so it belongs at
+   * the bottom of the log where the GM will actually see it.
+   */
+  static async _postRestoreNote({ created, skipped, gmOnly }) {
+    const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
+    if (!gmIds.length) return;
+
+    const bits = [`<strong>${created}</strong> message${created === 1 ? '' : 's'} restored`];
+    if (gmOnly) bits.push(`${gmOnly} whispered to you only`);
+    if (skipped) bits.push(`${skipped} already present, skipped`);
+
+    await ChatMessage.create({
+      whisper: gmIds,
+      content: `<div class="transgression-message restore-note">
+        <div class="restore-note-head"><i class="fas fa-clock-rotate-left"></i> Restored from the content module</div>
+        <p>${bits.join(' · ')}</p>
+        <p class="hint">Restored messages keep their original timestamps, so they sit
+        where they happened rather than here. Running Restore again adds nothing.</p>
+      </div>`,
+      flags: { 'darkest-system': { restoreNote: true } },
+    });
   }
 
   /** The body of a restored message, formatted by kind. */

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.39.1-alpha (2026-08-13)
+
+**A restore now leaves a GM-only note in chat**, saying how many messages came back, how many were whispered, and how many were skipped as already present. A toast is gone the moment it fades; this stays in the record it just rebuilt, and survives into the next export — so the history itself knows it was restored. The note is dropped when the history is rebuilt, so it cannot accumulate a notice about a notice on every cycle.
+
+**Restored transgressions go back as GM whispers, not public messages.** This one is worth explaining, because it would have been a real leak. Foundry's chat export writes a whispered message in exactly the same shape as a public one — who could see it is simply absent from the file. The witch's scripted action ("The Lost — Transgression 3: A thick fog descends…") was whispered to the GM when it fired; the players only ever saw *the woods stir and whisper*. Restoring naively would have re-posted every one of them publicly and handed the players the entire transgression table in one go.
+
+Visibility is therefore inferred from the kind: transgression cards restore GM-only, everything else restores public. That is a guess, but deliberately the safe one — a public line wrongly kept private costs a re-read, where the reverse spoils the campaign.
+
+**Requires content module 1.11.1**, which carries the whisper flags. Update the system first.
+
 ## 0.39.0-alpha (2026-08-13)
 
 **Transgressions can be added and edited by hand.** For a campaign that started tracking partway in, or to correct a mis-recorded one. Region, level, witch, and the game day and time it happened.

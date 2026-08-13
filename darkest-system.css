@@ -6414,6 +6414,16 @@
   opacity: 0.85;
 }
 
+/* The GM-only marker left behind by a restore. */
+.restore-note .restore-note-head {
+  color: #b8923a;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.restore-note p { margin: 0 0 4px; }
+.restore-note .hint { font-style: italic; opacity: 0.8; font-size: 11px; }
+
 .chat-restored .restored-roll-outcome {
   margin-top: 3px;
   font-weight: bold;
