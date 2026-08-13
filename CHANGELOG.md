@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.40.3-alpha (2026-08-13)
+
+**The stingers no longer loop.** They were built with `repeat: true`, inherited from the ambience beds where a track ending mid-scene would leave a hole in the soundscape. A stinger is a one-shot, so a wolf howl started at a transgression would still be howling when the party reached the next region. They are also given a short non-zero fade: Syrinscape Controller feeds the fade duration to `setValueCurveAtTime`, which throws on zero.
+
+**Testing the flourish now tells you why nothing happened.** `TransgressionFx.play()` had four separate silent returns — not the primary GM, the setting off, no sounds for that region, and the playlist not imported. All four returned `undefined` and did nothing, which is correct during play but useless when a GM is testing: a missing playlist looked exactly like a broken feature.
+
+Called by hand it now logs which gate stopped it, and reports what Sequencer and FXMaster were found to be. The likeliest cause gets a real instruction: *the "Transgression stingers" playlist is not in this world — import it from the module's Playlists compendium.* The live path stays silent.
+
+**Requires content module 1.13.1**, which also puts the stinger playlist on every region bundle so importing any region brings it in.
+
 ## 0.40.2-alpha (2026-08-13)
 
 **The screen effects now use an asset that exists.** Both tiers referenced JB2A files from the Patreon library — the free library carries `energy_field` in blue only and has no `dark_red` at all, so they 404'd and nothing showed. Both now use `jb2a.darkness.black` at two weights: lighter and shorter at tier 2, heavier and longer at tier 3.

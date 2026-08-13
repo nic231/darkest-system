@@ -602,7 +602,7 @@ export class TransgressionTracker extends Application {
     //
     // Not awaited: a flourish must never delay or fail the record. Every
     // failure inside is swallowed and logged.
-    TransgressionFx.play(regionSlug, region.level);
+    TransgressionFx.play(regionSlug, region.level, { verbose: false });
 
     // Post the triggered event to GM chat
     const regionData = ALL[regionSlug];

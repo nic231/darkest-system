@@ -81,20 +81,42 @@ export const TransgressionFx = {
    * Fire-and-forget by design: the caller is mid-way through recording a
    * transgression and must not wait on audio, nor fail because of it.
    */
-  play(regionSlug, level) {
-    if (!isPrimaryGM()) return;
-    if (!this.enabled()) return;
+  /**
+   * @param {boolean} [verbose]  Say why nothing happened, rather than
+   *   returning silently. On by default when called by hand from a macro or
+   *   the console -- both guards below are legitimate reasons to do nothing
+   *   during play, but when a GM is testing, "undefined and no sound" is
+   *   indistinguishable from a broken feature. Passing false keeps the live
+   *   path quiet.
+   */
+  play(regionSlug, level, { verbose = true } = {}) {
+    if (!isPrimaryGM()) {
+      if (verbose) console.warn('Darkest System | transgression flourish skipped: not the primary GM');
+      return;
+    }
+    if (!this.enabled()) {
+      if (verbose) console.warn(`Darkest System | transgression flourish skipped: setting is "${this.mode()}"`);
+      return;
+    }
 
     const tier = tierOf(level);
     // Awaited internally but not by the caller; every branch swallows its
     // own errors so a missing module can't surface as an unhandled rejection.
-    this._playTier(regionSlug, tier).catch(err =>
+    return this._playTier(regionSlug, tier, verbose).catch(err =>
       console.warn('Darkest System | transgression flourish failed', err));
   },
 
-  async _playTier(regionSlug, tier) {
-    await this._stinger(regionSlug, tier);
-    if (this.mode() === 'all') await this._screen(tier);
+  async _playTier(regionSlug, tier, verbose = false) {
+    if (verbose) {
+      console.log(`Darkest System | transgression flourish: ${regionSlug}, level tier ${tier}`);
+      if (!Object.keys(TRANSGRESSION_SOUNDS).length) {
+        console.warn('Darkest System |   no sound data registered — is the content module active and up to date?');
+      } else if (!TRANSGRESSION_SOUNDS[regionSlug]) {
+        console.warn(`Darkest System |   "${regionSlug}" has no stingers. Known: ${Object.keys(TRANSGRESSION_SOUNDS).join(', ')}`);
+      }
+    }
+    await this._stinger(regionSlug, tier, verbose);
+    if (this.mode() === 'all') await this._screen(tier, verbose);
   },
 
   /**
@@ -110,16 +132,30 @@ export const TransgressionFx = {
    * the top of the bed; the ambience code's diff never sees them because
    * they live in a different playlist with a different contentType.
    */
-  async _stinger(regionSlug, tier) {
+  async _stinger(regionSlug, tier, verbose = false) {
     const ids = TRANSGRESSION_SOUNDS[regionSlug]?.[tier]
       ?? TRANSGRESSION_SOUNDS[regionSlug]?.[String(tier)]
       ?? [];
-    if (!ids.length) return;
+    if (!ids.length) {
+      if (verbose) console.warn(`Darkest System |   no tier-${tier} sounds for "${regionSlug}"`);
+      return;
+    }
 
+    // The playlist has to be IMPORTED INTO THE WORLD, not merely present in
+    // the module's compendium -- game.playlists holds world documents only.
+    // This is the likeliest reason a correctly-configured table hears
+    // nothing, so it says so rather than returning quietly.
     const playlist = game.playlists?.find(
       p => p.getFlag('darkest-woods', 'audio')?.contentType === 'syrinscape-stingers'
     );
-    if (!playlist) return;
+    if (!playlist) {
+      if (verbose) {
+        console.warn('Darkest System |   the "Transgression stingers" playlist is not in this world. '
+          + 'Import it from the module\'s Playlists compendium, or run the region importer.');
+      }
+      return;
+    }
+    if (verbose) console.log(`Darkest System |   playing ${ids.length} element(s): ${ids.join(', ')}`);
 
     for (const id of ids) {
       const sound = playlist.sounds?.find(
@@ -176,9 +212,22 @@ export const TransgressionFx = {
     }
   },
 
-  async _screen(tier) {
+  async _screen(tier, verbose = false) {
     const spec = TRANSGRESSION_FX[tier] ?? TRANSGRESSION_FX[String(tier)];
-    if (!spec) return;   // tier 1 is deliberately silent on screen
+    if (!spec) {
+      // Tier 1 is deliberately silent on screen; anything else means the
+      // module's fx data didn't arrive.
+      if (verbose && tier !== 1) {
+        console.warn(`Darkest System |   no screen effect defined for tier ${tier}`);
+      }
+      return;
+    }
+
+    if (verbose) {
+      console.log('Darkest System |   Sequencer:', !!globalThis.Sequence,
+        '| asset present:', TransgressionFx._hasAsset(spec.sequencer?.effect),
+        '| FXMaster:', !!(globalThis.FXMASTER ?? globalThis.FXMaster));
+    }
 
     if (globalThis.Sequence && spec.sequencer && TransgressionFx._hasAsset(spec.sequencer.effect)) {
       try {
