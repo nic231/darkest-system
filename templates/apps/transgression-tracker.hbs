@@ -69,6 +69,16 @@
       </button>
     </span>
     {{/if}}
+    {{#if confirming}}
+    {{!-- A quiet reminder that the track only moves when you say so. Without
+          it, a session where you let several pass looks like the tracker is
+          broken. --}}
+    <span class="damping-status confirming"
+          data-tooltip="Each Darkest Die whispers you a prompt before the track advances. The players see the woods stir either way.">
+      <i class="fas fa-hand"></i>
+      Asking first
+    </span>
+    {{/if}}
   </div>
 
   {{#if isEmpty}}

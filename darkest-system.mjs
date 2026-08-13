@@ -575,8 +575,15 @@ Hooks.on('darkestSystem.transgression', async (actor, roll) => {
   if (game.user.isGM) {
     const currentRegion = TransgressionTracker.getCurrentRegion();
     if (currentRegion) {
+      // No toast when the GM is being asked: the whispered prompt IS the
+      // notification, and "Transgression tracked. Level: 3" would be a lie
+      // told over the top of a question that hasn't been answered yet. (It
+      // was already misleading for a damped trigger, which returns the level
+      // it was held at -- so the toast now only speaks when the track moved.)
+      const asking = TransgressionTracker.confirmEnabled();
+      const before = TransgressionTracker.getTransgressions()[currentRegion]?.level ?? 0;
       const result = await TransgressionTracker.incrementTransgression(currentRegion);
-      if (result) {
+      if (result && !asking && result.level !== before) {
         ui.notifications.info(`Transgression tracked for ${currentRegion}. Level: ${result.level}, Loops: ${result.loops}`);
       }
     } else {
@@ -800,6 +807,39 @@ $(document).on('click', '.backtrack-apply', async function(event) {
   // bypassDamping: this is one deliberate press, not a flurry of dice.
   await TransgressionTracker.incrementTransgression(region, { bypassDamping: true });
   $(btn).closest('.backtrack-actions').html('<em class="backtrack-done">Transgression applied.</em>');
+});
+
+// The roll-driven confirm prompt ("Ask before each transgression"). Distinct
+// from .backtrack-apply above because this one must NOT bypass damping and
+// must NOT re-post the public message:
+//
+//   - damping still applies. The two settings compose: this decides whether
+//     the woods advance, pacing decides whether they can. Bypassing here
+//     would silently override a pacing rule the GM also chose.
+//   - silent, because the prompt already stirred the woods when the die
+//     landed. A second line on Apply would appear only for applied
+//     transgressions -- the exact tell this feature exists to prevent.
+//   - skipConfirm, or applying would prompt again, forever.
+$(document).on('click', '.transgression-apply', async function(event) {
+  event.preventDefault();
+  if (!game.user.isGM) return;
+  const btn = event.currentTarget;
+  const region = btn.dataset.region || TransgressionTracker.getCurrentRegion();
+  if (!region) {
+    ui.notifications.warn('No region set — open the Transgression Tracker and pick one.');
+    return;
+  }
+  // Disable immediately: ChatMessage.create() round-trips, and a double-click
+  // in that window would advance the track twice for one Darkest Die.
+  btn.disabled = true;
+  const result = await TransgressionTracker.incrementTransgression(region, {
+    skipConfirm: true, silent: true,
+  });
+  const held = result && result.level != null
+    ? ` <span class="damped-reason">(track at ${result.level})</span>`
+    : '';
+  $(btn).closest('.backtrack-actions')
+    .html(`<em class="backtrack-done">Transgression applied.${held}</em>`);
 });
 
 $(document).on('click', '.backtrack-dismiss', function(event) {

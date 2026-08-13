@@ -5470,6 +5470,18 @@
   border-color: rgba(127, 176, 105, 0.5);
 }
 
+/* "Asking first". The margin-left:auto above right-aligns a badge; with both
+   badges showing, only the FIRST should claim that space or the two would be
+   pushed to opposite ends of the toolbar. */
+.transgression-tracker .damping-status ~ .damping-status {
+  margin-left: 6px;
+}
+
+.transgression-tracker .damping-status.confirming {
+  color: #b8923a;
+  border-color: rgba(184, 146, 58, 0.5);
+}
+
 .transgression-tracker .damping-reset {
   width: 20px;
   padding: 0;
@@ -6068,6 +6080,30 @@
   border-color: #b8923a;
   background: rgba(90, 74, 44, 0.7);
   color: #fff0cc;
+}
+
+/* Disabled the instant Apply is pressed -- the write round-trips, and a
+   double-click in that window would advance the track twice. */
+.backtrack-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.backtrack-actions button:disabled:hover {
+  border-color: #6a5a3a;
+  background: rgba(60, 50, 30, 0.5);
+  color: #e0cfa0;
+}
+
+/* What applying would actually trigger, shown in the confirm prompt so the
+   call can be made without opening the tracker to look it up. Indented and
+   dimmed: it is the witch's scripted action, not part of the question. */
+.backtrack-prompt .transgression-preview {
+  border-left: 2px solid #6a5a3a;
+  padding-left: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  opacity: 0.9;
 }
 
 .backtrack-done {

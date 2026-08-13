@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.37.0-alpha (2026-08-13)
+
+**Ask before each transgression.** A new setting under Transgression pacing. With it on, a Darkest Die whispers you a prompt — *apply it, or let it pass* — instead of advancing the track on its own. The prompt names the region, the level it would reach, and the witch's scripted action for that level, so the call can be made without opening the tracker.
+
+**The players cannot tell.** This is the whole point of the feature, so it is worth being precise about what it guarantees. The woods stir publicly the instant the die lands, before you have decided, worded exactly as they always are — including the tier, which is chosen from the level the transgression *would* reach rather than the one it is sitting at, because the tiers step at 5 and 10 and getting that wrong would be the tell at the two most dramatic moments in the track. Applying posts nothing further; a second public line would appear only for the ones you applied. Applied, let pass, held by pacing, and fully automatic are byte-identical in public chat.
+
+**Letting one pass costs nothing.** No cooldown is consumed and no provocation is counted, so the next Darkest Die can still land. Pacing is only consulted if you apply.
+
+**It composes with pacing rather than replacing it.** This decides whether the woods advance; pacing decides whether they *can*. Run both and a transgression you apply can still be held by a cooldown — the tracker will tell you so, privately.
+
+**Backtracking is unchanged.** It has asked you this way since 0.31.0 and does not double-prompt.
+
+The tracker window shows an "Asking first" badge while the setting is on, so a session where you let several pass doesn't look like the tracker has stopped working. Off by default; Darkest Woods mode only, like the pacing rules it sits with.
+
+**Also:** the GM-only toast that announced "Transgression tracked. Level: N" no longer fires when the track didn't actually move — it had been reporting a level for damped triggers that were held.
+
 ## 0.36.0-alpha (2026-08-13)
 
 A pass over the whole codebase, fixing what the last review found. Most of these are things that only went wrong under conditions the table actually meets — a party that splits, a second GM logging in, a journey that starts underground.

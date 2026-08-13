@@ -11,6 +11,7 @@ const SETTING_DAMPING_MINUTES = 'transgressionCooldownMinutes';
 const SETTING_DAMPING_ROLLS = 'transgressionCooldownRolls';
 const SETTING_DAMPING_THRESHOLD = 'transgressionThreshold';
 const SETTING_DAMPING_STATE = 'transgressionDampingState';
+const SETTING_CONFIRM = 'transgressionConfirm';
 
 // Content placeholders — populated by the darkest-woods module if installed,
 // or customised manually by the GM via the tracker UI.
@@ -408,7 +409,87 @@ export class TransgressionTracker extends Application {
     return { level: region.level, loops: region.loops };
   }
 
-  static async incrementTransgression(regionSlug, { bypassDamping = false } = {}) {
+  /** Is the GM being asked about each roll-driven transgression? */
+  static confirmEnabled() {
+    try {
+      return game.settings.get('darkest-system', SETTING_CONFIRM) === true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Stir the woods, then ask the GM whether the track actually moves.
+   *
+   * The player-facing half must be INDISTINGUISHABLE from a live
+   * transgression, a damped one, and one the GM lets pass. Three things
+   * follow from that, and all three are load bearing:
+   *
+   * 1. The public message is posted HERE, before the GM decides, and is the
+   *    same _publicStirMessage() a live trigger posts. Waiting for the
+   *    decision would put a visible pause in front of the players that scales
+   *    with how long the GM deliberated.
+   * 2. It is tiered off the level this trigger WOULD reach, not the current
+   *    one -- the same reasoning as the damping branch. The tiers step at 5
+   *    and 10, so using the current level would post a tier-2 line where a
+   *    live trigger posted tier-3, at the two most dramatic moments in the
+   *    track.
+   * 3. Applying later posts NO second public message. The players have had
+   *    their line; a second one on Apply would mark out the applied ones.
+   *
+   * Damping is deliberately not consulted here. A trigger the GM lets pass
+   * costs nothing -- no cooldown consumed, no provocation counted -- so the
+   * next one can still land. Damping runs on Apply, inside the normal path.
+   */
+  static async _promptForTransgression(regionSlug, ALL) {
+    const current = this.getTransgressions()[regionSlug] || { level: 0, loops: 0 };
+    const wouldBe = current.level >= 10 ? 1 : current.level + 1;
+
+    const stir = TransgressionTracker._publicStirMessage(
+      wouldBe, false, ALL[regionSlug].keyPhrase
+    );
+    await ChatMessage.create({
+      content: `<div class="transgression-message player-ominous"><i class="fas fa-tree"></i> ${stir}</div>`
+    });
+
+    const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
+    if (!gmIds.length) return current;
+
+    const regionData = ALL[regionSlug];
+    // What applying would actually do, so the call can be made from the
+    // prompt without opening the tracker to look it up.
+    const eventText = regionData?.transgressionEvents?.[wouldBe - 1];
+    const preview = eventText
+      ? `<p class="transgression-preview"><strong>Would trigger ${wouldBe}:</strong> ${eventText}</p>`
+      : '';
+
+    await ChatMessage.create({
+      whisper: gmIds,
+      content: `<div class="transgression-message backtrack-prompt">
+        <div class="backtrack-head"><i class="fas fa-dice-d6"></i> A Darkest Die — your call.</div>
+        <p>The woods have stirred for <strong>${regionData.name}</strong>. The track
+        sits at <strong>${current.level}</strong>; applying takes it to
+        <strong>${wouldBe}</strong>.</p>
+        ${preview}
+        <p class="hint">The players have already seen the woods take notice — nothing below changes what they see.</p>
+        <div class="backtrack-actions">
+          <button type="button" class="transgression-apply" data-region="${regionSlug}">
+            <i class="fas fa-tree"></i> Apply transgression
+          </button>
+          <button type="button" class="backtrack-dismiss">
+            <i class="fas fa-times"></i> Let it pass
+          </button>
+        </div>
+      </div>`,
+      flags: { 'darkest-system': { transgressionPrompt: true } },
+    });
+
+    return current;
+  }
+
+  static async incrementTransgression(regionSlug, {
+    bypassDamping = false, skipConfirm = false, silent = false,
+  } = {}) {
     if (this.getGameMode() === 'darkest-house') {
       return this._incrementHouseAction();
     }
@@ -417,6 +498,17 @@ export class TransgressionTracker extends Application {
     if (!regionSlug || !ALL[regionSlug]) {
       ui.notifications.warn('No valid region selected for transgression tracking');
       return null;
+    }
+
+    // Ask first, if the GM wants to be asked. skipConfirm is what the prompt's
+    // own Apply button comes back through -- without it, pressing Apply would
+    // post a second stir message and prompt again forever.
+    //
+    // bypassDamping implies skipConfirm: its only caller is the backtracking
+    // prompt, which has ALREADY asked. Prompting again would be a second
+    // dialog for one decision the GM just made.
+    if (this.confirmEnabled() && !skipConfirm && !bypassDamping) {
+      return TransgressionTracker._promptForTransgression(regionSlug, ALL);
     }
 
     // Optional pacing house rule. A damped trigger still stirs the woods --
@@ -441,13 +533,19 @@ export class TransgressionTracker extends Application {
       // current level would post a tier-2 message where a live trigger
       // posted tier-3 -- letting a player who tracks the wording work out
       // that damping is on, at exactly the two most dramatic moments.
-      const wouldBe = current.level >= 10 ? 1 : current.level + 1;
-      const stir = TransgressionTracker._publicStirMessage(
-        wouldBe, false, ALL[regionSlug].keyPhrase
-      );
-      await ChatMessage.create({
-        content: `<div class="transgression-message player-ominous"><i class="fas fa-tree"></i> ${stir}</div>`
-      });
+      //
+      // `silent` when the GM is confirming: the prompt already posted this
+      // exact line before they decided. Pressing Apply and finding the woods
+      // held would otherwise stir them twice for one Darkest Die.
+      if (!silent) {
+        const wouldBe = current.level >= 10 ? 1 : current.level + 1;
+        const stir = TransgressionTracker._publicStirMessage(
+          wouldBe, false, ALL[regionSlug].keyPhrase
+        );
+        await ChatMessage.create({
+          content: `<div class="transgression-message player-ominous"><i class="fas fa-tree"></i> ${stir}</div>`
+        });
+      }
 
       const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
       if (gmIds.length) {
@@ -480,11 +578,19 @@ export class TransgressionTracker extends Application {
     // Public ominous message, tiered by the new level -- everyone sees this,
     // GM included; it never names the witch's actual scripted action (only
     // the tier-3 key phrase, per the rules -- see _publicStirMessage).
-    const isHouseMode = this.getGameMode() === 'darkest-house';
-    const stirMessage = TransgressionTracker._publicStirMessage(region.level, isHouseMode, ALL[regionSlug].keyPhrase);
-    await ChatMessage.create({
-      content: `<div class="transgression-message player-ominous"><i class="fas fa-tree"></i> ${stirMessage}</div>`
-    });
+    //
+    // Suppressed when the GM is confirming: the prompt posted this line the
+    // moment the die landed, tiered off the same level this advance reached.
+    // Posting again on Apply would give the players a second stir for one
+    // provocation -- and only for the ones the GM chose to apply, which is
+    // exactly the tell the whole feature exists to avoid.
+    if (!silent) {
+      const isHouseMode = this.getGameMode() === 'darkest-house';
+      const stirMessage = TransgressionTracker._publicStirMessage(region.level, isHouseMode, ALL[regionSlug].keyPhrase);
+      await ChatMessage.create({
+        content: `<div class="transgression-message player-ominous"><i class="fas fa-tree"></i> ${stirMessage}</div>`
+      });
+    }
 
     // Post the triggered event to GM chat
     const regionData = ALL[regionSlug];
@@ -661,7 +767,8 @@ export class TransgressionTracker extends Application {
         name: data.name,
         selected: slug === currentRegion
       })),
-      damping: TransgressionTracker._dampingStatus()
+      damping: TransgressionTracker._dampingStatus(),
+      confirming: TransgressionTracker.confirmEnabled(),
     };
   }
 
@@ -926,6 +1033,26 @@ export function registerTransgressionSettings() {
       threshold: 'Provocation — several triggers needed to advance one level',
     },
     default: 'off',
+    onChange: () => TransgressionTracker.refresh(),
+  });
+
+  // --- Optional house rule: decide each one yourself ----------------------
+  //
+  // Separate from pacing above, and composable with it: pacing decides
+  // whether the woods CAN advance, this decides whether they DO. A GM who
+  // wants to judge every transgression in the moment ("that one was earned,
+  // that one was a fluke of the dice") turns this on and leaves pacing off.
+  //
+  // The players' experience is byte-identical either way. That is the whole
+  // point of the feature and the constraint every part of it is written
+  // against -- see _promptForTransgression().
+  game.settings.register('darkest-system', SETTING_CONFIRM, {
+    name: 'Ask before each transgression',
+    hint: 'Optional house rule, Darkest Woods mode only. A Darkest Die whispers you a prompt instead of advancing the track: apply it, or let it pass. The players see exactly what they always see either way — the woods stir on the card regardless, and nothing in chat reveals your choice. Backtracking already asks and is unaffected.',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: false,
     onChange: () => TransgressionTracker.refresh(),
   });
 
