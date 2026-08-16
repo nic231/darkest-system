@@ -4674,6 +4674,11 @@
    Capped and scrollable: the badge grows upward from the player list, and a
    table of eight would otherwise climb into the scene controls. Six rows fit
    before it starts scrolling, which covers any normal party. */
+/* max-height is a FALLBACK only. positionDoomBadge() overwrites it with the
+   space actually available between the player list and the top of the
+   viewport, because a fixed cap either wastes room on a tall screen or still
+   overlaps the chat panel on a short one. This value only applies before the
+   first positioning pass, or if that pass cannot find the player list. */
 #darkest-doom-badge .badge-list {
   display: flex;
   flex-direction: column;

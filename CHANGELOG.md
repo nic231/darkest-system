@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.42.4-alpha (2026-08-14)
+
+**The doom badge no longer covers the player list.** It was positioned to sit just past the travel dial — but the dial is a narrow pill (~112px) and the player list is nearly twice that (~202px), so once the roster filled out the badge landed squarely on top of it. It now clears whichever of the two is wider, which holds for any roster size and any name length, since the list grows sideways with the longest name.
+
+It also sits on the same baseline as the dial now rather than being pushed up above the player list, since it no longer needs to clear the list vertically.
+
+**The roster list is capped to the space actually available** between that baseline and the top of the viewport, and scrolls inside the cap. The skull and the total are never shrunk. The cap is recomputed on window resize, which the old fixed 132px value could not react to.
+
 ## 0.42.3-alpha (2026-08-14)
 
 **The tracker's play button no longer un-disables itself mid-cue.** It was held disabled for the cue's length by a timeout on the button element — but advancing any region's transgression re-renders the whole tracker, which replaces that element. The timeout then cleared a flag on a node no longer on screen, leaving the fresh button live while the sound was still playing.

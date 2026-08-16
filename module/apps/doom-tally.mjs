@@ -184,11 +184,46 @@ export class DoomTally extends Application {
 function positionDoomBadge(el) {
   const players = document.getElementById('players');
   if (!players) return;
-  el.style.bottom = `${players.offsetHeight + 10}px`;
 
-  // To the RIGHT of the dial when it's there, hard left when it isn't.
+  // To the RIGHT of the dial -- and of the PLAYER LIST, which is the wider of
+  // the two and the one that actually gets covered.
+  //
+  // This used to clear the dial alone. The dial is a narrow pill (~112px) but
+  // the player list is nearly twice that (~210px), so a badge placed just
+  // past the dial landed squarely on top of the list once the roster filled
+  // out. Clearing whichever is wider fixes it for any roster and any player
+  // name length, since the list grows sideways with the longest name.
   const dial = document.getElementById('darkest-travel-dial');
-  el.style.left = dial ? `${dial.offsetLeft + dial.offsetWidth + 8}px` : '12px';
+  const clearOf = (node) => node ? node.offsetLeft + node.offsetWidth : 0;
+  el.style.left = `${Math.max(clearOf(dial), clearOf(players), 4) + 8}px`;
+
+  // Sit on the same baseline as the dial, so the two read as one row of
+  // furniture. It no longer needs to clear the player list VERTICALLY -- it
+  // now clears it sideways -- so anchoring to the list's height would only
+  // push it needlessly up the screen.
+  const bottom = dial
+    ? Math.max(0, window.innerHeight - (dial.offsetTop + dial.offsetHeight))
+    : 12;
+  el.style.bottom = `${bottom}px`;
+
+  // The badge still grows UPWARD as characters are added -- the total block
+  // plus one row each -- and it sits at z-index 70, above Foundry's own UI,
+  // so nothing pushes it aside if it gets tall. Cap the roster list to the
+  // space actually available; the skull and the total stay whole, and the
+  // list scrolls inside the cap, so nothing is hidden permanently.
+  const available = window.innerHeight - bottom - 60;   // 60: leave the top clear
+  const list = el.querySelector('.badge-list');
+  if (list) {
+    // Measure the chrome (skull, total, padding) with the cap LIFTED, then
+    // apply the new one. Reading offsetHeight while a previous max-height is
+    // still in force measures the clamped list, so `chrome` would come out
+    // too large and the badge would shrink a little further on every
+    // reposition -- a full roster would ratchet down to nothing over a
+    // session's worth of players connecting and disconnecting.
+    list.style.maxHeight = 'none';
+    const chrome = el.offsetHeight - list.offsetHeight;
+    list.style.maxHeight = `${Math.max(0, available - chrome)}px`;
+  }
 }
 
 /**
@@ -350,6 +385,16 @@ export function registerDoomTallyHooks() {
   // the two registrations -- that ordering is not this file's to depend on,
   // and a future edit could silently flip it back.
   Hooks.on('renderPlayerList', () => requestAnimationFrame(() => renderDoomBadge()));
+
+  // The height cap is computed from window.innerHeight, so it goes stale on a
+  // resize or a jump to fullscreen -- the badge would keep the cap for the
+  // old window and either waste space or overlap the chat panel again.
+  // Debounced: a drag-resize fires this continuously.
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => renderDoomBadge(), 150);
+  });
 
   // Called directly, not via Hooks.on('ready'): this runs FROM the ready
   // handler, and Foundry never replays a hook that has already fired.
