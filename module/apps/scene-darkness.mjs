@@ -86,7 +86,13 @@ export const SceneDarkness = {
     // canvasReady and clockChanged both reach this too -- activating it for a
     // hold fires the first, and time passing during the roleplay fires the
     // second.
+    // Matched by FLAG as well as by the stored uuid. The travelling scene now
+    // falls back to the content module's own when the GM has chosen nothing
+    // (see TravelTool.travelScene), so a uuid comparison alone stopped
+    // recognising it -- and the clock would then darken a stylised woodcut
+    // road as though it were a sky.
     try {
+      if (scene.getFlag('darkest-woods', 'contentType') === 'travel') return;
       const travelUuid = game.settings.get('darkest-system', 'travelSceneUuid');
       if (travelUuid && scene.uuid === travelUuid) return;
     } catch { /* setting not registered yet; nothing to exclude */ }

@@ -4895,6 +4895,14 @@
   color: #b3aa9c !important;
 }
 
+/* "(from the content module)" -- a provenance note beside a real scene name,
+   not a name in its own right, so it sits smaller and dimmer than the em
+   rule above gives it. */
+.travel-tool .travel-scene-default {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
 /* The things you actually read and act on sit brighter than the hints. */
 .app.travel-tool .travel-hold-check,
 .application.travel-tool .travel-hold-check,

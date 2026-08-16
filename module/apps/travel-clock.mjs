@@ -1162,6 +1162,11 @@ export class TravelTool extends Application {
       hasGroups: TravelGroups.all().length > 1,
       hold,
       travelSceneName: TravelTool.travelScene()?.name ?? null,
+      // Whether that name came from the GM's own choice or from the content
+      // module's default. Clear is only offered for a chosen one -- with the
+      // fallback in place, clearing a defaulted scene would appear to do
+      // nothing, because the very next render finds it again.
+      travelSceneIsDefault: !TravelTool.chosenTravelSceneUuid(),
       canHold: TravelTool.canHold(),
       // Every pace is offered; _updatePaceOptions() disables the ones the
       // SELECTED ROUTE can't take, which is the check travel actually makes.
@@ -1896,10 +1901,62 @@ export class TravelTool extends Application {
     } catch {
       return null;
     }
-    if (!uuid) return null;
+
+    if (uuid) {
+      try {
+        const scene = fromUuidSync(uuid);
+        if (scene instanceof Scene) return scene;
+      } catch { /* fall through to the search below */ }
+    }
+
+    // Nothing set, or the chosen scene has since been deleted: find the
+    // module's own travelling scene by its flag.
+    //
+    // The content module ships one and puts it in EVERY region bundle, so a
+    // world with any region imported has it -- but the setting stores a UUID
+    // the system cannot guess, and the importer only fills it in on a fresh
+    // import. Worlds built before the scene existed, scenes dragged in by
+    // hand from the compendium, and a setting that was cleared all left hold
+    // mode silently unavailable with no hint as to why.
+    //
+    // Deliberately NOT written back to the setting: this runs on a getter
+    // that players call too, and a world-scoped write from a player throws.
+    // Finding it each time is cheap, and TravelTool's own settings picker
+    // still lets the GM choose a different scene, which takes precedence
+    // because the uuid branch above is tried first.
+    return TravelTool.moduleTravelScene();
+  }
+
+  /**
+   * The uuid the GM actually chose, or '' when they have chosen nothing.
+   *
+   * Distinct from travelScene(), which falls back to the module's default --
+   * the UI needs to tell those apart so it does not offer to "clear" a scene
+   * that would immediately be found again.
+   */
+  static chosenTravelSceneUuid() {
     try {
-      const scene = fromUuidSync(uuid);
-      return (scene instanceof Scene) ? scene : null;
+      const uuid = game.settings.get('darkest-system', SETTING_TRAVEL_SCENE) || '';
+      // A uuid pointing at a deleted scene is not a live choice.
+      if (!uuid) return '';
+      return (fromUuidSync(uuid) instanceof Scene) ? uuid : '';
+    } catch {
+      return '';
+    }
+  }
+
+  /**
+   * The travelling scene the content module supplies, by flag.
+   *
+   * Returns null without the module, which is correct: hold-for-roleplay is
+   * unavailable and the travel tool hides the option rather than offering
+   * something that cannot work.
+   */
+  static moduleTravelScene() {
+    try {
+      return game.scenes?.find(
+        s => s.getFlag('darkest-woods', 'contentType') === 'travel'
+      ) ?? null;
     } catch {
       return null;
     }

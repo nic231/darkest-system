@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.43.0-alpha (2026-08-14)
+
+**The travelling scene sets itself.** Now that the content module ships one and puts it in every region bundle, the system finds it by flag instead of waiting to be handed a UUID it could never guess.
+
+That UUID was only ever filled in by the region importer, on a fresh import. Any world built before the scene existed, any scene dragged in by hand from the compendium, and any setting that had been cleared left hold-for-roleplay silently unavailable — with nothing in the tool to say why, since the option simply hides itself when no scene is set.
+
+**A scene you pick yourself still wins.** The stored UUID is tried first and only falls through to the module's default when it is empty or points at a scene that has since been deleted.
+
+The travel tool now says *(from the content module)* beside a defaulted scene, and only offers **Clear** for one you chose. Clearing a default would have looked broken — the setting would empty and the very next render would find the scene again.
+
+**Scene darkness still skips it**, which the change would otherwise have broken: that check compared against the stored UUID, so a defaulted scene stopped being recognised and the clock would have darkened a stylised woodcut road as though it were a sky. It now matches the flag as well.
+
+Without the content module nothing changes — no scene is found, and the tool hides the option as before.
+
 ## 0.42.4-alpha (2026-08-14)
 
 **The doom badge no longer covers the player list.** It was positioned to sit just past the travel dial — but the dial is a narrow pill (~112px) and the player list is nearly twice that (~202px), so once the roster filled out the badge landed squarely on top of it. It now clears whichever of the two is wider, which holds for any roster size and any name length, since the list grows sideways with the longest name.

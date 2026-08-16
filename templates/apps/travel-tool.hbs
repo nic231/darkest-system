@@ -237,17 +237,24 @@
   <div class="travel-scene-setting">
     <span class="travel-scene-label">Travelling scene:</span>
     <span class="travel-scene-name">
-      {{#if travelSceneName}}{{travelSceneName}}{{else}}<em>not set — needed to hold for roleplay</em>{{/if}}
+      {{#if travelSceneName}}{{travelSceneName}}{{#if travelSceneIsDefault}}
+        <em class="travel-scene-default">(from the content module)</em>
+      {{/if}}{{else}}<em>not set — needed to hold for roleplay</em>{{/if}}
     </span>
     <button type="button" class="travel-scene-pick"
             data-tooltip="The generic scene shown while the party is on the road.">
       <i class="fas fa-map"></i> {{#if travelSceneName}}Change{{else}}Set{{/if}}
     </button>
+    {{!-- Clear is only for a scene the GM CHOSE. Offering it for the module's
+          default would look broken: the setting would empty and the very next
+          render would find the scene again by flag. --}}
+    {{#unless travelSceneIsDefault}}
     {{#if travelSceneName}}
-    <button type="button" class="travel-scene-clear" data-tooltip="Unset it">
+    <button type="button" class="travel-scene-clear" data-tooltip="Revert to the content module's travelling scene">
       <i class="fas fa-times"></i>
     </button>
     {{/if}}
+    {{/unless}}
   </div>
 
 </div>
