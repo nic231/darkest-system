@@ -33,6 +33,16 @@ export class TransgressionTracker extends Application {
   // section. See _advanceLevel().
   static _levelQueue = Promise.resolve();
 
+  /**
+   * regionSlug -> the ms timestamp at which its cue finishes.
+   *
+   * Held here rather than on the button element because a re-render replaces
+   * the DOM, and advancing any region's transgression re-renders this window
+   * -- so a disabled flag set on the old node would be lost. Kept per region
+   * so playing The Lost's cue does not disable The Dismal's button.
+   */
+  static _stingerUntil = new Map();
+
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
       id: 'transgression-tracker',
@@ -841,6 +851,19 @@ export class TransgressionTracker extends Application {
   activateListeners(html) {
     super.activateListeners(html);
 
+    // A cue that was still playing when this window last re-rendered leaves
+    // its button live on the fresh DOM. Put the disabled state back from the
+    // class-held timestamps, and drop entries that have since expired.
+    const now = Date.now();
+    for (const [slug, until] of TransgressionTracker._stingerUntil) {
+      if (until <= now) {
+        TransgressionTracker._stingerUntil.delete(slug);
+        continue;
+      }
+      const btn = html.find(`.stinger-btn[data-region="${slug}"]`)[0];
+      if (btn) btn.disabled = true;
+    }
+
     // Restore open panels from before the render
     if (this._openPanels?.size) {
       this._openPanels.forEach(slug => {
@@ -935,12 +958,19 @@ export class TransgressionTracker extends Application {
       // Disabled for the length of the cue, so the button matches what is
       // audible: pressing again mid-cue would stop and restart it, which
       // reads as a stutter rather than as a second sting.
+      //
+      // The "until" time is held on the CLASS, not on the button element.
+      // Any re-render of this window replaces the DOM -- and advancing a
+      // transgression re-renders it -- so a timeout that re-enabled `btn`
+      // would be clearing a flag on a node no longer on screen, leaving the
+      // fresh button live. Storing when the cue ends means the state
+      // survives the render -- activateListeners() puts it back.
+      TransgressionTracker._stingerUntil.set(
+        regionSlug, Date.now() + TransgressionFx.cueLength());
       btn.disabled = true;
-      try {
-        await TransgressionFx.play(regionSlug, level, { verbose: false });
-      } finally {
-        setTimeout(() => { btn.disabled = false; }, TransgressionFx.cueLength());
-      }
+      setTimeout(() => TransgressionTracker.refresh(), TransgressionFx.cueLength());
+
+      await TransgressionFx.play(regionSlug, level, { verbose: false });
     });
 
     // Click region summary to set as active — click again to deactivate

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.42.3-alpha (2026-08-14)
+
+**The tracker's play button no longer un-disables itself mid-cue.** It was held disabled for the cue's length by a timeout on the button element — but advancing any region's transgression re-renders the whole tracker, which replaces that element. The timeout then cleared a flag on a node no longer on screen, leaving the fresh button live while the sound was still playing.
+
+The end time is now held on the class, per region, and restored when the window re-renders. Pressing **+** on one region while another's cue plays no longer re-enables it.
+
 ## 0.42.2-alpha (2026-08-13)
 
 **The vignette actually animates now.** The real fault was not the tier values — it was that **CSS cannot interpolate between two radial gradients**. `background` is not an animatable property in any browser, so the gradient snapped to its final size and the only thing genuinely moving was opacity.
