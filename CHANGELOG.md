@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.43.1-alpha (2026-08-14)
+
+**"A new day begins", not "A new day dawns."** The day rolls over at midnight, so that line fires at 00:00 and at any hour a long journey happens to land on afterwards — announcing a dawn at 03:15 is simply untrue. The sunless variant beside it already said *begins*, so the two branches were inconsistent as well as one of them being wrong.
+
+The icon moves from a sun to a calendar for the same reason: a sun at three in the morning is the same claim made in a picture. The sunless branch keeps its moon.
+
 ## 0.43.0-alpha (2026-08-14)
 
 **The travelling scene sets itself.** Now that the content module ships one and puts it in every region bundle, the system finds it by flag instead of waiting to be handed a UUID it could never guess.

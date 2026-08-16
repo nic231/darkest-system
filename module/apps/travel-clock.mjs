@@ -2111,9 +2111,17 @@ export class TravelTool extends Application {
       // measure it (on day 2 there's nothing to compare against), and
       // noticing the light failing is exactly the realisation the players
       // should reach on their own.
+      // "Begins", not "dawns": the day rolls over at MIDNIGHT, so this fires
+      // at 00:00-ish and any hour after it that a long journey lands on.
+      // "A new day dawns" at 03:15 is simply untrue, and the sunless branch
+      // beside it already said "begins" -- the two were inconsistent as well
+      // as one of them wrong.
+      //
+      // The icon follows for the same reason: a sun at three in the morning
+      // is the same claim made in a picture.
       content += `<div class="travel-chat-newday">
-        <i class="fas ${now.merged ? 'fa-moon' : 'fa-sun'}"></i>
-        ${now.merged ? 'Another lightless day begins.' : 'A new day dawns.'}
+        <i class="fas ${now.merged ? 'fa-moon' : 'fa-calendar-day'}"></i>
+        ${now.merged ? 'Another lightless day begins.' : 'A new day begins.'}
       </div>`;
     }
     content += `</div>`;
@@ -2331,9 +2339,17 @@ export class TravelTool extends Application {
       <div class="travel-chat-body">${timeLine}</div>`;
 
     if (result.daysPassed > 0) {
+      // "Begins", not "dawns": the day rolls over at MIDNIGHT, so this fires
+      // at 00:00-ish and any hour after it that a long journey lands on.
+      // "A new day dawns" at 03:15 is simply untrue, and the sunless branch
+      // beside it already said "begins" -- the two were inconsistent as well
+      // as one of them wrong.
+      //
+      // The icon follows for the same reason: a sun at three in the morning
+      // is the same claim made in a picture.
       content += `<div class="travel-chat-newday">
-        <i class="fas ${now.merged ? 'fa-moon' : 'fa-sun'}"></i>
-        ${now.merged ? 'Another lightless day begins.' : 'A new day dawns.'}
+        <i class="fas ${now.merged ? 'fa-moon' : 'fa-calendar-day'}"></i>
+        ${now.merged ? 'Another lightless day begins.' : 'A new day begins.'}
       </div>`;
     }
     content += `</div>`;
