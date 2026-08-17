@@ -1,0 +1,59 @@
+{{!-- The credits sequence. The map fills the left; the feed and the running
+      totals stack down the right. This is the system's first side-by-side
+      window, so .credits-stage sets display:flex explicitly -- Foundry core
+      wins on specificity inside .window-content. --}}
+<div class="credits-container">
+
+  {{#unless available}}
+  <p class="credits-empty-state">
+    <i class="fas fa-map"></i>
+    No map data. Enable the Darkest Woods content module — the coordinates
+    ship with it.
+  </p>
+  {{else}}
+
+  {{#unless hasRoute}}
+  <p class="credits-empty-state">
+    <i class="fas fa-shoe-prints"></i>
+    Nothing walked yet. Travel with the Travel &amp; Time tool, or add legs by
+    hand in the session log, and the route appears here.
+  </p>
+  {{else}}
+
+  <div class="credits-toolbar">
+    <button type="button" class="credits-play" {{#if playing}}disabled{{/if}}>
+      <i class="fas fa-play"></i> Play
+    </button>
+    <button type="button" class="credits-stop" {{#unless playing}}disabled{{/unless}}>
+      <i class="fas fa-stop"></i> Stop
+    </button>
+    <span class="credits-count">
+      {{eventCount}} event{{#unless (eq eventCount 1)}}s{{/unless}}{{#if unplaced}},
+      <span data-tooltip="These happened before the record began, so they are on screen from the start">{{unplaced}} undated</span>{{/if}}
+    </span>
+  </div>
+
+  <div class="credits-stage">
+    {{!-- min-width:0 in the CSS is load bearing: a flex child that refuses to
+          shrink gives a canvas measuring its own attribute width, which then
+          grows every frame. --}}
+    <div class="credits-map">
+      <canvas class="credits-canvas"></canvas>
+    </div>
+
+    <div class="credits-side">
+      <div class="credits-feed">
+        <h4 class="credits-panel-head">As it happened</h4>
+        <div class="credits-feed-rows"></div>
+      </div>
+
+      <div class="credits-stats">
+        <h4 class="credits-panel-head">The dice, so far</h4>
+        <div class="credits-stats-body"></div>
+      </div>
+    </div>
+  </div>
+
+  {{/unless}}
+  {{/unless}}
+</div>

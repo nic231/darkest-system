@@ -238,11 +238,24 @@ export class SessionLog extends Application {
   }
 
   /** An action roll resolved. */
+  /**
+   * An action roll resolved.
+   *
+   * The `where` fields (atSlug..groupId) are optional and arrive only from
+   * 0.45.0 onward -- earlier rolls have none, and the credits sequence places
+   * those by bracketing them between legs instead (see _bracketRolls). They
+   * are listed explicitly rather than spread wholesale so a typo in the
+   * caller shows up as a missing column rather than as a silently stored
+   * junk field.
+   */
   static recordRoll({ who, characterRating, taskRating, target, total, darkestDie, outcome,
-                      calledWoods = false }) {
+                      calledWoods = false,
+                      atSlug = null, atTitle = null, day = null, time = null,
+                      when = null, region = null, groupId = null }) {
     return SessionLog.record({
       kind: 'roll', who, characterRating, taskRating, target, total, darkestDie, outcome,
       calledWoods,
+      atSlug, atTitle, day, time, when, region, groupId,
     });
   }
 
@@ -507,7 +520,12 @@ export class SessionLog extends Application {
 
     const wanted = CHAT_HISTORY
       .map((m, i) => ({ ...m, _id: idOf(m, i) }))
-      .filter(m => (m.kind === 'roll' || m.kind === 'transgression') && !existing.has(m._id));
+      .filter(m => (m.kind === 'roll' || m.kind === 'transgression'
+                    // Only wounds the party TOOK, and only real ones. A wound
+                    // dealt to a wolf is the mechanism, not the story, and a
+                    // scratch is by definition nothing happening.
+                    || (m.kind === 'harm' && m.taken !== false && m.event !== 'scratch'))
+                   && !existing.has(m._id));
 
     if (!wanted.length) {
       ui.notifications.info('Session log already holds everything in the history.');
@@ -523,7 +541,7 @@ export class SessionLog extends Application {
       return Number.isFinite(t) ? { t } : {};
     };
 
-    let rolls = 0, transgressions = 0;
+    let rolls = 0, transgressions = 0, harms = 0;
     for (const m of wanted) {
       if (m.kind === 'roll') {
         await SessionLog.record({
@@ -539,6 +557,14 @@ export class SessionLog extends Application {
           ...stamp(m),
         });
         rolls++;
+      } else if (m.kind === 'harm') {
+        await SessionLog.record({
+          kind: 'harm', importId: m._id, imported: true,
+          who: m.who,
+          event: m.event, rating: m.rating, woundType: m.woundType,
+          ...stamp(m),
+        });
+        harms++;
       } else {
         await SessionLog.record({
           kind: 'transgression', importId: m._id, imported: true, manual: true,
@@ -550,8 +576,13 @@ export class SessionLog extends Application {
     }
 
     SessionLog.refresh();
-    ui.notifications.info(`Imported ${rolls} roll${rolls === 1 ? '' : 's'} and ${transgressions} transgression${transgressions === 1 ? '' : 's'}.`);
-    return { created: wanted.length, rolls, transgressions };
+    const parts = [
+      `${rolls} roll${rolls === 1 ? '' : 's'}`,
+      `${transgressions} transgression${transgressions === 1 ? '' : 's'}`,
+    ];
+    if (harms) parts.push(`${harms} wound${harms === 1 ? '' : 's'}`);
+    ui.notifications.info(`Imported ${parts.join(', ')}.`);
+    return { created: wanted.length, rolls, transgressions, harms };
   }
 
   /**
@@ -734,6 +765,89 @@ export class SessionLog extends Application {
       if (ad !== bd) return ad - bd;
       return mins(a) - mins(b);
     });
+  }
+
+  /**
+   * Place rolls that carry no location, by the leg they fall within.
+   *
+   * Rolls recorded before 0.45.0 stored only a wall-clock `t` -- no place, no
+   * game time. But moves carry `t` too, stamped by the same record() call, so
+   * walking both by wall clock says which leg a roll happened during. On the
+   * two sessions in the archive this buckets all 34 rolls across 10 legs.
+   *
+   * A roll belongs to the leg it lands INSIDE: after that leg's `t`, before
+   * the next one's. Its place is that leg's destination, because the leg is
+   * recorded on arrival -- the party was standing at `toSlug` when they
+   * rolled.
+   *
+   * NOTHING IS WRITTEN BACK. This runs in memory at plan-build time, and the
+   * result is marked `inferred`. A guess persisted into the log becomes
+   * indistinguishable from a recorded fact, and the first mis-bucket would be
+   * permanent; keeping it in memory also means the heuristic can be improved
+   * later with no migration.
+   *
+   * @returns {object[]} copies of `rolls`, each with atSlug/atTitle/when/
+   *   inferred filled in where a leg could be found. Rolls already carrying a
+   *   location (0.45.0 onward) are returned untouched.
+   */
+  static _bracketRolls(rolls, moves) {
+    if (!rolls?.length) return [];
+
+    // Real legs only. A stay has no destination to attribute a roll to, and
+    // an undated leg cannot be placed on the replay's timeline.
+    const legs = SessionLog._chronological(moves ?? [])
+      .filter(m => !m.stay && m.toSlug && typeof m.t === 'number')
+      .sort((a, b) => a.t - b.t);
+
+    return rolls.map((r) => {
+      // Already recorded with a place: leave it entirely alone.
+      if (r.atSlug || r.when != null) return r;
+      if (!legs.length || typeof r.t !== 'number') return r;
+
+      // The last leg that had already been recorded when this roll happened.
+      let leg = null;
+      for (const m of legs) {
+        if (m.t > r.t) break;
+        leg = m;
+      }
+      // A roll before the first recorded leg has no place -- it stays
+      // unplaced rather than being attributed to a journey that had not
+      // happened yet.
+      if (!leg) return r;
+
+      return {
+        ...r,
+        atSlug: leg.toSlug,
+        atTitle: leg.toTitle || leg.toSlug,
+        when: SessionLog._legMinutes(leg),
+        region: r.region ?? leg.region,
+        groupId: r.groupId ?? leg.groupId,
+        inferred: true,
+      };
+    });
+  }
+
+  /**
+   * A leg's ARRIVAL as whole minutes of game time.
+   *
+   * The same unit as a route-map step's `when`, so a roll placed here lands
+   * on the replay's timeline without conversion.
+   *
+   * Deliberately NOT importing RouteMap._legTime, which computes the same
+   * thing: session-log -> route-map -> travel-history -> session-log is a
+   * cycle. Four lines duplicated beats a lazy import inside a synchronous
+   * helper -- and the identical `HH:MM` parse already appears in
+   * _chronological just above, for the same reason.
+   *
+   * Arrival rather than departure, because a roll bracketed to this leg
+   * happened after the party got there.
+   */
+  static _legMinutes(leg) {
+    if (leg?.day == null) return null;
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(leg.time ?? ''));
+    // A fixed-time region stores a phase label ("Endless Night"), not a
+    // clock reading; those place at the start of their day.
+    return (leg.day * 1440) + (m ? (Number(m[1]) * 60) + Number(m[2]) : 0);
   }
 
   static _formatMoves(moves) {
@@ -957,6 +1071,14 @@ export class SessionLog extends Application {
     html.find('.log-route-map').click(async () => {
       const { RouteMapApp } = await import('./route-map.mjs');
       new RouteMapApp().render(true);
+    });
+
+    // Lazily imported for the same reason as the route map: this file is
+    // loaded on every client at startup, and credits.mjs pulls in the whole
+    // route-map module behind it.
+    html.find('.log-credits').click(async () => {
+      const { CreditsApp } = await import('./credits.mjs');
+      new CreditsApp().render(true);
     });
 
     html.find('.log-add-move').click(async () => {

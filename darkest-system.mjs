@@ -43,6 +43,7 @@ import {
 import { TravelHistory, registerTravelHistorySettings } from './module/apps/travel-history.mjs';
 import { TravelGroups, registerTravelGroupSettings } from './module/apps/travel-groups.mjs';
 import { RouteMap, RouteMapApp, registerRouteMapSettings } from './module/apps/route-map.mjs';
+import { CreditsApp } from './module/apps/credits.mjs';
 import {
   SceneAmbience,
   registerSceneAmbienceSettings,
@@ -253,6 +254,7 @@ async function _preloadHandlebarsTemplates() {
     'systems/darkest-system/templates/apps/travel-tool.hbs',
     'systems/darkest-system/templates/apps/session-log.hbs',
     'systems/darkest-system/templates/apps/route-map.hbs',
+    'systems/darkest-system/templates/apps/credits.hbs',
 
     // Dialogs are deliberately NOT listed here. They carry inline scripts and
     // are rendered on demand via renderTemplate() instead.
@@ -288,6 +290,9 @@ Hooks.once('ready', function() {
   game.darkestSystem.TravelGroups = TravelGroups;
   game.darkestSystem.RouteMap = RouteMap;
   game.darkestSystem.RouteMapApp = RouteMapApp;
+  // game.darkestSystem.CreditsApp -- open with:
+  //   new game.darkestSystem.CreditsApp().render(true)
+  game.darkestSystem.CreditsApp = CreditsApp;
 
   // Register doom tally hooks
   registerDoomTallyHooks();

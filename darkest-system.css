@@ -6643,3 +6643,269 @@
   font-size: 11px;
   font-style: italic;
 }
+
+/* ============================================================
+   The credits sequence
+   ============================================================ */
+
+/* The system's first side-by-side window. Foundry core sets .window-content
+   to display:block and wins on specificity, so the flex is declared here
+   explicitly rather than relied upon. Padding is zeroed for this app id: a
+   scrollbar on the window content plus one on the feed is two scrollbars. */
+.app.credits .window-content,
+.application.credits .window-content {
+  padding: 0;
+  overflow: hidden;
+  background: var(--darkest-bg-dark, #1e1c19);
+  color: var(--darkest-text, #cec9c0);
+}
+
+.credits-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  gap: 8px;
+}
+
+.credits-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+/* Explicit colours: Foundry core styles buttons inside .window-content at a
+   higher specificity than a bare class. */
+.credits-toolbar button {
+  padding: 4px 12px;
+  border: 1px solid #6a5a3a;
+  border-radius: 3px;
+  background: rgba(60, 50, 30, 0.5);
+  color: #e0cfa0;
+  font-size: 12px;
+  line-height: normal;
+  cursor: pointer;
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.credits-toolbar button:hover:not(:disabled) {
+  border-color: #b8923a;
+  background: rgba(90, 74, 44, 0.7);
+  color: #fff0cc;
+}
+
+.credits-toolbar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.credits-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--darkest-text-dim, #b3aa9c);
+}
+
+.credits-stage {
+  display: flex;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;          /* lets the children scroll rather than the window */
+}
+
+/* min-width:0 is LOAD BEARING. A flex child defaults to min-width:auto and
+   refuses to shrink below its content; the canvas inside then reports its own
+   attribute width, _redraw measures that, sets it wider, and the thing swells
+   a little every frame. This is also why _redraw measures THIS element rather
+   than the canvas. */
+.credits-map {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.credits-canvas {
+  max-width: 100%;
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  background: #000;
+}
+
+.credits-side {
+  flex: 0 0 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.credits-feed {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.credits-stats {
+  flex: 0 0 auto;
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.credits-panel-head {
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--darkest-text-dim, #b3aa9c);
+  border-bottom: 1px solid var(--darkest-border, #4a4038);
+}
+
+.credits-feed-rows {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 6px;
+}
+
+/* Rows fade in as the playhead reaches them. The transition is why _appendRow
+   waits two frames before adding .shown -- one frame and the browser folds
+   the insert and the class into a single paint, so nothing animates. */
+.credits-row {
+  padding: 4px 6px;
+  margin-bottom: 3px;
+  border-radius: 3px;
+  background: var(--darkest-bg-medium, #2a2723);
+  font-size: 12px;
+  opacity: 0;
+  transform: translateX(8px);
+  transition: opacity 0.35s ease-out, transform 0.35s ease-out;
+}
+
+.credits-row.shown {
+  opacity: 1;
+  transform: none;
+}
+
+/* The place, shown only when it changes -- repeating one name down twelve
+   rows is noise, and the map already says where they are. */
+.credits-row-place {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #b8923a;
+  margin-bottom: 2px;
+}
+
+.credits-approx {
+  cursor: help;
+  opacity: 0.7;
+}
+
+.credits-row-body {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.credits-who {
+  font-weight: 600;
+  color: var(--darkest-text, #cec9c0);
+}
+
+.credits-outcome { font-size: 11px; margin-left: auto; }
+.credits-outcome.success { color: #7fb069; }
+.credits-outcome.partial { color: #d8a05a; }
+.credits-outcome.failure { color: #c47a7a; }
+
+.credits-detail {
+  font-size: 11px;
+  margin-left: auto;
+  color: var(--darkest-text-dim, #b3aa9c);
+}
+
+/* Calling upon the woods costs a Doom and always transgresses, so it gets the
+   doom purple and a left mark rather than sitting in the run of ordinary
+   rolls. */
+.credits-row.called-woods {
+  border-left: 2px solid var(--darkest-purple-light, #9b82c4);
+}
+
+.credits-called {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--darkest-purple-light, #9b82c4);
+  cursor: help;
+}
+
+.credits-row.kind-transgression {
+  border-left: 2px solid var(--darkest-accent-light, #b83232);
+}
+
+/* A wound the party TOOK. Dealt wounds and scratches never reach the feed --
+   see buildEvents. Crimson rather than the doom purple: this is blood, not
+   the woods reaching in. */
+.credits-row.kind-harm {
+  border-left: 2px solid var(--darkest-danger, #7a2e2e);
+}
+
+.credits-harm {
+  font-size: 11px;
+  margin-left: auto;
+  color: #c47a7a;
+}
+
+.credits-stats-body { padding: 8px; }
+
+.credits-stat-line {
+  font-size: 11px;
+  color: var(--darkest-text-dim, #b3aa9c);
+  margin-bottom: 4px;
+}
+
+.credits-stat-line strong { color: var(--darkest-text, #cec9c0); }
+
+.credits-stat-table {
+  width: 100%;
+  margin-top: 6px;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.credits-stat-table th {
+  text-align: left;
+  font-weight: bold;
+  color: var(--darkest-text-dim, #b3aa9c);
+  border-bottom: 1px solid var(--darkest-border, #4a4038);
+  padding: 2px 4px;
+}
+
+.credits-stat-table td {
+  padding: 2px 4px;
+  color: var(--darkest-text, #cec9c0);
+}
+
+.credits-stat-success { color: #7fb069; }
+.credits-stat-called { color: #d9c9f5; font-weight: bold; }
+.credits-dim { opacity: 0.45; }
+
+.credits-empty,
+.credits-empty-state {
+  color: var(--darkest-text-dim, #b3aa9c);
+  font-style: italic;
+  font-size: 12px;
+  text-align: center;
+  padding: 12px;
+}

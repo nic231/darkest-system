@@ -2,6 +2,49 @@ import { SessionLog } from '../apps/session-log.mjs';
 // Safe one-way: transgression-tracker imports travel-clock and session-log,
 // never the dice, so there is no cycle back to here.
 import { TransgressionTracker } from '../apps/transgression-tracker.mjs';
+// Same one-way guarantee: travel-clock does not import the dice module.
+// Static rather than lazy because dispatchRollEffects must stay SYNCHRONOUS --
+// its ordering against toMessage() is load bearing (see the note there).
+import { TravelClock } from '../apps/travel-clock.mjs';
+import { TravelGroups } from '../apps/travel-groups.mjs';
+
+/**
+ * Where and when the party is, for stamping onto a roll.
+ *
+ * Everything here is best-effort. A roll must NEVER fail to log because the
+ * clock threw or the canvas was not ready, so the whole thing is one
+ * try/catch returning {} -- an unplaced roll still records, and the credits
+ * sequence falls back to bracketing it by wall clock.
+ *
+ * `when` is whole minutes of game time, the same unit as a route-map step's
+ * `when` and as SessionLog._legMinutes. That shared unit is what lets an
+ * event be placed on the replay timeline without conversion.
+ */
+function whereNow() {
+  try {
+    const scene = canvas?.scene ?? null;
+    const state = TravelClock.displayState();
+    // A fixed-time region stores a phase label ("Endless Night") rather than
+    // a clock reading; those place at the start of their day.
+    const hm = /^(\d{1,2}):(\d{2})$/.exec(String(state?.time ?? ''));
+    const day = state?.day ?? null;
+
+    return {
+      atSlug: scene?.getFlag('darkest-woods', 'locationSlug') ?? null,
+      atTitle: scene?.name ?? null,
+      day,
+      time: state?.time ?? null,
+      when: day == null
+        ? null
+        : (day * 1440) + (hm ? (Number(hm[1]) * 60) + Number(hm[2]) : 0),
+      region: TravelClock.currentRegion?.() ?? null,
+      groupId: TravelGroups.activeId?.() ?? null,
+    };
+  } catch (err) {
+    console.warn('Darkest System | could not stamp a roll with its location', err);
+    return {};
+  }
+}
 
 /** The Darkest Die's distinctive purple, shared by every client. */
 export const DARKEST_DIE_APPEARANCE = {
@@ -434,6 +477,11 @@ export class DarkestRoll extends Roll {
           : this.isSuccess ? 'Success'
           : this.isPartialSuccess ? 'Partial Success'
           : 'Failure',
+        // Where and when, so the credits sequence can put this roll on the
+        // map. Computed on the ROLLER's client, not the GM's: the scene the
+        // player is looking at is the scene their character is in, while the
+        // GM may be on a region overview or a prep scene entirely.
+        ...whereNow(),
       };
       if (game.user.isGM) {
         SessionLog.recordRoll(entry);

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.45.0-alpha (2026-08-17)
+
+**The credits sequence.** *Credits*, beside *Draw the route* in the session log. The journey plays across the book's own map while two panels fill in beside it: what happened at each place as the line reaches it, and the dice totals climbing as it goes.
+
+The feed carries rolls with their outcome, calling upon the woods marked apart in the doom purple, transgressions, and wounds the party took. The place is named only when it changes — repeating one name down twelve rows is noise, and the map already says where they are.
+
+**Rolls now record where and when they happened.** The flag was never there: a roll stored only a wall clock. New rolls stamp the scene and the game time on the *roller's* client, because the scene a player is looking at is the scene their character is in, while the GM may be on a region overview entirely.
+
+**The back catalogue is placed by inference.** Rolls from before this release carry no location, so they are bracketed between the legs they fall within — moves and rolls share the same wall clock, so walking both says which leg a roll happened during. On the two sessions in the archive this places 32 of 34; the two it cannot place happened before the first leg was recorded, and are left unplaced rather than attributed to a journey that had not happened yet.
+
+Inferred places are marked with a `~` and are **never written back to the log**. A guess stored beside recorded facts becomes indistinguishable from one, and the first mis-bucket would be permanent.
+
+**Wounds are recovered from the chat history.** Damage rolls are deliberately excluded from the dice statistics — they have no task rating to succeed against, and folding them in would corrupt every success percentage — but the card carries everything needed, so the campaign's wounds were recoverable without recording anything new. Only wounds the party *took* reach the feed: one dealt to a wolf is the mechanism, and the wolf falling over already tells that story. The difference is detectable because a dealt wound is followed by the GM-only "NPC defeat threshold" whisper.
+
+Across both sessions: Harvey took a Rating 1 physical, Baz a Rating 2 mental, Syren a Rating 4 mental.
+
+**The statistics are the session log's own.** The panel calls the same `_rollStats` on a growing slice rather than keeping its own count, so the credits' final numbers are identical to the log's by construction — a second definition would have drifted.
+
+**Requires content module 1.19.0**, which carries the parsed wounds.
+
+*The official map is used here and there is no share path — the credits are an end-of-arc artefact for the GM's screen, and the region maps name every location with the secret birdsong paths in red.*
+
 ## 0.44.0-alpha (2026-08-17)
 
 **The dice tracker counts how often each character calls upon the woods.** A new *Called* column beside the success rates, and a line in the markdown export.

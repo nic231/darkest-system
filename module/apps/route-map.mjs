@@ -121,6 +121,48 @@ export function stayKind(minutes) {
   return null;
 }
 
+/**
+ * The journey as a schedule: what plays, for how long, and starting when.
+ *
+ * Extracted from RouteMapApp.play() so the replay and the credits sequence
+ * share ONE timing contract. Two windows each deciding how long a stay lasts
+ * would drift apart the first time either was tuned, and the credits panels
+ * need `offsets` anyway to place an event on the timeline.
+ *
+ * `steps` is the whole plan in MERGED order -- across maps and across groups,
+ * so steps[i] is the step whose seq is i. Two things depend on that: the
+ * replay follows the party between maps instead of losing them at the
+ * boundary, and two groups' legs interleave by game time rather than one
+ * group waiting for the other to finish.
+ *
+ * @returns {{steps: object[], durations: number[], offsets: number[], total: number}}
+ *   `offsets[i]` is when step i STARTS, in ms from the beginning; `total` is
+ *   the length of the whole sequence.
+ */
+export function buildTimeline(plan) {
+  const steps = (plan?.groups ?? [])
+    .flatMap(g => g.steps)
+    .sort((a, b) => a.seq - b.seq);
+
+  // From the setting: how long the line takes to cross one leg. The default
+  // reads at a walking pace; a GM showing this as a credits scene will want
+  // it slower than one checking a route.
+  const LEG = replayLegSeconds() * 1000;
+  const CUT = 700;    // a beat on the new map before the line resumes
+  const durations = steps.map(s =>
+    s.type === 'stay' ? stayPause(s.minutes)
+    : s.type === 'cross' ? CUT
+    : s.type === 'break' ? 0
+    : LEG
+  );
+
+  const offsets = [];
+  let acc = 0;
+  for (const d of durations) { offsets.push(acc); acc += d; }
+
+  return { steps, durations, offsets, total: acc };
+}
+
 export const RouteMap = {
 
   available() {
@@ -891,28 +933,8 @@ export class RouteMapApp extends Application {
     this.stop();
     this.playing = true;
 
-    // The whole journey in MERGED order, across maps and across groups --
-    // steps[i] is the step whose seq is i. Two things depend on that: the
-    // replay follows the party between maps instead of losing them at the
-    // boundary, and two groups' legs interleave by game time instead of one
-    // group waiting for the other to finish.
-    const steps = this._plan.groups
-      .flatMap(g => g.steps)
-      .sort((a, b) => a.seq - b.seq);
+    const { steps, durations, total } = buildTimeline(this._plan);
     if (!steps.length) return;
-
-    // From the setting: how long the line takes to cross one leg. The
-    // default reads at a walking pace; a GM showing this as a credits scene
-    // will want it slower than one checking a route.
-    const LEG = replayLegSeconds() * 1000;
-    const CUT = 700;    // a beat on the new map before the line resumes
-    const durations = steps.map(s =>
-      s.type === 'stay' ? stayPause(s.minutes)
-      : s.type === 'cross' ? CUT
-      : s.type === 'break' ? 0
-      : LEG
-    );
-    const total = durations.reduce((a, b) => a + b, 0);
 
     const tick = () => {
       if (!this.playing) return;
