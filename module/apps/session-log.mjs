@@ -238,9 +238,11 @@ export class SessionLog extends Application {
   }
 
   /** An action roll resolved. */
-  static recordRoll({ who, characterRating, taskRating, target, total, darkestDie, outcome }) {
+  static recordRoll({ who, characterRating, taskRating, target, total, darkestDie, outcome,
+                      calledWoods = false }) {
     return SessionLog.record({
-      kind: 'roll', who, characterRating, taskRating, target, total, darkestDie, outcome
+      kind: 'roll', who, characterRating, taskRating, target, total, darkestDie, outcome,
+      calledWoods,
     });
   }
 
@@ -530,6 +532,10 @@ export class SessionLog extends Application {
           characterRating: m.characterRating, taskRating: m.taskRating,
           target: m.target, total: m.total, darkestDie: m.darkestDie,
           outcome: m.outcome,
+          // Carried through from the parsed chat card, so a backfilled
+          // history counts toward the tracker's "Called" column exactly as a
+          // live roll does.
+          calledWoods: !!m.calledWoods,
           ...stamp(m),
         });
         rolls++;
@@ -875,12 +881,17 @@ export class SessionLog extends Application {
     if (!rolls.length) return null;
 
     const tally = (list) => {
-      const out = { total: list.length, success: 0, partial: 0, failure: 0 };
+      const out = { total: list.length, success: 0, partial: 0, failure: 0, calledWoods: 0 };
       for (const r of list) {
         const o = (r.outcome || '').toLowerCase();
         if (o.includes('partial')) out.partial++;
         else if (o.includes('success')) out.success++;
         else out.failure++;
+        // Counted per player as well as overall: reaching for the woods is a
+        // choice about a character, not a property of the dice. One player
+        // doing it four times while nobody else does it once is the kind of
+        // thing a GM wants to see.
+        if (r.calledWoods) out.calledWoods++;
       }
       out.successPct = Math.round(100 * out.success / out.total);
       out.partialPct = Math.round(100 * out.partial / out.total);
@@ -1135,11 +1146,17 @@ export class SessionLog extends Application {
         + `${stats.overall.success} success (${stats.overall.successPct}%), `
         + `${stats.overall.partial} partial, `
         + `${stats.overall.failure} failure (${stats.overall.failurePct}%)`, '');
-      lines.push('| Character | Rolls | Success | Partial | Failure |', '|---|---|---|---|---|');
+      lines.push('| Character | Rolls | Success | Partial | Failure | Called the woods |',
+                 '|---|---|---|---|---|---|');
       stats.byCharacter.forEach(c => {
-        lines.push(`| ${c.who} | ${c.total} | ${c.success} (${c.successPct}%) | ${c.partial} | ${c.failure} |`);
+        lines.push(`| ${c.who} | ${c.total} | ${c.success} (${c.successPct}%) | ${c.partial} | ${c.failure} | ${c.calledWoods} |`);
       });
-      lines.push('', `Darkest Die 1s rolled: **${stats.onesRolled}**`, '');
+      lines.push('', `Darkest Die 1s rolled: **${stats.onesRolled}**`);
+      if (stats.overall.calledWoods) {
+        lines.push(`Called upon the woods: **${stats.overall.calledWoods}** `
+          + `(each one a Doom and a transgression)`);
+      }
+      lines.push('');
     }
 
     if (transgressions.length) {

@@ -189,7 +189,8 @@
       <h4 class="log-section-head">By character</h4>
       <table class="log-table">
         <thead>
-          <tr><th>Character</th><th>Rolls</th><th>Success</th><th>Partial</th><th>Failure</th></tr>
+          <tr><th>Character</th><th>Rolls</th><th>Success</th><th>Partial</th><th>Failure</th>
+              <th data-tooltip="Times they called upon the woods — each one costs a Doom and always transgresses">Called</th></tr>
         </thead>
         <tbody>
           {{#each stats.byCharacter}}
@@ -199,6 +200,10 @@
             <td class="log-success">{{success}} <span class="log-dim">({{successPct}}%)</span></td>
             <td>{{partial}}</td>
             <td class="log-failure">{{failure}} <span class="log-dim">({{failurePct}}%)</span></td>
+            {{!-- Dimmed at zero: most characters never do this, and a column
+                  of bright noughts would draw the eye away from the one who
+                  has. --}}
+            <td class="log-called{{#unless calledWoods}} log-dim{{/unless}}">{{calledWoods}}</td>
           </tr>
           {{/each}}
         </tbody>

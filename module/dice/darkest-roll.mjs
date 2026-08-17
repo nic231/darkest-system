@@ -425,6 +425,11 @@ export class DarkestRoll extends Roll {
         target: this.targetNumber,
         total: this._total,
         darkestDie: this.darkestDieResult,
+        // Recorded so the dice tracker can count who reaches for it. Calling
+        // upon the woods always costs a Doom and always transgresses, so how
+        // often a player does it is a character fact, not a dice statistic --
+        // and it was the one thing about a roll the log did not keep.
+        calledWoods: !!this.callUponWoods,
         outcome: this.isSpecialSuccess ? 'Special Success'
           : this.isSuccess ? 'Success'
           : this.isPartialSuccess ? 'Partial Success'

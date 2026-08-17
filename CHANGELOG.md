@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.44.0-alpha (2026-08-17)
+
+**The dice tracker counts how often each character calls upon the woods.** A new *Called* column beside the success rates, and a line in the markdown export.
+
+It is the one thing about a roll the log did not keep. The flag existed on the roll object all along but never reached the session log, so nothing could count it — and it is worth counting: each call costs a Doom and always transgresses, so how often a character reaches for it says more about them than any success rate does. Zeroes are dimmed, because most characters never do it and a column of bright noughts would pull the eye away from the one who has.
+
+**The existing history was backfilled**, so the count starts from what actually happened rather than from now. The chat parser reads the choice off the card, and *Restore* carries it into the log exactly as a live roll would.
+
+Across both sessions so far: **Baz has called upon the woods once**, and nobody else has.
+
+There is a neat cross-check on this, now asserted in the suite: such a roll prints no Darkest Die on its card, because the die goes into the total instead. Every call in the history lacks one, and every roll lacking one is a call.
+
+**Requires content module 1.18.1**, which carries the flag on the parsed history.
+
 ## 0.43.2-alpha (2026-08-17)
 
 **"The party takes Mordecai's Door", not "takes the mordecai's door."** A possessive is already definite, so the article in front of it was wrong — and it is somebody's *name*, so lowercasing it was wrong too. Only two labels in the book are built this way, both in Dismal, and both were broken.
