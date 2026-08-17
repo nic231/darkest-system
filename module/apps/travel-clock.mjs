@@ -397,7 +397,19 @@ function routeKm(route) {
 // to a pirogue draws from a different list and shouldn't inherit its memory.
 const _lastFlavour = new Map();
 
-function regionFlavour(regionSlug, boating = false, driving = false) {
+function regionFlavour(regionSlug, boating = false, driving = false, label = '') {
+  // A THRESHOLD, not a journey. Stepping through Mordecai's door is not a
+  // walk across the Dismal, so the region's terrain lines are simply wrong
+  // there: "standing water spreads across the low ground" described a swamp
+  // to a party who had just walked into a shack.
+  //
+  // Detected from the route LABEL rather than a list of interior locations:
+  // the source data has no interior flag (locationTypes is empty on every
+  // location), but a route called "X's Door" is one by definition. Returning
+  // null drops the line entirely -- the arrival text already describes the
+  // room, which is the only description such a short move needs.
+  if (/\b(door|doorway|entrance|hatch)\b/i.test(label || '')) return null;
+
   const useBoat = boating && BOAT_FLAVOUR[regionSlug];
   const useDrive = !useBoat && driving && DRIVE_FLAVOUR[regionSlug];
   const mode = useBoat ? 'boat' : (useDrive ? 'drive' : 'walk');
@@ -629,8 +641,19 @@ function describeJourney(label, driving = false, boating = false) {
   // rather than a noun ("Exiting the Woods", "Woodfolk Symbol") and would
   // read as nonsense there, so fall back to something always grammatical.
   if (/\b(trail|track|road|path|way|stairs?|staircase|tunnel|bridge|pier|door|opening|gate|steps|waterway|passage|root)\b/i.test(label)) {
+    const bare = label.replace(/^The\s+/i, '');
+
+    // A POSSESSIVE is already definite, so "the" in front of it is wrong:
+    // "takes the Mordecai's door". It also must not be lowercased, because
+    // the possessive is somebody's NAME. Both apostrophe forms are matched --
+    // the book's labels use the curly U+2019, which a straight-quote test
+    // silently misses.
+    if (/['’]s\b|s['’]\b/.test(bare)) {
+      return `The party ${boating ? 'poles along' : 'takes'} ${bare}`;
+    }
+
     const verb = boating ? 'poles along the' : 'takes the';
-    return `The party ${verb} ${label.replace(/^The\s+/i, '').toLowerCase()}`;
+    return `The party ${verb} ${bare.toLowerCase()}`;
   }
 
   // "To the Landing", "To the Dark Vault" -- a destination, not a route.
@@ -2063,7 +2086,7 @@ export class TravelTool extends Application {
     // Capture the region BEFORE any scene change, so the flavour describes
     // the ground actually crossed rather than wherever the party ends up.
     const flavourLine = opts.region
-      ? regionFlavour(opts.region, opts.boating, opts.driving)
+      ? regionFlavour(opts.region, opts.boating, opts.driving, opts.route?.label)
       : null;
 
     // Departure has to be read BEFORE the clock moves: advance() is

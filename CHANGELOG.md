@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.43.2-alpha (2026-08-17)
+
+**"The party takes Mordecai's Door", not "takes the mordecai's door."** A possessive is already definite, so the article in front of it was wrong — and it is somebody's *name*, so lowercasing it was wrong too. Only two labels in the book are built this way, both in Dismal, and both were broken.
+
+The check that should have caught this earlier was looking for a straight apostrophe. The book's labels use the curly one, so every possessive slipped past silently.
+
+**Stepping through a door no longer describes the swamp.** The region flavour tables describe the ground crossed on a journey, and walking into a shack is not a journey — so a party entering Mordecai's got told that standing water spread across the low ground. Threshold routes now get no terrain line at all; the arrival text already describes the room, which is all a one-step move needs.
+
+Detected from the route label rather than a list of interiors, because the source data has no interior flag — but a route called "X's Door" is one by definition.
+
+**The chat history now carries both sessions** (module 1.18.0) — 126 messages, up from 52.
+
+**Requires content module 1.18.0.**
+
 ## 0.43.1-alpha (2026-08-14)
 
 **"A new day begins", not "A new day dawns."** The day rolls over at midnight, so that line fires at 00:00 and at any hour a long journey happens to land on afterwards — announcing a dawn at 03:15 is simply untrue. The sunless variant beside it already said *begins*, so the two branches were inconsistent as well as one of them being wrong.
