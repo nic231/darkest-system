@@ -6720,17 +6720,25 @@
    attribute width, _redraw measures that, sets it wider, and the thing swells
    a little every frame. This is also why _redraw measures THIS element rather
    than the canvas. */
+/* min-width AND min-height 0 are both load bearing. A flex child defaults to
+   min-*:auto and refuses to shrink below its content, so the canvas inside
+   reports its own attribute size, _redraw measures that, sets it larger, and
+   the thing swells a little every frame. Zeroing both also gives clientHeight
+   a real value -- without it the portrait maps (The Lost is 1540x2000) size
+   to the width alone and lose their bottom third off the edge. */
 .credits-map {
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   overflow: hidden;
 }
 
 .credits-canvas {
   max-width: 100%;
+  max-height: 100%;
   border: 1px solid var(--darkest-border, #4a4038);
   border-radius: 4px;
   background: #000;

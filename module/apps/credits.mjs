@@ -54,7 +54,12 @@ export function eventOffset(when, timeline) {
   // An unplaced event (no location, no bracket) is on screen from the start,
   // so an old campaign still shows a full statistics panel rather than an
   // empty one for the first several minutes.
-  if (when == null) return 0;
+  //
+  // The check is for a NUMBER, not merely for presence. A string here compares
+  // false against every numeric step time, so the event finds no bracket and
+  // silently lands at zero -- which is how the whole back catalogue once
+  // arrived on the first frame.
+  if (!Number.isFinite(when)) return 0;
 
   let i = -1;
   for (let k = 0; k < steps.length; k++) {
@@ -211,12 +216,18 @@ export class CreditsApp extends Application {
     this._stage = html.find('.credits-map')[0] ?? null;
     this._feed = html.find('.credits-feed-rows')[0] ?? null;
     this._statsEl = html.find('.credits-stats-body')[0] ?? null;
+    this._playBtn = html.find('.credits-play')[0] ?? null;
+    this._stopBtn = html.find('.credits-stop')[0] ?? null;
 
     html.find('.credits-play').click(() => this.play());
-    html.find('.credits-stop').click(() => { this.stop(); this.render(false); });
+    html.find('.credits-stop').click(() => this.stop());
 
-    this._redraw(this._seq);
+    // Always open on an EMPTY map. _seq survives a re-render, so painting at
+    // its old value showed the finished route the moment the window opened.
+    this._seq = 0;
+    this._redraw(0);
     this._renderStats();
+    this._setButtons();
   }
 
   // ── The map ───────────────────────────────────────────────────────────
@@ -246,9 +257,22 @@ export class CreditsApp extends Application {
     // Measured from the PARENT, not the canvas. A canvas inside a flex child
     // reports its attribute width, so measuring itself feeds its own growth
     // back in and the thing swells every frame.
-    const w = this._stage?.clientWidth || 820;
+    const availW = this._stage?.clientWidth || 820;
+    const availH = this._stage?.clientHeight || 600;
     const ratio = map ? (map.height / map.width) : 0.75;
-    const h = Math.round(w * ratio);
+
+    // FIT INSIDE BOTH dimensions, not just the width.
+    //
+    // Sizing to the width alone works for the landscape maps and clips the
+    // portrait ones badly: The Lost is 1540x2000, so at 854px wide it wants
+    // 1109px of height in a 724px space and the bottom third of the region
+    // simply vanished. Take whichever constraint binds first.
+    let w = availW;
+    let h = Math.round(w * ratio);
+    if (h > availH) {
+      h = availH;
+      w = Math.round(h / ratio);
+    }
 
     // Assigning width/height CLEARS the canvas, so only do it on a change.
     if (this._canvas.width !== w || this._canvas.height !== h) {
@@ -394,6 +418,16 @@ export class CreditsApp extends Application {
     if (this._feed) this._feed.innerHTML = '';
     this._renderStats();
 
+    // Wind the map back BEFORE the first frame, and paint it empty.
+    //
+    // Without this the previous run's finished playhead was still on _seq, so
+    // the whole route flashed up complete, vanished on the first tick, and
+    // then animated -- which is exactly what it looked like. The paint has to
+    // happen here rather than being left to the tick, because _redraw is
+    // async (it awaits _loadImages) and the first tick can land before it.
+    this._seq = 0;
+    await this._redraw(0);
+
     this._timeline = buildTimeline(this._plan);
     const { steps, durations, total } = this._timeline;
     if (!steps.length) return;
@@ -406,6 +440,7 @@ export class CreditsApp extends Application {
     this._scheduled = scheduled;
 
     this.playing = true;
+    this._setButtons();
     const startedAt = Date.now();
 
     const tick = () => {
@@ -458,7 +493,12 @@ export class CreditsApp extends Application {
         this.playing = false;
         this._seq = steps.length;
         this._redraw(steps.length);
-        this.render(false);
+        // The buttons are toggled directly rather than by re-rendering.
+        // render() rebuilds the DOM, which would throw away the feed the GM
+        // has just watched fill -- and it re-runs activateListeners, whose
+        // opening _redraw(this._seq) then repainted the FINISHED route as the
+        // first thing the next run showed.
+        this._setButtons();
         return;
       }
       this._raf = requestAnimationFrame(tick);
@@ -466,10 +506,22 @@ export class CreditsApp extends Application {
     tick();
   }
 
+  /**
+   * Toggle the toolbar to match `playing`.
+   *
+   * Done by hand rather than through render(), which would rebuild the DOM
+   * and take the feed with it.
+   */
+  _setButtons() {
+    if (this._playBtn) this._playBtn.disabled = this.playing;
+    if (this._stopBtn) this._stopBtn.disabled = !this.playing;
+  }
+
   stop() {
     this.playing = false;
     if (this._raf) cancelAnimationFrame(this._raf);
     this._raf = null;
+    this._setButtons();
   }
 
   /** @override */

@@ -422,7 +422,7 @@ export class SessionLog extends Application {
     // one is derived from the parts that identify it: when, who, and the
     // text. Two identical messages a second apart stay distinct; the same
     // message seen in two overlapping exports collapses to one.
-    const idOf = (m, i) => `${m.when ?? m.raw ?? i}|${m.who}|${(m.text || '').slice(0, 64)}`;
+    const idOf = (m, i) => `${m.at ?? m.raw ?? i}|${m.who}|${(m.text || '').slice(0, 64)}`;
 
     const pending = CHAT_HISTORY
       .map((m, i) => ({ ...m, _id: idOf(m, i) }))
@@ -448,7 +448,7 @@ export class SessionLog extends Application {
       // rather than passed as undefined when the export's timestamp did not
       // parse, so Foundry falls back to its own default instead of storing
       // a broken value.
-      const t = m.when ? Date.parse(m.when) : NaN;
+      const t = m.at ? Date.parse(m.at) : NaN;
 
       // A transgression card is the witch's SCRIPTED ACTION -- GM-only when
       // it fired, and it has to go back that way. Foundry's export records
@@ -516,7 +516,7 @@ export class SessionLog extends Application {
     const existing = new Set(
       SessionLog.getLog().entries.map(e => e.importId).filter(Boolean)
     );
-    const idOf = (m, i) => `${m.when ?? m.raw ?? i}|${m.who}|${(m.text || '').slice(0, 64)}`;
+    const idOf = (m, i) => `${m.at ?? m.raw ?? i}|${m.who}|${(m.text || '').slice(0, 64)}`;
 
     const wanted = CHAT_HISTORY
       .map((m, i) => ({ ...m, _id: idOf(m, i) }))
@@ -537,7 +537,7 @@ export class SessionLog extends Application {
     // the timestamp is unusable: record() sets t before spreading the entry,
     // so an explicit undefined would CLOBBER it and leave the row unsorted.
     const stamp = (m) => {
-      const t = m.when ? Date.parse(m.when) : NaN;
+      const t = m.at ? Date.parse(m.at) : NaN;
       return Number.isFinite(t) ? { t } : {};
     };
 
@@ -801,7 +801,15 @@ export class SessionLog extends Application {
 
     return rolls.map((r) => {
       // Already recorded with a place: leave it entirely alone.
-      if (r.atSlug || r.when != null) return r;
+      // Already placed: leave it alone. `when` must be a NUMBER to count --
+      // whole minutes of game time. Testing only for presence let imported
+      // rolls through, because the chat parser used to put an ISO date string
+      // in a field of the same name; every one then looked already-placed,
+      // was never bracketed, and compared false against the numeric step
+      // times, so the whole back catalogue landed at offset zero and dumped
+      // on the first frame. The parser's field is `at` now, but the type
+      // check stays: it is the honest test either way.
+      if (r.atSlug || Number.isFinite(r.when)) return r;
       if (!legs.length || typeof r.t !== 'number') return r;
 
       // The last leg that had already been recorded when this roll happened.

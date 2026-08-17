@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.45.1-alpha (2026-08-17)
+
+**The whole back catalogue no longer dumps onto the first frame.** The chat parser emitted a field called `when` holding a wall-clock date string, while the system uses that name for whole minutes of game time. Two different meanings, one name.
+
+The consequence ran in two stages: the bracketing skipped every imported roll because it looked "already placed", and the date string then compared false against every numeric step time, so each roll fell through to offset zero. All 22 arrived at once, before the line had moved.
+
+The parser's field is `at` now, and both guards test for a **number** rather than for presence — which is the honest check either way, and would have caught this on its own.
+
+**The route no longer flashes complete before animating.** The playhead survived a re-render, so the finished value from the previous run was painted the moment the window opened or replay began. It now winds back to zero and paints an empty map before the first frame. The end of a replay also no longer calls `render()`, which was rebuilding the DOM and discarding the feed the GM had just watched fill.
+
+**Portrait maps are no longer cut off.** The map was sized to fill the width alone. The Lost is 1540×2000, so at 854px wide it wanted 1109px of height in a 724px space and lost its bottom third off the edge. It now fits inside both dimensions, keeping its aspect — The Lost draws at 557×724 instead.
+
+**Requires content module 1.19.1** for the renamed timestamp field.
+
 ## 0.45.0-alpha (2026-08-17)
 
 **The credits sequence.** *Credits*, beside *Draw the route* in the session log. The journey plays across the book's own map while two panels fill in beside it: what happened at each place as the line reaches it, and the dice totals climbing as it goes.
