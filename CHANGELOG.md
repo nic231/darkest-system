@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.46.0-alpha (2026-08-19)
+
+**A camera on the credits.** The sequence used to sit still on one region map and cut abruptly to the next. It now opens on the whole woods, pushes in on wherever the party started, and follows them as the line draws. When they cross into another region it pulls back out to the overview, walks a dashed line between the two regions, and pushes into the new one. It ends by drawing back out over the whole map.
+
+The overview stops being just another map in the set and becomes the thing that ties the journey together.
+
+**The transition costs the replay nothing.** The camera keeps its own clock, and the replay's clock is frozen while it moves — so every roll and wound still lands exactly where it did before, and the *Draw the route* tool is entirely unaffected. That is deliberate: the two share a schedule, and the way to leave one alone was to make the camera's time invisible to it rather than to re-time everything around it.
+
+**A Camera toggle** sits in the toolbar. It runs live at the end of an arc, so there is a way back to the plain per-map replay without waiting on a patch.
+
+Some details that are easy to miss and were the point:
+
+- The line, the pins and the stay rings **hold their weight** while the terrain grows underneath. Scaling them too would read as an image being magnified rather than a camera moving in — and the stay ring's radius means something, so it must not change size.
+- Map changes are **matched-scale hard cuts**, not fades. Two frames showing the same thing at the same size read as continuous motion.
+- The canvas is sized **once** for the whole run. Resizing it per map would flip its shape mid-move, and assigning a canvas its width clears it — so the frame would flash.
+
 ## 0.45.1-alpha (2026-08-17)
 
 **The whole back catalogue no longer dumps onto the first frame.** The chat parser emitted a field called `when` holding a wall-clock date string, while the system uses that name for whole minutes of game time. Two different meanings, one name.

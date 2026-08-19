@@ -27,6 +27,12 @@
     <button type="button" class="credits-stop" {{#unless playing}}disabled{{/unless}}>
       <i class="fas fa-stop"></i> Stop
     </button>
+    {{!-- The kill switch. This runs live at the end of an arc, so there has
+          to be a way back to the plain per-map replay without a code change. --}}
+    <label class="credits-toggle"
+           data-tooltip="Open on the whole woods, and fly out to it whenever the party crosses between regions">
+      <input type="checkbox" name="camera" checked> Camera
+    </label>
     <span class="credits-count">
       {{eventCount}} event{{#unless (eq eventCount 1)}}s{{/unless}}{{#if unplaced}},
       <span data-tooltip="These happened before the record began, so they are on screen from the start">{{unplaced}} undated</span>{{/if}}

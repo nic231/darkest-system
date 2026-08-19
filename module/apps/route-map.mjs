@@ -494,18 +494,51 @@ export function paintBackdrop(ctx, { width, height, style = 'sketch', image = nu
 export function drawRoute(ctx, plan, {
   revealSeq = Infinity, width, height, style = 'sketch', mapSlug = null,
   images = {}, backdrop = null, holdSeq = null, phase = 0,
+  view = null,
 } = {}) {
   ctx.clearRect(0, 0, width, height);
 
   const map = MAP_DATA.maps?.[mapSlug];
-  const px = (pct) => (pct / 100) * width;
-  const py = (pct) => (pct / 100) * height;
+
+  // THE CAMERA. `view` is a rectangle in the same percentage space the pins
+  // already live in -- {x, y, w, h}, 0..100 of the map's own dimensions --
+  // and null means the whole map, which is what every caller but the credits
+  // sequence passes.
+  //
+  // Applied by REPLACING these two helpers rather than by transforming the
+  // context, and that is deliberate. Every coordinate in this function goes
+  // through px/py -- the line, the pins, the stay rings, the labels -- so
+  // this is the single choke point. A ctx.scale() would also multiply every
+  // SCREEN-space size: the line width, the pin radii, the stay ring (whose
+  // radius encodes how long they stayed), the travelling mark, the label
+  // font, the wobble. Eight sites to compensate, in a function whose whole
+  // premise is that there is one path.
+  //
+  // It also simply looks better. A line that holds its weight while the
+  // terrain grows underneath reads as a camera pushing in; a line that
+  // thickens reads as an image being magnified.
+  const vx = view?.x ?? 0, vy = view?.y ?? 0;
+  const vw = view?.w ?? 100, vh = view?.h ?? 100;
+  const px = (pct) => ((pct - vx) / vw) * width;
+  const py = (pct) => ((pct - vy) / vh) * height;
 
   // ── Backdrop ───────────────────────────────────────────────────────────
   // Pre-painted by the caller when there is one to reuse (the replay paints
   // it once); drawn straight in otherwise, for one-off renders and exports.
-  if (backdrop) ctx.drawImage(backdrop, 0, 0, width, height);
-  else paintBackdrop(ctx, { width, height, style, image: images[mapSlug] });
+  //
+  // The cached backdrop is always the WHOLE map, so the camera crops it here
+  // with a source rectangle rather than repainting. That is why the cache key
+  // must not include the view: zooming never invalidates it.
+  if (backdrop) {
+    const sx = (vx / 100) * backdrop.width;
+    const sy = (vy / 100) * backdrop.height;
+    const sw = (vw / 100) * backdrop.width;
+    const sh = (vh / 100) * backdrop.height;
+    ctx.drawImage(backdrop, sx, sy, sw, sh, 0, 0, width, height);
+  } else {
+    // One-off renders and exports never zoom, so paintBackdrop is untouched.
+    paintBackdrop(ctx, { width, height, style, image: images[mapSlug] });
+  }
 
   const ink = style === 'real' ? '#f0e6d2' : '#3a3026';
   const dim = style === 'real' ? 'rgba(240,230,210,0.55)' : 'rgba(58,48,38,0.5)';

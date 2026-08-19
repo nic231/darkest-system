@@ -6702,6 +6702,24 @@
   cursor: default;
 }
 
+/* The camera kill switch. Sits with the transport buttons rather than in
+   settings: it is a decision made while watching, not a configuration. */
+.credits-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--darkest-text-dim, #b3aa9c);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.credits-toggle input {
+  width: auto;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
 .credits-count {
   margin-left: auto;
   font-size: 11px;
