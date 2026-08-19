@@ -249,6 +249,7 @@ export class CreditsApp extends Application {
     this._images = {};
     this._raf = null;
     this._seq = 0;              // starts at the beginning, unlike the route map
+    this._paintSeq = 0;         // paint ticket; see _redraw
     this._plan = null;
     this._timeline = null;
     this._events = [];
@@ -360,10 +361,18 @@ export class CreditsApp extends Application {
    * the GM's screen -- the sketch style exists to keep the real maps away
    * from players, and there is no share path here.
    */
-  async _loadImages(mapSlug = this.mapSlug) {
+  /**
+   * Load a map's art.
+   *
+   * Returns a cached image SYNCHRONOUSLY -- `true` rather than a promise --
+   * so a caller can avoid awaiting at all when there is nothing to wait for.
+   * Every await inside a per-frame paint is a chance for frames to land out
+   * of order, and the steady state is that the art is already loaded.
+   */
+  _loadImages(mapSlug = this.mapSlug) {
     const src = MAP_DATA.maps?.[mapSlug]?.image;
-    if (!src || this._images[mapSlug]) return;
-    await new Promise((resolve) => {
+    if (!src || this._images[mapSlug]) return true;
+    return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => { this._images[mapSlug] = img; resolve(); };
@@ -420,7 +429,22 @@ export class CreditsApp extends Application {
     // Which map is on screen is the CAMERA's business when it is running, and
     // the replay's otherwise.
     const showMap = map ?? this._camMap ?? this.mapSlug;
-    await this._loadImages(showMap);
+
+    // ── Frames must land in the order they were issued ──────────────────
+    //
+    // This method is async, and the await below only actually suspends on the
+    // frame where a map's art is first needed -- which is exactly the frame a
+    // map change happens on. Two paints then resolve out of order: a later
+    // frame's full line is drawn, and the earlier frame's near-empty map
+    // repaints over it. That is the "drawn instantly, disappears, then
+    // animates" seen from the first map change onward.
+    //
+    // So stamp each paint and drop any that has been overtaken. Cheaper and
+    // more robust than trying to keep the loads ordered.
+    const ticket = ++this._paintSeq;
+    const pending = this._loadImages(showMap);
+    if (pending !== true) await pending;
+    if (ticket !== this._paintSeq) return null;   // overtaken; that frame won
 
     const { w, h } = this._measureStage();
 
@@ -585,20 +609,30 @@ export class CreditsApp extends Application {
   // ── The camera ────────────────────────────────────────────────────────
 
   /**
-   * How tightly the follow sits on the party, as a percentage of the region.
+   * How tightly the camera sits on the party once it is on a region map, as a
+   * percentage of that map.
    *
-   * 55 is close enough to read the location labels on the book's art and wide
-   * enough that the line has somewhere to go before the view has to move.
+   * 100 -- the WHOLE region, held still. The zoom belongs on the overview,
+   * where it says "here is where in the woods this is"; on a region map it
+   * only hides the rest of the route and makes the art harder to follow.
+   *
+   * At 100 centredView clamps to exactly WHOLE from any centre, so the follow
+   * damping below becomes a no-op rather than dead code needing a branch.
+   * Lower this and the follow simply switches back on.
    */
-  static FOLLOW = 55;
+  static FOLLOW = 100;
 
   /** Phase lengths, in ms. The camera's own clock -- see _cameraDebt. */
   static BEATS = {
     holdWide: 1200,   // prologue: the whole woods, before anything moves
     pushIn: 1400,     // overview -> the region
     settle: 700,      // the region, wide -> the follow view
-    pullBack: 900,    // crossing: the region -> its whole extent
-    hop: 1400,        // crossing: between two region pins on the overview
+    // A crossing is the one moment the whole map is on screen, and it is what
+    // makes the journey legible -- so it gets time to read. The pull back and
+    // the hop are both slower than the push in for that reason.
+    pullBack: 1400,   // crossing: the region -> its whole extent
+    hop: 2600,        // crossing: between two region pins on the overview
+    hopHold: 900,     // and a beat on the whole woods before diving back in
     epilogue: 1600,   // the last pull back out
   };
 
@@ -677,10 +711,14 @@ export class CreditsApp extends Application {
         return this._camTick();
 
       case 'pullBack':
+        // Across the WHOLE woods, not between two tight framings. Both pins
+        // have to be on screen at once or "they travelled from here to there"
+        // is not actually being shown -- and a hop between two 34% frames
+        // barely moves, which was the version that read as too fast.
         this._camGo('hop', {
           map: OVERVIEW,
-          from: this._overviewViewFor(cam.hop.from),
-          to: this._overviewViewFor(cam.hop.to),
+          from: { ...WHOLE },
+          to: { ...WHOLE },
           ms: B.hop,
           hop: cam.hop,
         });
@@ -688,11 +726,24 @@ export class CreditsApp extends Application {
         return this._camTick();
 
       case 'hop':
+        // A beat on the finished line before diving back in, so the crossing
+        // has a moment to land rather than being snatched away the instant
+        // the mark arrives.
+        this._camGo('hopHold', {
+          map: OVERVIEW,
+          from: { ...WHOLE },
+          to: { ...WHOLE },
+          ms: B.hopHold,
+          hop: cam.hop,
+        });
+        return this._camTick();
+
+      case 'hopHold':
         this._camGo('pushIn', {
           map: OVERVIEW,
-          from: this._overviewViewFor(cam.hop.to),
+          from: { ...WHOLE },
           to: this._overviewViewFor(cam.hop.to),
-          ms: 1,               // already framed; cut straight through
+          ms: B.pushIn,
           hop: cam.hop,
         });
         return this._camTick();
@@ -851,6 +902,32 @@ export class CreditsApp extends Application {
     const scheduled = this._events
       .map(e => ({ ...e, at: eventOffset(e.when, this._timeline) }))
       .sort((a, b) => a.at - b.at);
+
+    // ── The undated backlog ─────────────────────────────────────────────
+    //
+    // Session 1 was played before the travel tool existed, so its rolls sit
+    // before the first recorded leg and have nothing to attribute to;
+    // imported transgressions carry no game-day at all. Both are genuinely
+    // unplaceable -- eventOffset correctly returns 0 for them.
+    //
+    // But "unplaceable" was being rendered as "all on screen before the line
+    // moves", which is a wall of rows nobody can read. Deal them out across
+    // the opening instead, in their recorded order, so they arrive as a
+    // recap while the camera is still out over the woods.
+    const undated = scheduled.filter(e => e.at <= 0);
+    if (undated.length > 1) {
+      // Finish just before the replay proper starts, so the backlog never
+      // competes with the first real event.
+      const B = CreditsApp.BEATS;
+      const window = this._camera
+        ? B.holdWide + B.pushIn + B.settle - 200
+        : Math.min(2600, (scheduled.find(e => e.at > 0)?.at ?? 2600) - 100);
+      const gap = Math.max(90, window / undated.length);
+      // _backlog marks these as running on the wall clock rather than on the
+      // replay's frozen `elapsed` -- see the reveal loop.
+      undated.forEach((e, i) => { e.at = i * gap; e._backlog = true; });
+    }
+    scheduled.sort((a, b) => a.at - b.at);
     this._scheduled = scheduled;
 
     this.playing = true;
@@ -925,16 +1002,18 @@ export class CreditsApp extends Application {
       // A monotonic cursor, not a filter: revealing is one-way, which is what
       // lets each row animate in exactly once.
       //
-      // Held while the camera is on its opening: unplaced events resolve to
-      // offset 0, so without this the whole back catalogue floods the feed
-      // while the camera is still out over the woods.
-      const opening = this._cam && (this._cam.phase === 'holdWide'
-        || (this._cam.phase === 'pushIn' && !this._cam.hop?.from));
-      if (!opening) {
-        while (this._cursor < scheduled.length && scheduled[this._cursor].at <= elapsed) {
-          this._revealEvent(scheduled[this._cursor]);
-          this._cursor++;
-        }
+      // The backlog is dealt out on WALL CLOCK, not on `elapsed`. The replay
+      // clock is frozen at 0 for the whole of the camera's opening (that is
+      // what _cameraDebt does), so anything scheduled inside the prologue
+      // would otherwise wait for the camera to finish and then arrive all at
+      // once -- the very pile-up the spreading is there to prevent.
+      const wall = now - startedAt;
+      while (this._cursor < scheduled.length) {
+        const ev = scheduled[this._cursor];
+        const due = ev.at <= 0 || ev._backlog ? wall : elapsed;
+        if (ev.at > due) break;
+        this._revealEvent(ev);
+        this._cursor++;
       }
 
       // The view: the camera's while it moves, the damped follow otherwise.
@@ -957,9 +1036,18 @@ export class CreditsApp extends Application {
 
       // The region-to-region line, drawn over the overview during a hop.
       // _redraw is async, so this waits on the frame it belongs to.
-      if (this._cam?.phase === 'hop') {
+      //
+      // It stays up through hopHold and the push-in that follows, at full
+      // length -- the line is the whole point of going out there, and having
+      // it vanish the moment the mark arrives is what made the crossing feel
+      // like it was over before it registered.
+      if (this._cam && (this._cam.phase === 'hop' || this._cam.phase === 'hopHold'
+                        || (this._cam.phase === 'pushIn' && this._cam.hop?.from
+                            && this._cam.hop.from !== this._cam.hop.to))) {
         const cam = this._cam;
-        const t = Math.min(1, (now - cam.startedAt) / cam.ms);
+        const t = cam.phase === 'hop'
+          ? Math.min(1, (now - cam.startedAt) / cam.ms)
+          : 1;
         painted?.then?.((p) => {
           if (p) this._paintOverviewLeg(p.ctx, {
             from: cam.hop.from, to: cam.hop.to, view, w: p.w, h: p.h, t,

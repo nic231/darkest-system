@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.46.1-alpha (2026-08-19)
+
+**The region maps are whole again.** The camera no longer zooms in once it is on a region — it holds the entire map, still, exactly as before the camera existed. The zoom belongs on the overview, where it says *where in the woods this is*; on a region map it hid the rest of the route and made the art harder to read.
+
+**The crossings are slower, and go all the way out.** The pull back runs to the full extent of the woods, and the line between the two regions is drawn across the whole map so both ends are visible at once. Previously it slid between two tight framings, which barely moved — that is why it read as too fast. The hop is nearly twice as long, and there is now a beat on the finished line before the camera dives back in, so the crossing lands rather than being snatched away.
+
+**The line no longer flashes complete at a map change.** `_redraw` is async, and the one frame it actually suspends on is the frame a map changes — so two paints could resolve out of order, drawing the finished route and then an earlier frame's near-empty map over it. Each paint now carries a ticket and a stale one is dropped. A cached map also returns synchronously rather than through a promise, so the steady state does not await at all.
+
+This is the same *class* of bug as the 0.45.1 playhead fix, at a different site: that one was the finished route repainting at the end of a run, this one is at every map change. Both are one paint overtaking another.
+
+**The undated backlog is dealt out instead of dumped.** Session 1 was played before the travel tool existed, so its rolls sit before the first recorded leg and have nothing to attribute to; imported transgressions carry no game-day at all. Both are genuinely unplaceable — but showing them all before the line moved was a wall of rows nobody could read. They now arrive spread across the camera's opening, in their recorded order, as a recap while the view is still out over the woods.
+
+Worth being straight about: this is not the 0.45.1 bug returning. That was a field-name collision putting *dated* rolls at zero. These events have no date to place them by, and never did.
+
 ## 0.46.0-alpha (2026-08-19)
 
 **A camera on the credits.** The sequence used to sit still on one region map and cut abruptly to the next. It now opens on the whole woods, pushes in on wherever the party started, and follows them as the line draws. When they cross into another region it pulls back out to the overview, walks a dashed line between the two regions, and pushes into the new one. It ends by drawing back out over the whole map.
