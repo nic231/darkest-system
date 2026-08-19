@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.47.0-alpha (2026-08-19)
+
+**Wood folk tokens and birdsongs on screen**, stacked above the doom count in the same column of furniture. Both use the book's own artwork — the painted wood folk token, and the seven Birdsong Symbols.
+
+**The birdsong badge only ever shows what the party has earned.** No empty slots, no "3 of 7", and nothing at all on a player's screen until they learn the first one — an empty badge would still announce that birdsongs are a thing worth collecting. The symbols are also listed in the book's numbering rather than grouped by path, because the two Birdsong Paths are three symbols each: grouping them would hand the players the routes the moment they held two.
+
+Click either badge as GM to set it — a number for the tokens, a checklist for the songs. Players can see both but change neither. There is a macro route too:
+
+```js
+game.darkestSystem.PartyTokens.setWoodfolk(3)
+game.darkestSystem.PartyTokens.toggleBirdsong('grackle', true)
+```
+
+Both badges hide themselves from players while the party has nothing, and a GM keeps them at zero so there is somewhere to click. **Requires content module 1.20.0**, which carries the wood folk token art.
+
 ## 0.46.1-alpha (2026-08-19)
 
 **The region maps are whole again.** The camera no longer zooms in once it is on a region — it holds the entire map, still, exactly as before the camera existed. The zoom belongs on the overview, where it says *where in the woods this is*; on a region map it hid the rest of the route and made the art harder to read.

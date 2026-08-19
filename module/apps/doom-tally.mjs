@@ -299,6 +299,14 @@ export function renderDoomBadge() {
     ${rows ? `<div class="badge-list">${rows}</div>` : ''}`;
 
   positionDoomBadge(el);
+
+  // The wood folk and birdsong badges stack on top of this one and measure
+  // its position, so they have to re-measure whenever it moves or changes
+  // height (a character gaining a Doom adds a row). Dynamic import keeps the
+  // dependency one-way: doom-tally knows nothing about them at load.
+  import('./party-tokens.mjs')
+    .then(m => m.renderPartyBadges?.())
+    .catch(() => {});   // never let the stack above take the badge out
 }
 
 /**

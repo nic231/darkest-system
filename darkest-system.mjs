@@ -21,6 +21,7 @@ import { DarkestItemSheet } from './module/item/item-sheet.mjs';
 import { registerDarkestRoll, playDarkestDiceSequence } from './module/dice/darkest-roll.mjs';
 import { TransgressionTracker, registerTransgressionSettings } from './module/apps/transgression-tracker.mjs';
 import { DoomTally, registerDoomTallySettings, registerDoomTallyHooks } from './module/apps/doom-tally.mjs';
+import { PartyTokens, registerPartyTokenSettings, registerPartyTokenHooks } from './module/apps/party-tokens.mjs';
 import { NpcTracker, registerNpcTrackerSettings } from './module/apps/npc-tracker.mjs';
 import { GmWhisperTool } from './module/apps/gm-whisper.mjs';
 import {
@@ -100,6 +101,8 @@ Hooks.once('init', function() {
 
   // Register doom tally settings
   registerDoomTallySettings();
+
+  registerPartyTokenSettings();
 
   // Register NPC tracker settings
   registerNpcTrackerSettings();
@@ -277,6 +280,10 @@ Hooks.once('ready', function() {
   // Expose GM tools globally for macros
   game.darkestSystem.TransgressionTracker = TransgressionTracker;
   game.darkestSystem.DoomTally = DoomTally;
+  // Exposed so the counts can be set from a macro as well as the badges:
+  //   game.darkestSystem.PartyTokens.setWoodfolk(3)
+  //   game.darkestSystem.PartyTokens.toggleBirdsong('grackle', true)
+  game.darkestSystem.PartyTokens = PartyTokens;
   game.darkestSystem.NpcTracker = NpcTracker;
   game.darkestSystem.SessionLog = SessionLog;
   // Exposed so a GM can audition the escalation without provoking the woods:
@@ -296,6 +303,11 @@ Hooks.once('ready', function() {
 
   // Register doom tally hooks
   registerDoomTallyHooks();
+
+  // The wood folk / birdsong stack sits on top of the doom badge and measures
+  // it, so it is registered AFTER -- its deferred first render then finds a
+  // badge that has already been positioned.
+  registerPartyTokenHooks();
 
   // Register travel clock hooks and draw the dial
   registerTravelClockHooks();

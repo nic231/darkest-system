@@ -4728,6 +4728,193 @@
 }
 
 /* ----------------------------------------
+   Wood folk tokens & birdsongs — stacked above the doom badge
+---------------------------------------- */
+
+/* Same panel language as the doom badge so the three read as one column of
+   furniture. `left` and `bottom` come from JS, which measures the doom badge
+   and stacks upward from it. */
+.darkest-party-badge {
+  position: fixed;
+  left: 12px;
+  bottom: 300px;
+  z-index: 70;
+  width: 172px;
+  padding: 6px;
+  border: 1px solid var(--darkest-border, #4a4038);
+  border-radius: 8px;
+  background: var(--darkest-bg-dark, #1e1c19);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+  color: var(--darkest-text, #cec9c0);
+  font-family: var(--font-primary, inherit);
+  user-select: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Only a GM can change these, so only a GM gets the affordance. */
+.darkest-party-badge.is-gm { cursor: pointer; }
+
+.darkest-party-badge.is-gm:hover {
+  border-color: var(--darkest-green, #5c6f4a);
+  box-shadow: 0 2px 14px rgba(92, 111, 74, 0.45);
+}
+
+/* ── Wood folk ─────────────────────────────────────────────────────── */
+
+/* Echoes .badge-total, but in the token's own warm brown rather than the
+   doom purple -- these are a resource the party holds, not a threat. */
+#darkest-woodfolk-badge .party-total {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, var(--darkest-bg-medium, #2a2723), #4a3a28);
+}
+
+#darkest-woodfolk-badge .party-token-img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  /* Dim at zero, matching the unlit skull: "none yet" without a second look. */
+  opacity: 0.4;
+  transition: opacity 0.3s;
+}
+
+#darkest-woodfolk-badge.has-any .party-token-img { opacity: 1; }
+
+.darkest-party-badge .party-count {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.darkest-party-badge .party-number {
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 1;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+#darkest-woodfolk-badge.has-any .party-number {
+  text-shadow: 0 0 10px rgba(180, 130, 70, 0.7);
+}
+
+.darkest-party-badge .party-label {
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--darkest-text-dim, #b3aa9c);
+}
+
+/* ── Birdsongs ─────────────────────────────────────────────────────── */
+
+#darkest-birdsong-badge .party-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, var(--darkest-bg-medium, #2a2723), #3a4a3a);
+}
+
+#darkest-birdsong-badge .party-head-icon {
+  font-size: 13px;
+  opacity: 0.75;
+  color: var(--darkest-text, #cec9c0);
+}
+
+#darkest-birdsong-badge .party-head .party-label { margin-top: 0; }
+
+/* Wraps rather than scrolling: there are only ever seven, and a wrapped
+   second row is easier to read at a glance than a scrolling strip. */
+#darkest-birdsong-badge .party-symbols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+/* The symbols are bold red line art on transparent, drawn for print. On a
+   dark panel they need their own light ground to stay legible -- hence the
+   pale disc rather than showing them straight. */
+#darkest-birdsong-badge .party-symbol {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border-radius: 50%;
+  background: #d9d2c4;
+  border: 1px solid var(--darkest-border, #4a4038);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.25);
+}
+
+#darkest-birdsong-badge .party-symbol img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Shown when the content module (and so the artwork) is missing. */
+#darkest-birdsong-badge .party-symbol-fallback {
+  font-size: 7px;
+  line-height: 1.05;
+  text-align: center;
+  color: #2a2723;
+}
+
+#darkest-birdsong-badge .party-empty {
+  display: block;
+  padding: 3px 2px;
+  font-size: 10px;
+  font-style: italic;
+  color: var(--darkest-text-muted, #7a7268);
+}
+
+/* ── The GM's dialogs ──────────────────────────────────────────────── */
+
+.darkest-token-prompt input[type="number"] {
+  width: 100%;
+  margin-top: 6px;
+  padding: 5px 8px;
+  font-size: 16px;
+  text-align: center;
+}
+
+.darkest-birdsong-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.darkest-birdsong-row:hover { background: rgba(255, 255, 255, 0.06); }
+
+/* The same pale disc as the badge, so the dialog and the badge show the
+   symbol the same way -- picking one is easier when it looks like what will
+   appear on screen. */
+.darkest-birdsong-row img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  padding: 2px;
+  border-radius: 50%;
+  background: #d9d2c4;
+  flex: none;
+}
+
+.darkest-birdsong-row input[type="checkbox"] { flex: none; }
+
+/* ----------------------------------------
    Travel & Time — the GM tool
 ---------------------------------------- */
 /* The window itself is dark.
