@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.47.1-alpha (2026-08-19)
+
+**Session 1's rolls now land where they happened.** They were arriving all at once at the front of the feed even though the map drew their route perfectly well — the line went through the Abandoned Campsite, the Rake and the Doe and Rake's Ambush while every roll made there sat stacked at the start.
+
+The cause was a gap between two ways of knowing "when". A leg recorded before the travel clock was running carries a real destination but no game day, so `_legMinutes` returns null for it. A roll bracketed onto that leg therefore knew exactly *where* it happened and still had no *when* — and an event with no when falls back to offset zero.
+
+An event that knows its location is now placed as the line reaches that location, which is the same moment a dated roll there would fire. Location known is enough; the game date was never the only way to place something on a route the map already draws.
+
+Rolls that carry a real game time are untouched, and anything with no location at all — imported transgressions, which carry a region but no place — still shows in the opening recap.
+
 ## 0.47.0-alpha (2026-08-19)
 
 **Wood folk tokens and birdsongs on screen**, stacked above the doom count in the same column of furniture. Both use the book's own artwork — the painted wood folk token, and the seven Birdsong Symbols.

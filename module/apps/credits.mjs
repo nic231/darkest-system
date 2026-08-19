@@ -137,8 +137,25 @@ export function centredView(cx, cy, w, h) {
  * arithmetic in the feature, and the zero-denominator case below is easy to
  * regress.
  */
-export function eventOffset(when, timeline) {
+export function eventOffset(when, timeline, atSlug = null) {
   const { steps, offsets, total } = timeline;
+
+  // ── Placed by WHERE, when there is no WHEN ──────────────────────────
+  //
+  // A leg recorded before the travel clock was running carries a real
+  // destination but no game day, so _legMinutes returns null for it. A roll
+  // bracketed onto such a leg therefore knows exactly where it happened and
+  // still has when == null.
+  //
+  // Falling through to offset 0 there is what piles a whole session at the
+  // front of the feed while its route draws perfectly well on the map --
+  // location known, position lost. Place it as the line REACHES that
+  // location instead, which is the same moment a dated roll there would fire.
+  if (!Number.isFinite(when) && atSlug) {
+    const k = steps.findIndex(s => s.map === atSlug || s.to === atSlug);
+    if (k >= 0) return offsets[Math.min(k + 1, offsets.length - 1)] ?? 0;
+  }
+
   // An unplaced event (no location, no bracket) is on screen from the start,
   // so an old campaign still shows a full statistics panel rather than an
   // empty one for the first several minutes.
@@ -181,6 +198,9 @@ export function buildEvents(entries, moves) {
     when: r.when ?? null,
     inferred: !!r.inferred,
     where: r.atTitle || r.atSlug || null,
+    // Kept alongside the title so a roll on an undated leg can still be
+    // placed by location -- see eventOffset.
+    atSlug: r.atSlug || null,
     who: r.who || 'Someone',
     outcome: r.outcome || '',
     calledWoods: !!r.calledWoods,
@@ -219,6 +239,7 @@ export function buildEvents(entries, moves) {
       when: h.when ?? null,
       inferred: !!h.inferred,
       where: h.atTitle || h.atSlug || null,
+      atSlug: h.atSlug || null,
       who: h.who || 'Someone',
       event: h.event || 'wound',
       rating: h.rating,
@@ -900,7 +921,7 @@ export class CreditsApp extends Application {
     // Every event's wall-clock moment, computed ONCE. Recomputing per frame
     // would be the whole timeline per tick for no benefit.
     const scheduled = this._events
-      .map(e => ({ ...e, at: eventOffset(e.when, this._timeline) }))
+      .map(e => ({ ...e, at: eventOffset(e.when, this._timeline, e.atSlug) }))
       .sort((a, b) => a.at - b.at);
 
     // ── The undated backlog ─────────────────────────────────────────────
