@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.47.2-alpha (2026-08-19)
+
+**Events are sequenced by when they happened.** The sort forced every event with no game time to the very front, tie-broken by the order they were built — and rolls are built before transgressions. So a session appeared as one block of rolls followed by one block of transgressions, describing an evening that never ran that way.
+
+Game time is still the key when two events both have it. When they don't, the fallback is now the **wall clock**, which every entry carries: the log stamps it on write, and the chat import takes the real moment from the export. Transgressions now land immediately after the roll that caused them, which is what they always were.
+
+**The line no longer flashes at a re-render.** The previous fix covered a paint overtaking another at a map change. This is the same class of race at a different site: `activateListeners` runs on every re-render and issues an async empty paint, which could land *after* a tick's paint — wiping the line mid-run and letting the animation resume from nothing. It no longer paints at all while playing.
+
+**The map keeps the book's colours.** The backdrop had a flat 35% black wash over the real art, which suits the route map — there the line is the point and the art is context. In the credits the map is the main event on a large screen, and that wash visibly greyed it: the reds and greens went flat next to the same image in the app. The wash is now a parameter, and the credits use **0.08**.
+
+**Fields added to the importer reach entries already imported.** Re-importing skips anything already present, which is right for avoiding duplicates and wrong for an entry written by an older version — it keeps whatever gaps it was created with. `calledWoods` was the live case: a roll imported before that flag was carried through reads as "never called upon the woods" forever, so the credits' *Called* column showed 0 for a player who plainly did. Importing now backfills absent fields on entries it already owns, and reports how many it refreshed. Only missing fields are filled, so a hand correction is never overwritten.
+
 ## 0.47.1-alpha (2026-08-19)
 
 **Session 1's rolls now land where they happened.** They were arriving all at once at the front of the feed even though the map drew their route perfectly well — the line went through the Abandoned Campsite, the Rake and the Doe and Rake's Ambush while every roll made there sat stacked at the start.

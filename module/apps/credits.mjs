@@ -196,6 +196,8 @@ export function buildEvents(entries, moves) {
   const events = rolls.map(r => ({
     kind: 'roll',
     when: r.when ?? null,
+    // The wall clock, for ordering when game time is missing. See the sort.
+    t: Number.isFinite(r.t) ? r.t : null,
     inferred: !!r.inferred,
     where: r.atTitle || r.atSlug || null,
     // Kept alongside the title so a roll on an undated leg can still be
@@ -217,6 +219,7 @@ export function buildEvents(entries, moves) {
     events.push({
       kind: 'transgression',
       when: t.day != null ? SessionLog._legMinutes({ day: t.day, time: t.time }) : null,
+      t: Number.isFinite(t.t) ? t.t : null,
       inferred: false,
       where: t.region || null,
       who: t.witch || 'The woods',
@@ -237,6 +240,7 @@ export function buildEvents(entries, moves) {
     events.push({
       kind: 'harm',
       when: h.when ?? null,
+      t: Number.isFinite(h.t) ? h.t : null,
       inferred: !!h.inferred,
       where: h.atTitle || h.atSlug || null,
       atSlug: h.atSlug || null,
@@ -247,16 +251,39 @@ export function buildEvents(entries, moves) {
     });
   }
 
-  // Sort by game time; unplaced events first, holding their recorded order so
-  // a session with no dates at all still reads in sequence.
+  // Sort into the order things actually happened.
+  //
+  // Game time (`when`) is the key when both events have it. When they don't,
+  // fall back to WALL CLOCK (`t`) -- every entry carries one, because the log
+  // stamps Date.now() on write and the chat import stamps the real moment
+  // from the export. Two rolls made ten minutes apart are ten minutes apart
+  // in `t` whether or not the travel clock was running.
+  //
+  // Forcing every undated event to the front regardless of when it happened
+  // was what put a whole session's rolls in one block ahead of a whole
+  // session's transgressions: the tie-break fell through to insertion order,
+  // and buildEvents pushes all rolls before any transgression. Nothing about
+  // that block reflected the evening it was describing.
+  const key = (e) => (Number.isFinite(e.when) ? e.when : null);
   return events
     .map((e, i) => ({ e, i }))
     .sort((a, b) => {
-      const aw = a.e.when, bw = b.e.when;
-      if (aw == null && bw == null) return a.i - b.i;
-      if (aw == null) return -1;
-      if (bw == null) return 1;
-      return (aw - bw) || (a.i - b.i);
+      const aw = key(a.e), bw = key(b.e);
+      // Both dated in game time: the honest comparison.
+      if (aw != null && bw != null) return (aw - bw) || (a.i - b.i);
+      // Neither dated: real time, which they both have.
+      if (aw == null && bw == null) {
+        const at = a.e.t, bt = b.e.t;
+        if (Number.isFinite(at) && Number.isFinite(bt) && at !== bt) return at - bt;
+        return a.i - b.i;
+      }
+      // One of each. An undated event still belongs beside the dated ones it
+      // happened among, so compare through real time when both sides have it
+      // -- only falling back to "undated first" when there is nothing to
+      // compare on.
+      const at = a.e.t, bt = b.e.t;
+      if (Number.isFinite(at) && Number.isFinite(bt)) return at - bt;
+      return aw == null ? -1 : 1;
     })
     .map(x => x.e);
 }
@@ -369,8 +396,17 @@ export class CreditsApp extends Application {
 
     // Always open on an EMPTY map. _seq survives a re-render, so painting at
     // its old value showed the finished route the moment the window opened.
-    this._seq = 0;
-    this._redraw(0);
+    //
+    // But ONLY when not already playing. This method runs on every re-render,
+    // and _redraw is async: a re-render mid-playback would issue an empty
+    // paint that lands after a tick's paint, wiping the line and letting the
+    // animation resume from nothing. That is the "draws instantly, vanishes,
+    // then animates" that survived the map-change fix -- a different race, at
+    // a different call site.
+    if (!this.playing) {
+      this._seq = 0;
+      this._redraw(0);
+    }
     this._renderStats();
     this._setButtons();
   }
@@ -515,6 +551,12 @@ export class CreditsApp extends Application {
     off.width = w; off.height = h;
     paintBackdrop(off.getContext('2d'), {
       width: w, height: h, style: 'real', image: this._images[mapSlug],
+      // Much lighter than the route map's 0.35. There the art is context
+      // behind the line; here the map IS the show, on a big screen, and a
+      // 35% black wash visibly greys the book's own colours -- the reds and
+      // greens go flat against the app's version of the same image. The line
+      // still reads: it is drawn bright over a mostly-unmuted map.
+      dim: CreditsApp.MAP_DIM,
     });
 
     // A resize changes every key at once, so drop stale sizes rather than
@@ -642,6 +684,16 @@ export class CreditsApp extends Application {
    * Lower this and the follow simply switches back on.
    */
   static FOLLOW = 100;
+
+  /**
+   * How much black is washed over the book's art, 0..1.
+   *
+   * The route map uses 0.35, which suits a tool where the line is the point.
+   * The credits show the map large and it is the main event, so the wash is
+   * cut to a tenth of that -- just enough to sit the line on, not enough to
+   * grey the colours. Raise it if the route ever gets hard to follow.
+   */
+  static MAP_DIM = 0.08;
 
   /** Phase lengths, in ms. The camera's own clock -- see _cameraDebt. */
   static BEATS = {

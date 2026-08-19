@@ -518,6 +518,39 @@ export class SessionLog extends Application {
     );
     const idOf = (m, i) => `${m.at ?? m.raw ?? i}|${m.who}|${(m.text || '').slice(0, 64)}`;
 
+    // ── Backfill fields added to the importer after an earlier import ────
+    //
+    // Skipping anything already present is right for AVOIDING DUPLICATES and
+    // wrong for entries imported by an older version, which are missing every
+    // field added since. calledWoods is the live example: a roll imported
+    // before it was carried through has no flag, so the credits' "Called"
+    // column reads 0 for a player who demonstrably did call upon the woods --
+    // and no amount of re-importing fixes it, because the entry is skipped.
+    //
+    // Only fields that are ABSENT are filled, so a GM's hand correction is
+    // never overwritten by the export.
+    const byImportId = new Map();
+    for (const e of SessionLog.getLog().entries) {
+      if (e.importId) byImportId.set(e.importId, e);
+    }
+    let backfilled = 0;
+    for (const [i, m] of CHAT_HISTORY.entries()) {
+      const entry = byImportId.get(idOf(m, i));
+      if (!entry) continue;
+      const patch = {};
+      if (entry.calledWoods === undefined && m.calledWoods !== undefined) {
+        patch.calledWoods = !!m.calledWoods;
+      }
+      if (!Number.isFinite(entry.t) && m.at) {
+        const t = Date.parse(m.at);
+        if (Number.isFinite(t)) patch.t = t;
+      }
+      if (Object.keys(patch).length) {
+        await SessionLog.updateEntry(entry.id, patch);
+        backfilled++;
+      }
+    }
+
     const wanted = CHAT_HISTORY
       .map((m, i) => ({ ...m, _id: idOf(m, i) }))
       .filter(m => (m.kind === 'roll' || m.kind === 'transgression'
@@ -528,7 +561,9 @@ export class SessionLog extends Application {
                    && !existing.has(m._id));
 
     if (!wanted.length) {
-      ui.notifications.info('Session log already holds everything in the history.');
+      ui.notifications.info(backfilled
+        ? `Session log already complete — refreshed ${backfilled} entr${backfilled === 1 ? 'y' : 'ies'} with fields added since they were imported.`
+        : 'Session log already holds everything in the history.');
       return { created: 0 };
     }
 
@@ -581,6 +616,7 @@ export class SessionLog extends Application {
       `${transgressions} transgression${transgressions === 1 ? '' : 's'}`,
     ];
     if (harms) parts.push(`${harms} wound${harms === 1 ? '' : 's'}`);
+    if (backfilled) parts.push(`${backfilled} refreshed`);
     ui.notifications.info(`Imported ${parts.join(', ')}.`);
     return { created: wanted.length, rolls, transgressions, harms };
   }

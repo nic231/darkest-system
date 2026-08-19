@@ -446,12 +446,21 @@ function wobble(seed, i) {
  * blit it each frame -- 260 speckle rects or a full-size image per frame is
  * the bulk of the drawing cost, and none of it changes while the line moves.
  */
-export function paintBackdrop(ctx, { width, height, style = 'sketch', image = null } = {}) {
+export function paintBackdrop(ctx, { width, height, style = 'sketch', image = null, dim = 0.35 } = {}) {
   if (style === 'real' && image) {
     ctx.drawImage(image, 0, 0, width, height);
     // Knock the art back so the route reads over it.
-    ctx.fillStyle = 'rgba(10, 8, 6, 0.35)';
-    ctx.fillRect(0, 0, width, height);
+    //
+    // `dim` is a parameter because the two consumers want different things.
+    // The route map is ABOUT the line, so the art is context and 0.35 keeps
+    // the line legible over it. The credits show the map as the main event on
+    // a large screen, where 0.35 visibly greys the book's colours -- the reds
+    // and greens go flat -- so it passes a much lighter value. Zero skips the
+    // wash entirely.
+    if (dim > 0) {
+      ctx.fillStyle = `rgba(10, 8, 6, ${dim})`;
+      ctx.fillRect(0, 0, width, height);
+    }
     return;
   }
   // Sketch: aged paper, nothing of the real map at all. This is the
@@ -494,7 +503,7 @@ export function paintBackdrop(ctx, { width, height, style = 'sketch', image = nu
 export function drawRoute(ctx, plan, {
   revealSeq = Infinity, width, height, style = 'sketch', mapSlug = null,
   images = {}, backdrop = null, holdSeq = null, phase = 0,
-  view = null,
+  view = null, mapDim = 0.35,
 } = {}) {
   ctx.clearRect(0, 0, width, height);
 
@@ -537,7 +546,7 @@ export function drawRoute(ctx, plan, {
     ctx.drawImage(backdrop, sx, sy, sw, sh, 0, 0, width, height);
   } else {
     // One-off renders and exports never zoom, so paintBackdrop is untouched.
-    paintBackdrop(ctx, { width, height, style, image: images[mapSlug] });
+    paintBackdrop(ctx, { width, height, style, image: images[mapSlug], dim: mapDim });
   }
 
   const ink = style === 'real' ? '#f0e6d2' : '#3a3026';
