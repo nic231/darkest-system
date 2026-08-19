@@ -7048,6 +7048,40 @@
   color: var(--darkest-text-dim, #b3aa9c);
 }
 
+/* A transgression is the woods answering the Darkest Die, so it carries the
+   die's own purple rather than the muted detail grey. The light variant, not
+   --darkest-purple: the dark one is a die FACE colour and disappears against
+   the feed's near-black rows. */
+.credits-detail.credits-transgression {
+  color: var(--darkest-purple-light, #9b82c4);
+  font-weight: bold;
+}
+
+/* The witch tally beside the dice. */
+.credits-stat-head {
+  margin: 10px 0 4px;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--darkest-purple-light, #9b82c4);
+  border-top: 1px solid var(--darkest-border, #4a4038);
+  padding-top: 7px;
+}
+
+.credits-trans-table td:last-child {
+  text-align: right;
+}
+
+/* The level, in the Darkest Die's purple -- the same colour the feed rows
+   use, so the running total and the moments that produced it read as one
+   thing. */
+.credits-stat-transgression {
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  color: var(--darkest-purple-light, #9b82c4);
+}
+
 /* Calling upon the woods costs a Doom and always transgresses, so it gets the
    doom purple and a left mark rather than sitting in the run of ordinary
    rolls. */

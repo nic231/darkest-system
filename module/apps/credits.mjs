@@ -303,6 +303,7 @@ export class CreditsApp extends Application {
     this._events = [];
     this._cursor = 0;
     this._revealed = [];        // roll entries revealed so far, for _rollStats
+    this._revealedTrans = [];   // transgressions revealed so far, for the tally
 
     // ── The camera ──────────────────────────────────────────────────────
     //
@@ -575,6 +576,7 @@ export class CreditsApp extends Application {
 
   _revealEvent(ev) {
     if (ev.kind === 'roll') this._revealed.push(ev.roll);
+    if (ev.kind === 'transgression') this._revealedTrans.push(ev);
     this._appendRow(ev);
     this._renderStats();
   }
@@ -598,7 +600,7 @@ export class CreditsApp extends Application {
       row.innerHTML = `${place}
         <div class="credits-row-body">
           <span class="credits-who">${esc(ev.who)}</span>
-          <span class="credits-detail">transgression ${esc(ev.level)}</span>
+          <span class="credits-detail credits-transgression">Transgression ${esc(ev.level)}</span>
         </div>`;
     } else if (ev.kind === 'harm') {
       const what = ev.event === 'wound'
@@ -654,19 +656,43 @@ export class CreditsApp extends Application {
         <td class="${c.calledWoods ? 'credits-stat-called' : 'credits-dim'}">${c.calledWoods}</td>
       </tr>`).join('');
 
+    // The transgressions, by witch. This is the woods' side of the ledger and
+    // belongs beside the dice: the Darkest Die is only interesting because of
+    // what it wakes, so a count of 1s said nothing a GM could act on, while
+    // "the Isolating Pack is at 6" is the state of the campaign.
+    const byWitch = new Map();
+    for (const t of this._revealedTrans) {
+      const who = t.who || 'The woods';
+      // The LEVEL is the tally, not the number of entries -- a transgression
+      // track counts up, and level 6 IS six transgressions, however many rows
+      // recorded it.
+      const prev = byWitch.get(who) ?? 0;
+      byWitch.set(who, Math.max(prev, Number(t.level) || prev));
+    }
+    const trans = byWitch.size ? `
+      <div class="credits-stat-head">The woods, roused</div>
+      <table class="credits-stat-table credits-trans-table">
+        <tbody>${[...byWitch.entries()].map(([who, lvl]) => `
+          <tr>
+            <td>${esc(who)}</td>
+            <td class="credits-stat-transgression">${esc(lvl)}</td>
+          </tr>`).join('')}</tbody>
+      </table>` : '';
+
     this._statsEl.innerHTML = `
       <div class="credits-stat-line">
         <strong>${o.total}</strong> roll${o.total === 1 ? '' : 's'} —
         ${o.success} success (${o.successPct}%), ${o.partial} partial, ${o.failure} failure
       </div>
       <div class="credits-stat-line">
-        Darkest Die 1s: <strong>${stats.onesRolled}</strong>
-        ${o.calledWoods ? ` · called upon the woods: <strong>${o.calledWoods}</strong>` : ''}
+        Called upon the woods:
+        <strong class="${o.calledWoods ? 'credits-stat-called' : ''}">${o.calledWoods}</strong>
       </div>
       <table class="credits-stat-table">
         <thead><tr><th>Character</th><th>Rolls</th><th>Success</th><th>Called</th></tr></thead>
         <tbody>${rows}</tbody>
-      </table>`;
+      </table>
+      ${trans}`;
   }
 
   // ── The camera ────────────────────────────────────────────────────────
@@ -915,6 +941,7 @@ export class CreditsApp extends Application {
     // play twice does not show every event a second time.
     this._cursor = 0;
     this._revealed = [];
+    this._revealedTrans = [];
     this._lastPlace = null;
     if (this._feed) this._feed.innerHTML = '';
     this._renderStats();

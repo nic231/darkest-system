@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.47.3-alpha (2026-08-19)
+
+**The line no longer draws ahead of itself at a map change.** This is the flash reported since 0.45 and wrongly declared fixed twice — both earlier attempts were in the paint pipeline, and the bug was never in the painting.
+
+`drawRoute` filters the plan to the current map, but a `break` carries no map at all, so it passed the filter on *every* map. The count of "steps behind the playhead" therefore included it, and on the frame a map change landed, a map whose own first point was still ahead already counted one. Its first leg drew at **full length** with no head on it, disappeared as the playhead caught up, then animated properly. Glory's Cabin is where it showed because the boundary between two sessions is a break.
+
+A map now draws nothing until the playhead reaches a step that actually belongs to it. A `cross` is matched to the map being *left*, where the party is watched reaching the doorway.
+
+**The map keeps the book's colours.** The backdrop carried a flat 35% black wash — right for the route map, where the line is the point and the art is context, but on a large screen it visibly greyed the reds and greens against the same image in the app. The wash is a parameter now; the credits use 0.08.
+
+**The dice panel says something useful.** "Darkest Die 1s" is gone: a count of 1s is not something a GM can act on. The panel now leads with **called upon the woods**, and carries a new box — *The woods, roused* — tallying each witch's transgression level. The level is the track, not a row count: level 6 is six transgressions however many rows recorded it, which matters because the history has level 5 recorded twice.
+
+**Transgressions in the feed** are capitalised and carry the Darkest Die's purple, since that is what the die wakes.
+
 ## 0.47.2-alpha (2026-08-19)
 
 **Events are sequenced by when they happened.** The sort forced every event with no game time to the very front, tie-broken by the order they were built — and rolls are built before transgressions. So a session appeared as one block of rolls followed by one block of transgressions, describing an evening that never ran that way.

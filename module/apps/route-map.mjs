@@ -562,7 +562,25 @@ export function drawRoute(ctx, plan, {
     // Only this map's steps are drawn, but they keep their global `seq`, so
     // "has the playhead reached this?" stays a question about the whole
     // journey rather than about this map's slice of it.
-    const steps = group.steps.filter(s => !s.map || s.map === mapSlug);
+    //
+    // A `cross` carries no `map` of its own, and `!s.map` used to let it
+    // through onto EVERY map. That is what made the line flash complete at
+    // each map change: on the destination map the filtered list began with
+    // the leaked cross, so `show` was already non-zero the moment the map
+    // swapped, while `headIsHere` stayed false until the playhead reached
+    // one of this map's own steps. The first leg therefore drew at FULL
+    // length, vanished as the playhead caught up, and then animated.
+    //
+    // A crossing belongs to the map being LEFT -- that is where you watch
+    // the party reach the doorway -- so it is matched on `from`.
+    //
+    // A `break` carries slugs rather than a map, so it cannot be filtered by
+    // map -- and it must NOT be dropped, or the line would join two points
+    // the party never walked between, which is the whole reason it exists.
+    // It is handled below instead, where `show` is counted.
+    const steps = group.steps.filter(s =>
+      s.type === 'cross' ? s.from === mapSlug
+      : (!s.map || s.map === mapSlug));
     if (!steps.length) continue;
 
     // Steps whose sequence is behind the playhead. `show` is an index into
@@ -570,6 +588,22 @@ export function drawRoute(ctx, plan, {
     let show = 0;
     while (show < steps.length && steps[show].seq <= headSeq) show++;
     if (show <= 0) continue;
+
+    // Nothing is drawn on a map the playhead has not actually entered.
+    //
+    // `show` counts separators too -- a `break` has no map and rides along on
+    // every one -- so on the frame a map change lands, a map whose own first
+    // point is still ahead could already have show > 0. Its first leg then
+    // drew at FULL length with no head on it, vanished as the playhead caught
+    // up, and animated properly the second time. That is the flash at every
+    // map change, and at Glory's Cabin in particular, where the boundary
+    // between two sessions is a break.
+    //
+    // The honest test is whether any step BELONGING to this map is behind the
+    // playhead. Separators are not drawable content and must not vote.
+    const ownReached = steps.some(s =>
+      s.seq <= headSeq && s.type !== 'break' && s.type !== 'cross');
+    if (!ownReached) continue;
 
     // The head is only live when the step under the playhead is one of ours,
     // on this map -- otherwise another group (or another map) has it and our
