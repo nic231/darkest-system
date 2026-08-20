@@ -720,6 +720,21 @@ export class SessionLog extends Application {
         when: SessionLog._whenTransgression(t)
       })).reverse(),
       transgressionCount: transgressions.length,
+      // Each witch's track, for the dice tab. The LEVEL is the tally, not the
+      // number of rows: a transgression track counts up, so level 6 is six
+      // transgressions however many entries recorded it -- and the history has
+      // at least one level recorded twice, which a row count would inflate.
+      witchTracks: (() => {
+        const by = new Map();
+        for (const t of transgressions) {
+          const who = t.witch || 'The woods';
+          const prev = by.get(who) ?? 0;
+          by.set(who, Math.max(prev, Number(t.level) || prev));
+        }
+        return [...by.entries()]
+          .map(([witch, level]) => ({ witch, level }))
+          .sort((a, b) => b.level - a.level);
+      })(),
       hasHistory: CHAT_HISTORY.length > 0,
       historyCount: CHAT_HISTORY.length,
     };

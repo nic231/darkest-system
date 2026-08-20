@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.47.4-alpha (2026-08-19)
+
+**The Session Log's dice tab now matches the credits.** 0.47.3 replaced "Darkest Die 1s" in the credits panel and missed the Session Log, which is the one on screen in the screenshot that prompted it — two dice panels, one changed.
+
+The stat box now reads **Called**: how many times the party reached for the woods. The 1s are still in the Darkest Die distribution immediately below, where they carry the context that makes them mean anything.
+
+**A witch tally on the dice tab** — *The woods, roused* — showing each witch's transgression level, in the Darkest Die's purple. As in the credits, the level is the track rather than a row count: the history records one level twice, so counting entries would read 7 where the track is at 6.
+
+The text export still reports the count of 1s. A written record can afford detail a panel cannot.
+
 ## 0.47.3-alpha (2026-08-19)
 
 **The line no longer draws ahead of itself at a map change.** This is the flash reported since 0.45 and wrongly declared fixed twice — both earlier attempts were in the paint pipeline, and the bug was never in the painting.

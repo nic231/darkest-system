@@ -7156,3 +7156,12 @@
   text-align: center;
   padding: 12px;
 }
+
+/* The witch tracks on the dice tab. The level carries the Darkest Die's
+   purple, same as the credits feed, so the running total and the moments
+   that produced it read as one thing. */
+.log-witch-table .log-witch-level {
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  color: var(--darkest-purple-light, #9b82c4);
+}

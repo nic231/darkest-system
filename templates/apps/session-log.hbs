@@ -187,9 +187,13 @@
           <div class="log-stat-value">{{stats.overall.failurePct}}%</div>
           <div class="log-stat-label">failure</div>
         </div>
+        {{!-- Called upon the woods, not a count of Darkest Die 1s. The 1s
+              are already shown in the distribution below, and a bare count of
+              them is not something a GM can act on -- where "the party reached
+              for the woods four times" is the state of the campaign. --}}
         <div class="log-stat darkest">
-          <div class="log-stat-value">{{stats.onesRolled}}</div>
-          <div class="log-stat-label">Darkest 1s</div>
+          <div class="log-stat-value">{{stats.overall.calledWoods}}</div>
+          <div class="log-stat-label">Called</div>
         </div>
       </div>
 
@@ -215,6 +219,24 @@
           {{/each}}
         </tbody>
       </table>
+
+      {{#if witchTracks.length}}
+      {{!-- The woods' side of the ledger. The Darkest Die matters because of
+            what it wakes, so the tracks belong beside the dice rather than
+            only on their own tab. --}}
+      <h4 class="log-section-head">The woods, roused</h4>
+      <table class="log-table log-witch-table">
+        <thead><tr><th>Witch</th><th>Transgressions</th></tr></thead>
+        <tbody>
+          {{#each witchTracks}}
+          <tr>
+            <td>{{witch}}</td>
+            <td class="log-witch-level">{{level}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+      {{/if}}
 
       <h4 class="log-section-head">Darkest Die</h4>
       <div class="log-dd-chart">
