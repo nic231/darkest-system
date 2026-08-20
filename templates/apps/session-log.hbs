@@ -291,6 +291,14 @@
         </tbody>
       </table>
 
+      {{!-- Repairs a log imported before the duplicate bug was fixed, without
+            the "clear everything and start again" that would take the real
+            session record with it. --}}
+      <button type="button" class="log-dedupe"
+              data-tooltip="Find rolls recorded twice — the same player, numbers and outcome within a couple of minutes — and keep the fuller copy of each">
+        <i class="fas fa-clone"></i> Remove duplicate rolls
+      </button>
+
       <button type="button" class="log-clear-kind" data-kind="roll">
         <i class="fas fa-trash"></i> Clear all rolls
       </button>

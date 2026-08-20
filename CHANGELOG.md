@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.48.0-alpha (2026-08-19)
+
+**Re-importing no longer duplicates rolls the system already recorded.** A roll made during play is written by `recordRoll`, which stamps no `importId` — correctly, since it is not an import. But the importer deduped on `importId` alone, so it never recognised those entries and added a second copy of every one. That is the roll count going 34 to 46: twelve rolls from one session, duplicated. It compounded by another twelve on every further import.
+
+The importer now also matches a chat card against a roll already in the log by what the two genuinely share — the player, the numbers, the outcome, and the moment. Matching is **one-to-one**, because a player really can roll the same numbers twice; the history contains exactly that, 24 minutes apart. A matched entry is *adopted* rather than skipped: it is stamped with the card's `importId`, so ordinary dedupe catches it from then on and this only ever runs once per entry.
+
+**A repair for logs that already have duplicates.** *Remove duplicate rolls*, on the Dice tab. It reports what it found and asks before doing anything. The copy it keeps is the **fuller** of the two — the one carrying a location or a called-upon-the-woods flag — so the repair does not cost the log the very fields that make the credits work.
+
+Clearing all rolls would also have removed the duplicates, and would have taken the campaign record with them.
+
 ## 0.47.4-alpha (2026-08-19)
 
 **The Session Log's dice tab now matches the credits.** 0.47.3 replaced "Darkest Die 1s" in the credits panel and missed the Session Log, which is the one on screen in the screenshot that prompted it — two dice panels, one changed.

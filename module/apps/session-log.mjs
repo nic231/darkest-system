@@ -170,6 +170,74 @@ export class SessionLog extends Application {
     return SessionLog._writeQueue;
   }
 
+  /**
+   * Remove rolls that are the same roll recorded twice.
+   *
+   * Needed because the importer used to duplicate any roll the system had
+   * already logged live: a live entry carries no importId, so the dedupe by
+   * importId never saw it and a re-import added a second copy. The importer
+   * now adopts those instead (see importHistory), but a log that was imported
+   * before this fix already holds the duplicates, and clearing all rolls to be
+   * rid of them would destroy the session record.
+   *
+   * A duplicate is the same player, the same numbers, the same outcome, within
+   * a couple of minutes. The one that is KEPT is the richer of the two --
+   * whichever carries more recorded fields -- so location and calledWoods
+   * survive the merge rather than being thrown away with the copy.
+   */
+  static async dedupeRolls({ windowMs = 120 * 1000, dryRun = false } = {}) {
+    if (!game.user.isGM) return null;
+    const entries = SessionLog.getLog().entries.filter(e => e.kind === 'roll');
+    const sigOf = (r) => [
+      r.who, r.characterRating, r.taskRating, r.target, r.total, r.darkestDie, r.outcome,
+    ].join('|');
+    // How much an entry actually knows. The survivor should be the one with
+    // the location and the flags, not simply the older row.
+    const richness = (e) => [
+      e.atSlug, e.atTitle, e.day, e.time, e.region, e.groupId,
+      e.calledWoods !== undefined ? 1 : null, Number.isFinite(e.when) ? 1 : null,
+    ].filter(v => v != null && v !== '').length;
+
+    const bySig = new Map();
+    for (const e of entries) {
+      const k = sigOf(e);
+      if (!bySig.has(k)) bySig.set(k, []);
+      bySig.get(k).push(e);
+    }
+
+    const doomed = [];
+    for (const group of bySig.values()) {
+      if (group.length < 2) continue;
+      const sorted = [...group].sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
+      const used = new Set();
+      for (let i = 0; i < sorted.length; i++) {
+        if (used.has(sorted[i].id)) continue;
+        // Everything close enough in time to be the same moment.
+        const cluster = [sorted[i]];
+        for (let j = i + 1; j < sorted.length; j++) {
+          if (used.has(sorted[j].id)) continue;
+          if (Math.abs((sorted[j].t ?? 0) - (sorted[i].t ?? 0)) <= windowMs) {
+            cluster.push(sorted[j]);
+          }
+        }
+        if (cluster.length < 2) continue;
+        cluster.sort((a, b) => richness(b) - richness(a) || (a.t ?? 0) - (b.t ?? 0));
+        cluster.forEach(e => used.add(e.id));
+        doomed.push(...cluster.slice(1).map(e => e.id));   // keep the richest
+      }
+    }
+
+    if (dryRun) return { duplicates: doomed.length, total: entries.length };
+    if (!doomed.length) {
+      ui.notifications.info('No duplicate rolls found.');
+      return { removed: 0 };
+    }
+    const kill = new Set(doomed);
+    const removed = await SessionLog.remove(e => kill.has(e.id));
+    ui.notifications.info(`Removed ${removed} duplicate roll${removed === 1 ? '' : 's'}.`);
+    return { removed };
+  }
+
   /** Delete every entry of one kind ('move' | 'roll' | 'transgression'). */
   static removeKind(kind) {
     return SessionLog.remove(e => e.kind === kind);
@@ -551,6 +619,53 @@ export class SessionLog extends Application {
       }
     }
 
+    // ── Rolls already recorded LIVE ──────────────────────────────────────
+    //
+    // A roll made during play goes through recordRoll, which writes no
+    // importId -- correctly, since it is not an import. Re-importing the chat
+    // export for that same session then finds no matching importId and adds a
+    // SECOND copy of every roll the system already logged itself. That is the
+    // 34 -> 46 jump: twelve rolls from one session, duplicated, and it
+    // compounds by twelve on every further import.
+    //
+    // So match on what a live entry and its own chat card genuinely share:
+    // the roll's numbers, and the moment it happened. `t` is Date.now() on
+    // the live side and Date.parse(card time) on the import side -- the same
+    // instant, give or take the second the card took to post.
+    //
+    // Matching is ONE-TO-ONE (each live entry can be claimed once), because a
+    // player really can roll the same numbers twice; the real history has
+    // exactly that. A tight window keeps those apart -- the two identical
+    // rolls in the log are 24 minutes apart.
+    const LIVE_WINDOW_MS = 120 * 1000;
+    const sigOf = (r) => [
+      r.who, r.characterRating, r.taskRating, r.target, r.total, r.darkestDie, r.outcome,
+    ].join('|');
+    const liveBySig = new Map();
+    for (const e of SessionLog.getLog().entries) {
+      // Only entries this could plausibly be a re-import OF: a live roll with
+      // a real timestamp and no importId of its own.
+      if (e.kind !== 'roll' || e.importId || !Number.isFinite(e.t)) continue;
+      const k = sigOf(e);
+      if (!liveBySig.has(k)) liveBySig.set(k, []);
+      liveBySig.get(k).push(e);
+    }
+    const claimed = new Set();
+    /** The live entry this card already is, if any. */
+    const liveMatch = (m) => {
+      if (m.kind !== 'roll' || !m.at) return null;
+      const t = Date.parse(m.at);
+      if (!Number.isFinite(t)) return null;
+      const candidates = liveBySig.get(sigOf(m)) || [];
+      let best = null, bestGap = Infinity;
+      for (const e of candidates) {
+        if (claimed.has(e.id)) continue;
+        const gap = Math.abs(e.t - t);
+        if (gap <= LIVE_WINDOW_MS && gap < bestGap) { best = e; bestGap = gap; }
+      }
+      return best;
+    };
+
     const wanted = CHAT_HISTORY
       .map((m, i) => ({ ...m, _id: idOf(m, i) }))
       .filter(m => (m.kind === 'roll' || m.kind === 'transgression'
@@ -560,7 +675,26 @@ export class SessionLog extends Application {
                     || (m.kind === 'harm' && m.taken !== false && m.event !== 'scratch'))
                    && !existing.has(m._id));
 
-    if (!wanted.length) {
+    // Cards that are really a roll the system already logged live. They are
+    // ADOPTED rather than skipped: stamping the live entry with this card's
+    // importId means the ordinary dedupe catches it from now on, so this
+    // matching only ever has to run once per entry. It also backfills the
+    // fields the chat card knows and the live record did not.
+    let adopted = 0;
+    const fresh = [];
+    for (const m of wanted) {
+      const live = liveMatch(m);
+      if (!live) { fresh.push(m); continue; }
+      claimed.add(live.id);
+      const patch = { importId: m._id };
+      if (live.calledWoods === undefined && m.calledWoods !== undefined) {
+        patch.calledWoods = !!m.calledWoods;
+      }
+      await SessionLog.updateEntry(live.id, patch);
+      adopted++;
+    }
+
+    if (!fresh.length && !adopted && !backfilled) {
       ui.notifications.info(backfilled
         ? `Session log already complete — refreshed ${backfilled} entr${backfilled === 1 ? 'y' : 'ies'} with fields added since they were imported.`
         : 'Session log already holds everything in the history.');
@@ -577,7 +711,7 @@ export class SessionLog extends Application {
     };
 
     let rolls = 0, transgressions = 0, harms = 0;
-    for (const m of wanted) {
+    for (const m of fresh) {
       if (m.kind === 'roll') {
         await SessionLog.record({
           kind: 'roll', importId: m._id, imported: true,
@@ -616,9 +750,10 @@ export class SessionLog extends Application {
       `${transgressions} transgression${transgressions === 1 ? '' : 's'}`,
     ];
     if (harms) parts.push(`${harms} wound${harms === 1 ? '' : 's'}`);
+    if (adopted) parts.push(`${adopted} already recorded live`);
     if (backfilled) parts.push(`${backfilled} refreshed`);
     ui.notifications.info(`Imported ${parts.join(', ')}.`);
-    return { created: wanted.length, rolls, transgressions, harms };
+    return { created: fresh.length, rolls, transgressions, harms, adopted, backfilled };
   }
 
   /**
@@ -1239,6 +1374,23 @@ export class SessionLog extends Application {
     // record of the campaign's movement -- a mis-click here is unrecoverable,
     // and "delete every recorded movement" reads much less alarming than
     // "delete 214 movements" does.
+    html.find('.log-dedupe').click(async () => {
+      const found = await SessionLog.dedupeRolls({ dryRun: true });
+      if (!found?.duplicates) {
+        ui.notifications.info('No duplicate rolls found.');
+        return;
+      }
+      const ok = await Dialog.confirm({
+        title: 'Remove duplicate rolls',
+        content: `<div class="darkest-dialog">
+          <p><strong>${found.duplicates}</strong> of ${found.total} rolls look like the same roll recorded twice.</p>
+          <p class="hint">The fuller copy of each is kept — the one carrying a location or a called-upon-the-woods flag. This cannot be undone.</p>
+        </div>`,
+        yes: () => true, no: () => false, defaultYes: false,
+      });
+      if (ok) await SessionLog.dedupeRolls();
+    });
+
     html.find('.log-clear-kind').click(async (ev) => {
       const kind = ev.currentTarget.dataset.kind;
       const labels = { move: 'movements', roll: 'rolls', transgression: 'transgressions' };
