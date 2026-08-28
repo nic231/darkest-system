@@ -34,6 +34,7 @@ import {
   setTravelBed,
 } from './module/apps/travel-clock.mjs';
 import { SessionLog, registerSessionLog } from './module/apps/session-log.mjs';
+import { MovementImport } from './module/apps/import-movements.mjs';
 import { DarkestAudio, registerAudioSettings } from './module/apps/audio.mjs';
 import { isPrimaryGM } from './module/helpers/gm.mjs';
 import {
@@ -286,6 +287,10 @@ Hooks.once('ready', function() {
   game.darkestSystem.PartyTokens = PartyTokens;
   game.darkestSystem.NpcTracker = NpcTracker;
   game.darkestSystem.SessionLog = SessionLog;
+  // Travel is the one thing the chat history cannot restore, so the markdown
+  // export is its only other copy:
+  //   game.darkestSystem.MovementImport.apply(pastedMarkdown)
+  game.darkestSystem.MovementImport = MovementImport;
   // Exposed so a GM can audition the escalation without provoking the woods:
   //   game.darkestSystem.TransgressionFx.play('the-lost', 10)
   game.darkestSystem.TransgressionFx = TransgressionFx;

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.49.0-alpha (2026-08-19)
+
+**Travel can be restored from a markdown export.** *Restore from export*, on the Movement tab.
+
+This closes a real hole. The chat history rebuilds rolls, transgressions and wounds because each posts a chat card carrying its own numbers — but travel posts a card that deliberately never names the destination, since the players do not know where they are going until they arrive. So the chat export contains no movement at all, and the session log was the only copy of the route. Clearing the log destroyed it with no way back.
+
+The exported log is the other copy, and it has everything: from, to, route label, duration and both ends of the game clock. Paste it back and the Movements table is read into the log. **Check** reports what it found before anything is written; **Restore** writes it, replacing anything a previous run wrote rather than stacking.
+
+Two details the parser has to get right, both from the real export: pins carry coordinates and no title, so a printed name is transformed into a slug and then **checked against the real map** — an unrecognised place is reported, never guessed. And four of the twenty-four rows need a leading "The" the printed title drops (*Cave Mouth* is `the-cave-mouth`), so both forms are tried.
+
+Stays come back as stays: the em dash in the To column marks waiting rather than walking, and *Glory's Cabin Map* resolves to the cabin.
+
 ## 0.48.0-alpha (2026-08-19)
 
 **Re-importing no longer duplicates rolls the system already recorded.** A roll made during play is written by `recordRoll`, which stamps no `importId` — correctly, since it is not an import. But the importer deduped on `importId` alone, so it never recognised those entries and added a second copy of every one. That is the roll count going 34 to 46: twelve rolls from one session, duplicated. It compounded by another twelve on every further import.

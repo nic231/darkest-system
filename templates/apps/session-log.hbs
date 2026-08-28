@@ -148,6 +148,13 @@
         <button type="button" class="log-add-move">
           <i class="fas fa-plus"></i> Add a leg by hand
         </button>
+        {{!-- The chat history cannot restore travel: travel chat cards never
+              name the destination, so the export holds no movement. The
+              markdown export is the only other copy of the route. --}}
+        <button type="button" class="log-import-moves"
+                data-tooltip="Paste an exported session log to restore its Movements table">
+          <i class="fas fa-file-import"></i> Restore from export
+        </button>
         <button type="button" class="log-clear-kind" data-kind="move">
           <i class="fas fa-trash"></i> Clear all movement
         </button>

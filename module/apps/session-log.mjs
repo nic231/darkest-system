@@ -1374,6 +1374,46 @@ export class SessionLog extends Application {
     // record of the campaign's movement -- a mis-click here is unrecoverable,
     // and "delete every recorded movement" reads much less alarming than
     // "delete 214 movements" does.
+    html.find('.log-import-moves').click(async () => {
+      const { MovementImport } = await import('./import-movements.mjs');
+      const { MAP_DATA } = await import('./route-map.mjs');
+      new Dialog({
+        title: 'Restore movement from an export',
+        content: `<div class="darkest-dialog">
+          <p>Paste an exported session log. Its <strong>Movements</strong> table is read back into the log.</p>
+          <p class="hint">Travel is the one thing the chat history cannot restore — travel messages never name the destination, so the export is the only other copy.</p>
+          <textarea name="md" rows="10" style="width:100%; font-family:monospace; font-size:11px;"
+                    placeholder="# Darkest Woods — session log&#10;&#10;## Movements&#10;| # | From | To | Route | Took | Game time |"></textarea>
+        </div>`,
+        buttons: {
+          check: {
+            icon: '<i class="fas fa-magnifying-glass"></i>',
+            label: 'Check',
+            callback: async (html) => {
+              const el = html[0] ?? html;
+              const md = el.querySelector('textarea[name="md"]')?.value ?? '';
+              const r = MovementImport.parse(md, MAP_DATA);
+              ui.notifications.info(
+                `${r.rows.length} movement(s) found` +
+                (r.problems.length ? `, ${r.problems.length} row(s) unreadable — see the console.` : '.'));
+              if (r.problems.length) console.warn('darkest-system | movement import', r.problems);
+            },
+          },
+          restore: {
+            icon: '<i class="fas fa-file-import"></i>',
+            label: 'Restore',
+            callback: async (html) => {
+              const el = html[0] ?? html;
+              const md = el.querySelector('textarea[name="md"]')?.value ?? '';
+              await MovementImport.apply(md, { mapData: MAP_DATA });
+            },
+          },
+          cancel: { icon: '<i class="fas fa-times"></i>', label: 'Cancel' },
+        },
+        default: 'check',
+      }, { width: 560 }).render(true);
+    });
+
     html.find('.log-dedupe').click(async () => {
       const found = await SessionLog.dedupeRolls({ dryRun: true });
       if (!found?.duplicates) {
