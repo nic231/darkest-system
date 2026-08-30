@@ -34,6 +34,24 @@ Hooks.once('darkestSystem.registerChatHistory', (data) => {
   if (Array.isArray(data)) CHAT_HISTORY = data;
 });
 
+/**
+ * The party's actual route, shipped in the content module.
+ *
+ * Lives here beside CHAT_HISTORY rather than in import-movements, because that
+ * module imports THIS one -- holding it there and importing it back would
+ * close a cycle, and a `let` reassigned by a hook is exactly the value a cycle
+ * resolves wrongly.
+ *
+ * Travel is the one thing the chat export cannot carry, since travel cards
+ * never name the destination. Keeping the route in the module means it
+ * survives anything done to the world.
+ */
+export let ROUTE_HISTORY = [];
+
+Hooks.once('darkestSystem.registerRouteHistory', (data) => {
+  if (Array.isArray(data)) ROUTE_HISTORY = data;
+});
+
 // Stamped on every restored message so a second restore can recognise its
 // own work. Without it, running restore twice would double the log -- and
 // the GM most likely to press it is one who has just lost everything and is
@@ -870,6 +888,9 @@ export class SessionLog extends Application {
           .map(([witch, level]) => ({ witch, level }))
           .sort((a, b) => b.level - a.level);
       })(),
+      // Whether the module carries a saved route, so the empty movement tab
+      // can say so rather than leaving the GM to guess there is a way back.
+      hasSavedRoute: ROUTE_HISTORY.length > 0,
       hasHistory: CHAT_HISTORY.length > 0,
       historyCount: CHAT_HISTORY.length,
     };
@@ -1376,41 +1397,62 @@ export class SessionLog extends Application {
     // "delete 214 movements" does.
     html.find('.log-import-moves').click(async () => {
       const { MovementImport } = await import('./import-movements.mjs');
-      const { MAP_DATA } = await import('./route-map.mjs');
+      const saved = MovementImport.available
+        ? await MovementImport.applySaved({ dryRun: true })
+        : null;
+
+      // The module's own copy is the ordinary path -- the route ships with the
+      // module exactly as the chat history does, so nothing needs pasting.
+      // Pasting stays as the fallback for a log the module has not caught up
+      // with, or a route from another table.
+      const savedNote = saved
+        ? `<p>The content module carries a saved route of
+             <strong>${saved.rows}</strong> movement${saved.rows === 1 ? '' : 's'}` +
+          (saved.problems.length
+            ? `, though ${saved.problems.length} row(s) name a place this map does not have.`
+            : '.') + `</p>`
+        : `<p class="hint">The content module carries no saved route. Export a session
+             log and run <code>build_route_history.py</code> to put one there.</p>`;
+
       new Dialog({
-        title: 'Restore movement from an export',
+        title: 'Restore movement',
         content: `<div class="darkest-dialog">
-          <p>Paste an exported session log. Its <strong>Movements</strong> table is read back into the log.</p>
-          <p class="hint">Travel is the one thing the chat history cannot restore — travel messages never name the destination, so the export is the only other copy.</p>
-          <textarea name="md" rows="10" style="width:100%; font-family:monospace; font-size:11px;"
-                    placeholder="# Darkest Woods — session log&#10;&#10;## Movements&#10;| # | From | To | Route | Took | Game time |"></textarea>
+          ${savedNote}
+          <p class="hint">Travel is the one thing the chat history cannot restore —
+             travel messages never name the destination, so the route lives only here.</p>
+          <hr>
+          <p class="hint">Or paste an exported session log to use its Movements table instead:</p>
+          <textarea name="md" rows="7" style="width:100%; font-family:monospace; font-size:11px;"
+                    placeholder="## Movements&#10;| # | From | To | Route | Took | Game time |"></textarea>
         </div>`,
         buttons: {
-          check: {
-            icon: '<i class="fas fa-magnifying-glass"></i>',
-            label: 'Check',
-            callback: async (html) => {
-              const el = html[0] ?? html;
-              const md = el.querySelector('textarea[name="md"]')?.value ?? '';
-              const r = MovementImport.parse(md, MAP_DATA);
-              ui.notifications.info(
-                `${r.rows.length} movement(s) found` +
-                (r.problems.length ? `, ${r.problems.length} row(s) unreadable — see the console.` : '.'));
-              if (r.problems.length) console.warn('darkest-system | movement import', r.problems);
+          saved: {
+            icon: '<i class="fas fa-box-archive"></i>',
+            label: saved ? `Restore ${saved.rows} from module` : 'Nothing saved',
+            callback: async () => {
+              if (!saved) {
+                ui.notifications.warn('No saved route in the content module.');
+                return;
+              }
+              await MovementImport.applySaved();
             },
           },
-          restore: {
+          pasted: {
             icon: '<i class="fas fa-file-import"></i>',
-            label: 'Restore',
+            label: 'Use pasted text',
             callback: async (html) => {
               const el = html[0] ?? html;
               const md = el.querySelector('textarea[name="md"]')?.value ?? '';
-              await MovementImport.apply(md, { mapData: MAP_DATA });
+              if (!md.trim()) {
+                ui.notifications.warn('Nothing pasted.');
+                return;
+              }
+              await MovementImport.apply(md);
             },
           },
           cancel: { icon: '<i class="fas fa-times"></i>', label: 'Cancel' },
         },
-        default: 'check',
+        default: saved ? 'saved' : 'pasted',
       }, { width: 560 }).render(true);
     });
 

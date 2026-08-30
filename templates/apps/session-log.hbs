@@ -161,14 +161,28 @@
       </div>
 
       {{else}}
-      <button type="button" class="log-add-move">
-        <i class="fas fa-plus"></i> Add a leg by hand
-      </button>
+      {{!-- An EMPTY log is exactly when restoring matters, so the restore
+            button has to live here too. It was originally only in the
+            populated branch, which is the one state where nobody needs it. --}}
+      <div class="log-move-actions">
+        <button type="button" class="log-add-move">
+          <i class="fas fa-plus"></i> Add a leg by hand
+        </button>
+        <button type="button" class="log-import-moves"
+                data-tooltip="Rebuild the route from an exported session log">
+          <i class="fas fa-file-import"></i> Restore from export
+        </button>
+      </div>
       <p class="log-empty">
         <i class="fas fa-map-signs"></i>
         No movement recorded yet. Travel with the Travel &amp; Time tool and the
         party's route builds up here — with the real location names, which the
         public chat messages deliberately leave out.
+        {{#if hasSavedRoute}}
+        <br><br>
+        A saved route is in the content module — <strong>Restore from export</strong>
+        brings it back.
+        {{/if}}
       </p>
       {{/if}}
     </div>

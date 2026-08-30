@@ -19,7 +19,8 @@
  * part of the normal flow.
  */
 
-import { SessionLog } from './session-log.mjs';
+import { SessionLog, ROUTE_HISTORY } from './session-log.mjs';
+import { MAP_DATA } from './route-map.mjs';
 
 /** Marks what this wrote, so a re-run replaces rather than duplicates. */
 const TAG = 'movement-import';
@@ -149,6 +150,49 @@ export const MovementImport = {
     return { rows, problems };
   },
 
+  /** Is there a saved route in the content module? */
+  get available() {
+    return ROUTE_HISTORY.length > 0;
+  },
+
+  /**
+   * Restore the route the content module carries -- no pasting.
+   *
+   * The module's rows are already in the shape parse() produces, except that
+   * their places are titles. They go through the same slug resolution, so an
+   * unknown place is reported here too rather than written as a phantom stop.
+   */
+  async applySaved({ mapData, dryRun = false } = {}) {
+    if (!game.user.isGM) {
+      ui.notifications.warn('Only the GM can restore movement.');
+      return null;
+    }
+    if (!ROUTE_HISTORY.length) {
+      ui.notifications.warn('No saved route in the content module. Export a session log and run build_route_history.py.');
+      return null;
+    }
+    const data = mapData ?? MAP_DATA;
+    const rows = [];
+    const problems = [];
+    for (const r of ROUTE_HISTORY) {
+      const fromSlug = slugFor(r.from, data);
+      const toSlug = r.stay ? fromSlug : slugFor(r.to, data);
+      if (!fromSlug) { problems.push(`row ${r.n}: unknown place "${r.from}"`); continue; }
+      if (!toSlug) { problems.push(`row ${r.n}: unknown place "${r.to}"`); continue; }
+      rows.push({
+        n: r.n, stay: !!r.stay,
+        fromSlug, fromTitle: String(r.from).replace(/\s+Map$/i, ''),
+        toSlug, toTitle: String(r.stay ? r.from : r.to).replace(/\s+Map$/i, ''),
+        label: r.label || '',
+        minutes: r.minutes || 0,
+        departDay: r.departDay, departTime: r.departTime,
+        day: r.day, time: r.time,
+      });
+    }
+    if (dryRun) return { rows: rows.length, problems };
+    return MovementImport._write(rows, problems);
+  },
+
   /**
    * Write the parsed rows into the session log.
    *
@@ -160,7 +204,7 @@ export const MovementImport = {
       ui.notifications.warn('Only the GM can import movements.');
       return null;
     }
-    const data = mapData ?? game.darkestSystem?.MAP_DATA ?? null;
+    const data = mapData ?? MAP_DATA;
     const { rows, problems } = MovementImport.parse(markdown, data);
 
     if (!rows.length) {
@@ -168,7 +212,11 @@ export const MovementImport = {
       return { rows: 0, problems };
     }
     if (dryRun) return { rows: rows.length, problems };
+    return MovementImport._write(rows, problems);
+  },
 
+  /** The shared write, used by both the pasted and the saved route. */
+  async _write(rows, problems = []) {
     const removed = await SessionLog.remove(e => e.importTag === TAG);
 
     // Ordered `t` values a second apart, ending now. The credits bracket rolls

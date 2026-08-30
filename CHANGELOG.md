@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.49.1-alpha (2026-08-19)
+
+**The route now ships in the content module** — no pasting. 0.49.0 added restoring from an export but only offered it as a paste box, which was the wrong answer to the right problem: the chat history already travels with the module, and the route should too.
+
+`build_route_history.py` writes the party's route into the module as `route-history.js`, exactly as `build_chat_history.py` writes the chat. *Restore from export* now offers that saved route first and keeps pasting as the fallback, for a route the module has not caught up with.
+
+Places are stored as **titles, not slugs**, and resolved against the live map when restored — so a content update that renames somewhere is reported rather than silently baked in at build time.
+
+**The restore button now appears on an empty Movement tab**, which is the one state where it matters and the only state it was missing from. It was added to the populated branch alone, so a GM who had just lost their route saw nothing but "Add a leg by hand".
+
 ## 0.49.0-alpha (2026-08-19)
 
 **Travel can be restored from a markdown export.** *Restore from export*, on the Movement tab.
