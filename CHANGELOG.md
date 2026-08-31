@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.49.2-alpha (2026-08-30)
+
+**"Draw the route" no longer shows the finished route before animating.** This is the flash reported since 0.45 and declared fixed three times — and each of those fixes was real, but all three went into the **credits** window and none reached its sibling, *Draw the route*. The tool actually being watched never got them. `credits.mjs` even carries the comment "starts at the beginning, unlike the route map", so the divergence was noted at the time and still missed.
+
+Three things were wrong in `route-map.mjs`, all now matching what the credits window has done since 0.47.2:
+
+- **The playhead was never wound back.** `_seq` starts at `Infinity` so a freshly opened window shows the finished map — correct on its own, but it survived into the replay, so the route was already fully drawn when the animation started. `play()` now resets it to 0 and paints an empty frame **synchronously**, before anything async, because leaving it to the first tick lets the stale paint win the race.
+- **A re-render mid-replay painted over the animation.** `activateListeners` runs on every re-render and repainted unconditionally. It now paints only when not already playing.
+- **`_redraw` had no paint ticket.** It is async, so two overlapping calls could resolve out of order. Each paint is now stamped and dropped if overtaken. This one is dormant today (the await only suspends under `real` style, and this window is always `sketch`) but it keeps both files' contracts identical, so switching to the real art cannot quietly reintroduce the flash.
+
+Worth naming the mechanism, because "it breaks after Glory's Cabin" turned out to be a red herring: the real route data has **no session break at Glory's Cabin at all** — it sits mid-run on one map, and the first actual map crossing comes several steps later. What was really happening is on the **broadcast path**: `playShared()` renders the window (painting the complete route at `_seq = Infinity`) and only starts `play()` 400ms later, whose first ticks then wipe it. Deterministic on every "Play for all", with no map boundary needed to trigger it. Glory's Cabin was simply the last thing on screen before it became noticeable.
+
+Covered by a new `verify_route_map_playhead.mjs`, which asserts the lifecycle against logic mirrored from the shipped source and was checked to fail against the pre-fix behaviour.
+
 ## 0.49.1-alpha (2026-08-19)
 
 **The route now ships in the content module** — no pasting. 0.49.0 added restoring from an export but only offered it as a paste box, which was the wrong answer to the right problem: the chat history already travels with the module, and the route should too.

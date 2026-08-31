@@ -789,7 +789,12 @@ export class RouteMapApp extends Application {
     this.playing = false;
     // The playhead, in merged-sequence space. Infinity draws the finished
     // map, which is what a freshly opened window should show.
+    //
+    // It must be wound back to 0 before a replay starts -- see play(). A
+    // finished playhead surviving into a run is what painted the whole route
+    // complete, then wiped it on the first tick.
     this._seq = Infinity;
+    this._paintSeq = 0;         // paint ticket; see _redraw
     this._images = {};
     this._raf = null;
   }
@@ -845,7 +850,18 @@ export class RouteMapApp extends Application {
   activateListeners(html) {
     super.activateListeners(html);
     this._canvas = html.find('canvas.route-canvas')[0];
-    if (this._canvas) this._redraw();
+
+    // Only paint the opening frame when NOT already playing.
+    //
+    // This method runs on every re-render, and _redraw is async: a re-render
+    // landing mid-replay would issue a paint at whatever _seq held and drop
+    // it on top of the running animation. Worse, playShared() renders the
+    // window and only starts play() 400ms later, so this call painted the
+    // FINISHED route (_seq is Infinity until play winds it back) and the
+    // first ticks then wiped it -- the "draws complete, vanishes, then
+    // animates" flash. The credits window guards the same call for the same
+    // reason; this is its sibling and was missed.
+    if (this._canvas && !this.playing) this._redraw();
 
     html.find('[name="mapSlug"]').on('change', (ev) => {
       this.mapSlug = ev.currentTarget.value;
@@ -945,7 +961,20 @@ export class RouteMapApp extends Application {
 
   async _redraw(revealSeq = this._seq, { holdSeq = null, phase = 0 } = {}) {
     if (!this._canvas || !this._plan) return;
+
+    // Frames must land in the order they were issued.
+    //
+    // This is async, so two overlapping calls can resolve out of order and an
+    // older frame can paint over a newer one. Stamp each paint and drop any
+    // that has been overtaken. Dormant while style is 'sketch' -- the await
+    // below returns immediately then, which is every path RouteMapApp
+    // currently uses -- but the guard keeps this file's contract identical to
+    // the credits window's, so switching to 'real' art cannot quietly
+    // reintroduce the flash that guard was added there to fix.
+    const ticket = ++this._paintSeq;
     await this._loadImages();
+    if (ticket !== this._paintSeq) return;   // overtaken; the newer frame won
+
     const ctx = this._canvas.getContext('2d');
     const map = MAP_DATA.maps?.[this.mapSlug];
 
@@ -1008,6 +1037,17 @@ export class RouteMapApp extends Application {
   async play({ startedAt = Date.now() } = {}) {
     this.stop();
     this.playing = true;
+
+    // Wind the playhead back BEFORE the first frame, and paint it empty.
+    //
+    // _seq starts at Infinity (a freshly opened window shows the finished
+    // map) and survives a previous run, so without this the whole route was
+    // already on screen when the replay began -- it then vanished on the
+    // first tick and animated from nothing. Setting it here, synchronously,
+    // is what matters: _redraw is async, so leaving it to the tick lets the
+    // stale paint win the race.
+    this._seq = 0;
+    this._redraw(0);
 
     const { steps, durations, total } = buildTimeline(this._plan);
     if (!steps.length) return;
