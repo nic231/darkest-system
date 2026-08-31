@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.50.0-alpha (2026-08-31)
+
+**Each leg is now whispered to the GM as it happens.** A GM-only card, "Glory's Cabin → Glade of the Taken", with the trail and the game time beneath it. Players see nothing.
+
+This exists because the public travel message deliberately names only the trail — the party does not know where they are going until they arrive — which means a chat export has never carried destinations. The session log was the single copy of the route, and clearing it lost the route outright. With the whisper running, a chat export becomes a real second copy, and the route can be rebuilt from it without reconstructing anything.
+
+Can be switched off in settings, though leaving it on is the point: it only protects sessions played while it was running.
+
+**`build_route_history.py` now falls back to the chat log.** The markdown export is still the primary source, but it only covers sessions played before it was saved. Anything since is recovered from the chat export — preferring the new whispered cards, and otherwise matching each arrival card's description back to its location (all 100 arrival texts are unique, so this is unambiguous, and an unrecognised one is reported rather than guessed at).
+
+Validated against the real campaign: six legs reconstructed from the chat log alone matched the GM's own export exactly, slug and game time. It is a fallback rather than a replacement — it cannot recover a leg whose arrival card never posted, which is precisely what the whisper fixes going forward.
+
+**Tests no longer pin last session's numbers.** Five assertions across three suites broke simply because a third session was played — they expected 34 rolls, 24 movements, a transgression track at 6. They now derive those from the data and assert the *relationships* that must hold (the roll count does not move on re-import; the module matches the export it was built from; the tally reports the track rather than the row count). A test that has to be edited after every session was testing the wrong thing.
+
 ## 0.49.2-alpha (2026-08-30)
 
 **"Draw the route" no longer shows the finished route before animating.** This is the flash reported since 0.45 and declared fixed three times — and each of those fixes was real, but all three went into the **credits** window and none reached its sibling, *Draw the route*. The tool actually being watched never got them. `credits.mjs` even carries the comment "starts at the beginning, unlike the route map", so the divergence was noted at the time and still missed.

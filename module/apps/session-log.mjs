@@ -287,6 +287,21 @@ export class SessionLog extends Application {
     fromSlug, fromTitle, toSlug, toTitle, label, minutes, km, region,
     day, time, departDay, departTime, pace, manual, groupId,
   }) {
+    // Put the leg in the GM's chat as well as the log.
+    //
+    // The PUBLIC travel card deliberately names only the trail ("The party
+    // takes the north trail") -- the players do not know where they are going
+    // until they arrive, and that is right. But it means a chat export
+    // carries no destinations, so if the session log is ever cleared the
+    // route can only be reconstructed by matching arrival descriptions back
+    // to locations, which is fragile and cannot recover a leg whose arrival
+    // card never posted.
+    //
+    // A GM-only whisper naming both ends fixes that at the source: the chat
+    // export becomes a real second copy of the route. Whispered, so it gives
+    // the players nothing.
+    SessionLog._whisperMove({ fromTitle, toTitle, label, day, time, manual });
+
     return SessionLog.record({
       kind: 'move', fromSlug, fromTitle, toSlug, toTitle, label, minutes, km,
       region, day, time, departDay, departTime, pace, manual,
@@ -294,6 +309,38 @@ export class SessionLog extends Application {
       // are treated as the first group -- which is what they were.
       groupId,
     });
+  }
+
+  /**
+   * The GM-only "A -> B" card. Never throws into the caller: a failed chat
+   * post must not stop the leg being recorded, since the log is the thing
+   * that actually matters.
+   */
+  static _whisperMove({ fromTitle, toTitle, label, day, time, manual }) {
+    try {
+      if (!game.user.isGM) return;
+      if (!game.settings.get('darkest-system', 'whisperMoves')) return;
+      // A leg typed in by hand is already known to the GM -- no card for it.
+      if (manual) return;
+      const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
+      if (!gmIds.length) return;
+
+      const esc = (v) => foundry.utils.escapeHTML?.(String(v ?? '')) ?? String(v ?? '');
+      const from = esc(fromTitle || '?');
+      const to = esc(toTitle || '?');
+      const via = label ? ` <span class="travel-chat-light">via ${esc(label)}</span>` : '';
+      const when = (day != null && time) ? ` — Day ${esc(day)}, ${esc(time)}` : '';
+
+      ChatMessage.create({
+        content: `<div class="travel-chat">
+          <div class="travel-chat-head"><i class="fas fa-route"></i> ${from} &rarr; ${to}</div>
+          <div class="travel-chat-hint">${via}${when}</div>
+        </div>`,
+        whisper: gmIds,
+      });
+    } catch (err) {
+      console.warn('darkest-system | move whisper failed', err);
+    }
   }
 
   /**
@@ -1610,5 +1657,18 @@ export function registerSessionLog() {
     config: false,
     type: Object,
     default: { entries: [] }
+  });
+
+  // On by default: the whole point is that a chat export becomes a second
+  // copy of the route, and that only works if it is running before the log
+  // is ever lost. World-scoped rather than client, since it is about what
+  // gets written into the record, not about one person's screen.
+  game.settings.register('darkest-system', 'whisperMoves', {
+    name: 'Whisper each leg to the GM',
+    hint: 'Posts a GM-only "from → to" card whenever the party travels. Players never see it. This is what lets a chat log export carry the route — the public travel message names only the trail, so without it a cleared session log cannot be fully recovered.',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: true,
   });
 }
