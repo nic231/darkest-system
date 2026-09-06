@@ -1011,17 +1011,49 @@ export class DarkestActor extends Actor {
                 return;
               }
 
-              const { DarkestRoll } = await import('../dice/darkest-roll.mjs');
+              const { DarkestRoll, playDarkestDiceSequence } =
+                await import('../dice/darkest-roll.mjs');
               const results = [];
               // Rolls whose side effects (transgression, doom, session log)
               // are dispatched after the card below -- see the push site.
               const pendingEffects = [];
+
+              const restSpeaker = ChatMessage.getSpeaker({ actor: this });
 
               for (const wound of toRoll) {
                 const boons = wound.system.type === 'mental' ? mentBoons : physBoons;
                 const banes = wound.system.type === 'mental' ? mentBanes : physBanes;
                 const roll = DarkestRoll.createActionRoll(characterRating, wound.system.rating, boons, banes, false);
                 await roll.evaluate();
+
+                // Roll the dice on screen.
+                //
+                // Dice So Nice animates off a ChatMessage being created, and
+                // this card builds its own HTML rather than going through
+                // DarkestRoll.toMessage() -- which is where the two-stage
+                // animation lives. So a rest resolved silently: the numbers
+                // simply appeared. Play it here, mirroring to other clients
+                // the same way toMessage() does, since showForRoll() only
+                // animates on the client that calls it.
+                // playDarkestDiceSequence sets the Darkest Die's appearance
+                // itself, so there is nothing to configure here.
+                if (game.dice3d && roll.darkestDieRoll) {
+                  game.socket.emit('system.darkest-system', {
+                    type: 'darkestDiceAnimation',
+                    mainRoll: roll.toJSON(),
+                    darkestRoll: roll.darkestDieRoll.toJSON(),
+                    userId: game.user.id,
+                    speaker: restSpeaker,
+                    whisper: null,
+                  });
+                  await playDarkestDiceSequence({
+                    mainRoll: roll,
+                    darkestRoll: roll.darkestDieRoll,
+                    user: game.user,
+                    speaker: restSpeaker,
+                    whisper: null,
+                  });
+                }
 
                 const success = roll.isSuccess || roll.isAutoSuccess;
                 const woundLabel = `${wound.name} (Rating ${wound.system.rating})`;
@@ -1148,7 +1180,6 @@ export class DarkestActor extends Actor {
               // Speaker is passed explicitly: dispatchRollEffects falls back
               // to getSpeaker(), which on a player's client resolves to their
               // selected token rather than the resting actor.
-              const restSpeaker = ChatMessage.getSpeaker({ actor: this });
               for (const roll of pendingEffects) roll.dispatchRollEffects(restSpeaker);
 
               resolve(true);

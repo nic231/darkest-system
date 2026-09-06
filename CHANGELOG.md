@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.50.1-alpha (2026-08-31)
+
+**Special Success now fires on the exact boundary.** Rating 5 against Task Rating 4 gives Target 11, and a natural 6 makes 6 + 5 = 11 — which meets the trigger. It was being reported as a plain Success.
+
+The rule has two halves and they disagreed. The trigger is "a single die + Rating >= Target"; the limitation is only meant to say whether that is *reachable at all*, and since the best a d6 gives is 6, the comparison has to be `<=`. It was written `<`, so a task exactly one below your rating was excluded — the trigger would have fired, but the gate stopped it ever being asked.
+
+This came from the reference doc, which derived the limitation as `Task Rating < Character Rating - 1`. Working from the trigger it is `<=`, and the doc has been corrected too so the two do not drift apart again.
+
+Only that one boundary changes: Task = Rating − 1 **on a natural 6**. A 5 there still falls short, and Task = Rating stays unreachable. Verified exhaustively across every rating and task rating.
+
+**Rest rolls now animate the dice.** The rest card builds its own HTML and posts through `ChatMessage.create`, but the two-stage dice animation lives inside `DarkestRoll.toMessage()` — which that path never calls. So a rest resolved silently: the numbers simply appeared, with no dice rolled on screen.
+
+It now plays the same sequence per wound, mirrored to other clients over the socket the same way an action roll does, since Dice So Nice only animates on the client that asks it to. This is the same class of omission as the Darkest Die side effects on rest rolls, fixed earlier for the same reason — the rest card is a second path that has to be kept in step with `toMessage()` by hand.
+
 ## 0.50.0-alpha (2026-08-31)
 
 **Each leg is now whispered to the GM as it happens.** A GM-only card, "Glory's Cabin → Glade of the Taken", with the trail and the game time beneath it. Players see nothing.

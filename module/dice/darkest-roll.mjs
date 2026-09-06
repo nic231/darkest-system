@@ -234,8 +234,16 @@ export class DarkestRoll extends Roll {
       const specialEnabled = game.settings.get('darkest-system', 'enableSpecialSuccess');
       const partialEnabled = game.settings.get('darkest-system', 'enablePartialSuccess');
 
-      // Special Success possible when target < 6 + character rating AND the rule is enabled
-      this.specialSuccessPossible = specialEnabled && (this.targetNumber < 6 + this.characterRating);
+      // Is a special success even reachable? The best a single die can do is a
+      // 6, so the honest test is whether 6 + Rating can meet the target --
+      // which means <=, not <.
+      //
+      // This was `<` and silently excluded the exact-boundary case: Rating 5
+      // against Task Rating 4 gives Target 11, and 6 + 5 = 11 meets it on a
+      // natural 6. The trigger below would have fired; this gate stopped it
+      // ever being asked. Anyone rolling a task exactly one below their rating
+      // could never get a special success.
+      this.specialSuccessPossible = specialEnabled && (this.targetNumber <= 6 + this.characterRating);
 
       // Special Success: succeeded AND single die + rating >= target (only if possible)
       if (this.isSuccess && this.specialSuccessPossible &&
