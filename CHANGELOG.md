@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.51.0-alpha (2026-09-07)
+
+**The unconsciousness check now follows the rule as written.** It was per-type in three places, and the rule is not:
+
+> "Every time a wounded character sustains a new wound, they must roll as they would with any task, against the Rating of their **most grievous wound** (regardless of when it was sustained)."
+
+Nothing there is per-type. Type decides only the *consequence* — physical knocks you out, mental leaves you catatonic — and it follows the wound being **rolled against**, not the wound just taken.
+
+What changes:
+
+- **The trigger.** Any new wound while already wounded now prompts a check. Previously it needed a pre-existing wound *of the same type*, so a character carrying a Rating 7 physical wound who took their first mental wound was prompted for nothing at all.
+- **The target.** The roll is against the most grievous wound of either type, not the highest of the new wound's type.
+- **The consequence.** Set by the wound being rolled against. Failing against a grievous physical wound knocks you out even if a mental blow was what tipped you over.
+- **The sheet button** appears on any second wound, rather than a second wound of one type — it was hidden from a character with one physical and one mental wound, who has two wounds and neither type above one.
+
+Same-type cases are unaffected. An exhaustive sweep of wound pairings shows the old logic got **32 of 64 wrong**.
+
+This came out of auditing the 6 Sep session, where Ledger took a Rating 7 physical wound from Old Jenny at Rating 4. Every roll that session was applied correctly — the damage maths, the Bane, and the unconsciousness roll all check out. The gap was in what would have happened *next*, had he taken a mental wound on top.
+
+Not changed, deliberately: the **death check** still does not prompt when one is owed. Whether and when to call for it stays the GM's decision; the check remains on the sheet, unlocked by exactly that condition.
+
 ## 0.50.1-alpha (2026-08-31)
 
 **Special Success now fires on the exact boundary.** Rating 5 against Task Rating 4 gives Target 11, and a natural 6 makes 6 + 5 = 11 — which meets the trigger. It was being reported as a plain Success.

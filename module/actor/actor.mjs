@@ -302,22 +302,38 @@ export class DarkestActor extends Actor {
    * Mental wounds → catatonia check; physical → unconscious check.
    * @param {number} woundRating - The rating of the new wound
    * @param {string} woundType - 'physical' or 'mental'
-   * @param {number} preExistingSameType - Count of same-type wounds BEFORE this new one
+   * @param {number} preExistingAny - Count of wounds of ANY type BEFORE this new one
    */
-  async checkUnconscious(woundRating, woundType = 'physical', preExistingSameType = 0) {
-    // Only prompt if character already had wounds of this type
-    if (preExistingSameType <= 0) return;
+  async checkUnconscious(woundRating, woundType = 'physical', preExistingAny = 0) {
+    // "Every time a wounded character sustains a new wound, they must roll as
+    // they would with any task, against the Rating of their most grievous
+    // wound (regardless of when it was sustained)."
+    //
+    // Both halves of that were previously read as same-type, which was wrong
+    // twice over: a character carrying a Rating 7 physical wound who took
+    // their first mental wound was prompted for nothing at all, and any check
+    // that did fire rolled against the highest wound of that type rather than
+    // the worst one they had. Type belongs to the CONSEQUENCE, not the
+    // trigger and not the target.
+    if (preExistingAny <= 0) return;
 
     const systemData = this.system;
-    const isMental = woundType === 'mental';
+
+    // The most grievous wound, of either type -- it now includes the new one,
+    // since prepareDerivedData has run by this point.
+    const wounds = this.items.filter(i => i.type === 'wound' && !i.system.healed);
+    if (!wounds.length) return;
+    const worst = wounds.reduce((max, w) => w.system.rating > max.system.rating ? w : max, wounds[0]);
+    const highestRating = worst.system.rating;
+
+    // The consequence follows the wound being ROLLED AGAINST, not the wound
+    // just taken: falling to a grievous physical wound knocks you out even if
+    // the blow that tipped you over was mental.
+    const rollType = worst.system.type === 'mental' ? 'mental' : 'physical';
+    const isMental = rollType === 'mental';
     const checkLabel = isMental ? 'Catatonia' : 'Unconsciousness';
 
-    // Highest wound of same type (now includes the new one after prepareDerivedData ran)
-    const sameTypeWounds = this.items.filter(
-      i => i.type === 'wound' && !i.system.healed && i.system.type === woundType
-    );
-    const highestSameType = sameTypeWounds.reduce((max, w) => Math.max(max, w.system.rating), 0);
-    const targetNumber = 7 + highestSameType;
+    const targetNumber = 7 + highestRating;
     const characterRating = systemData.rating || 3;
     const woundBanes = systemData.banes || 0;
 
@@ -330,13 +346,14 @@ export class DarkestActor extends Actor {
 
     const content = `<div class="darkest-unconscious-prompt">
       <div class="prompt-header"><i class="fas fa-dizzy"></i> <strong>${this.name}</strong> took a ${woundType} wound and must resist ${checkLabel.toLowerCase()}!</div>
+        <div class="prompt-row"><span class="prompt-label">Rolling against:</span><span class="prompt-value">${worst.name}</span></div>
       <div class="prompt-details">
-        <div class="prompt-row"><span class="prompt-label">Target number:</span><span class="prompt-value">7 + ${highestSameType} = <strong>${targetNumber}</strong></span></div>
+        <div class="prompt-row"><span class="prompt-label">Target number:</span><span class="prompt-value">7 + ${highestRating} = <strong>${targetNumber}</strong></span></div>
         <div class="prompt-row"><span class="prompt-label">Your Rating reduces it:</span><span class="prompt-value">${targetNumber} − ${characterRating} = <strong>${diceNeeded}</strong></span></div>
         <div class="prompt-row highlight"><span class="prompt-label">Need on the dice:</span><span class="prompt-value">${diceNeeded} or higher (2d6${woundBanes > 0 ? ' with Bane' : ''})</span></div>
         ${baneNote}
       </div>
-      <button class="resist-unconscious-btn" data-actor-id="${this.id}" data-wound-rating="${highestSameType}" data-wound-type="${woundType}"><i class="fas fa-fist-raised"></i> Resist ${checkLabel}</button>
+      <button class="resist-unconscious-btn" data-actor-id="${this.id}" data-wound-rating="${highestRating}" data-wound-type="${rollType}"><i class="fas fa-fist-raised"></i> Resist ${checkLabel}</button>
     </div>`;
 
     await ChatMessage.create({
@@ -353,19 +370,30 @@ export class DarkestActor extends Actor {
    */
   async rollResistUnconscious(woundRating, woundType = 'physical') {
     const systemData = this.system;
-    const isMental = woundType === 'mental';
-    const checkLabel = isMental ? 'Resist Catatonia' : 'Resist Unconsciousness';
+    // let, not const: the no-rating fallback below can redirect the check to
+    // the most grievous wound, which may be the other type.
+    let isMental = woundType === 'mental';
+    let checkLabel = isMental ? 'Resist Catatonia' : 'Resist Unconsciousness';
 
-    // If no rating provided, use highest wound of that type
+    // Called with no rating (the sheet button rather than the chat prompt):
+    // fall back to the MOST GRIEVOUS wound of any type, and let it decide the
+    // consequence too. Same rule as the prompt -- "against the Rating of their
+    // most grievous wound (regardless of when it was sustained)" -- so the two
+    // entry points cannot disagree about what is being resisted.
     if (!woundRating || woundRating <= 0) {
-      const sameTypeWounds = this.items.filter(
-        i => i.type === 'wound' && !i.system.healed && i.system.type === woundType
-      );
-      woundRating = sameTypeWounds.reduce((max, w) => Math.max(max, w.system.rating), 0);
+      const wounds = this.items.filter(i => i.type === 'wound' && !i.system.healed);
+      if (wounds.length) {
+        const worst = wounds.reduce(
+          (max, w) => w.system.rating > max.system.rating ? w : max, wounds[0]);
+        woundRating = worst.system.rating;
+        woundType = worst.system.type === 'mental' ? 'mental' : 'physical';
+        isMental = woundType === 'mental';
+        checkLabel = isMental ? 'Resist Catatonia' : 'Resist Unconsciousness';
+      }
     }
 
     if (woundRating <= 0) {
-      ui.notifications.warn(`${this.name} has no ${woundType} wounds — no check needed.`);
+      ui.notifications.warn(`${this.name} has no wounds — no check needed.`);
       return false;
     }
 
@@ -419,6 +447,11 @@ export class DarkestActor extends Actor {
                 await this.update({ [statusFlag]: true });
                 const icon = isMental ? 'fa-brain' : 'fa-dizzy';
                 const statusText = isMental ? 'falls catatonic' : 'falls unconscious';
+                // Deliberately does NOT prompt a death check, even when the
+                // rules would owe one (unconscious with a wound rated above
+                // the character's Rating). Whether and when to call for it is
+                // the GM's decision, not the system's -- the check is on the
+                // sheet, unlocked by exactly that condition.
                 ChatMessage.create({
                   speaker: ChatMessage.getSpeaker({ actor: this }),
                   content: `<div class="darkest-unconscious"><i class="fas ${icon}"></i> <strong>${this.name}</strong> ${statusText}!</div>`
@@ -711,10 +744,15 @@ export class DarkestActor extends Actor {
   async addWound(rating, type = 'physical', description = '') {
     if (rating <= 0) return null;
 
-    // Count pre-existing wounds of SAME TYPE before creating new one
-    // (createEmbeddedDocuments triggers prepareDerivedData, so we must count now)
-    const preExistingSameType = this.items.filter(
-      i => i.type === 'wound' && !i.system.healed && i.system.type === type
+    // Count pre-existing wounds of ANY type before creating the new one
+    // (createEmbeddedDocuments triggers prepareDerivedData, so count now).
+    //
+    // The rule is "every time a WOUNDED character sustains a new wound" --
+    // already wounded at all, not already wounded in the same way. Counting
+    // only the same type meant a character carrying a grievous physical wound
+    // took their first mental wound with no check at all.
+    const preExistingAny = this.items.filter(
+      i => i.type === 'wound' && !i.system.healed
     ).length;
 
     const woundData = {
@@ -731,7 +769,7 @@ export class DarkestActor extends Actor {
     const [wound] = await this.createEmbeddedDocuments('Item', [woundData]);
 
     // Check for unconsciousness/catatonia — only if already had wounds of same type
-    await this.checkUnconscious(rating, type, preExistingSameType);
+    await this.checkUnconscious(rating, type, preExistingAny);
 
     return wound;
   }

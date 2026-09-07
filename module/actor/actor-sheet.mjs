@@ -130,11 +130,17 @@ export class DarkestActorSheet extends ActorSheet {
     context.totalBanes = this.actor.system.banes || 0;
     context.highestWoundRating = this.actor.system.highestWoundRating || 0;
 
-    // Per-type wound counts (for Resist button visibility)
+    // Per-type wound counts (still shown on the sheet; wounds ARE tracked
+    // separately, and the check's consequence depends on which one is worst).
     const wounds = this.actor.items.filter(i => i.type === 'wound' && !i.system.healed);
     context.totalPhysicalWounds = wounds.filter(w => w.system.type === 'physical').length;
     context.totalMentalWounds = wounds.filter(w => w.system.type === 'mental').length;
-    context.canResistUnconscious = context.totalPhysicalWounds > 1 || context.totalMentalWounds > 1;
+
+    // But the resist check is owed on ANY second wound, not a second wound of
+    // the same type: "every time a wounded character sustains a new wound".
+    // Counting per type hid the button from a character carrying one grievous
+    // physical wound and one mental one -- two wounds, neither type above 1.
+    context.canResistUnconscious = wounds.length > 1;
 
     // Death/catatonia check only required when unconscious/catatonic AND the
     // highest wound's Rating exceeds the character's own Rating (per the rules
