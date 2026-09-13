@@ -142,35 +142,45 @@ export class DarkestRoll extends Roll {
   }
 
   /**
-   * Create a damage roll (1d6 + attack rating - defense rating)
+   * Create a damage roll: ALWAYS 1d6 + attack rating - defense rating.
+   *
+   * WHY THERE ARE NO BOONS OR BANES HERE
+   *
+   * "To calculate damage, you roll 1d6. This is called the damage die. You
+   * add the attack's Rating to the result. Then you subtract the Rating of
+   * the victim, with modifications (like armor)." A single die, always.
+   *
+   * This used to honour boons and banes (2d6kh1 / 2d6kl1), which was wrong
+   * twice over. Damage is one die by rule -- and because the PLAYER rolls
+   * their own incoming damage ("when defending: damage die + foe's attack -
+   * own defense"), a low result is GOOD for them when defending. So a Bane,
+   * keeping the lower die, made an incoming wound about 1.9 Rating lighter:
+   * it helped the person it was supposed to hinder. The take-damage dialog
+   * also pre-filled the wound Bane, so being wounded made every subsequent
+   * blow land softer.
+   *
+   * The parameters are kept so existing callers and stored rolls still work,
+   * but they no longer affect the formula. They are recorded on the roll for
+   * display only.
+   *
    * @param {number} attackRating - Attacker's rating
    * @param {number} defenseRating - Defender's total rating (rating + armor)
-   * @param {number} boons - Number of boons
-   * @param {number} banes - Number of banes
+   * @param {number} boons - Recorded only; does not change the formula
+   * @param {number} banes - Recorded only; does not change the formula
    * @param {Object} extra - Extra options (woundType, targetRating)
    */
   static createDamageRoll(attackRating, defenseRating, boons = 0, banes = 0, extra = {}, names = {}) {
-    // Rules: NEVER roll more than 3 dice total. Damage base is 1d6.
-    // Any net boon = 2d6kh1; any net bane = 2d6kl1; balanced = 1d6.
-    const net = boons - banes;
-
-    let formula;
-    if (net > 0) {
-      formula = '2d6kh1';
-    } else if (net < 0) {
-      formula = '2d6kl1';
-    } else {
-      formula = '1d6';
-    }
-
-    formula += ` + ${attackRating} - ${defenseRating}`;
+    const formula = `1d6 + ${attackRating} - ${defenseRating}`;
 
     return new DarkestRoll(formula, {}, {
       isDamageRoll: true,
       characterRating: attackRating,
       defenseRating,
-      boons,
-      banes,
+      // Zeroed rather than passed through: the card renders a "Rolled with
+      // Bane" note from these, and printing one over a single-die roll is
+      // exactly the contradiction that made the bug hard to spot.
+      boons: 0,
+      banes: 0,
       woundType: extra.woundType || 'physical',
       targetRating: extra.targetRating || 0,
       ratingAdjName: names.ratingAdjName || '',

@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.52.0-alpha (2026-09-13)
+
+**Damage is a single d6 again — no boons, no banes.**
+
+> "To calculate damage, you roll 1d6. This is called the damage die. You add the attack's Rating to the result. Then, you subtract the Rating of the victim, with modifications (like armor)."
+
+One die, always. The system was rolling `2d6kh1` for a net boon and `2d6kl1` for a net bane, which was wrong by the rule and **backwards in play**.
+
+The reason it was backwards: the player rolls their own *incoming* damage — "when defending: damage die + foe's attack Rating − own defense Rating" — so a **low** result is good for a defender. A Bane, keeping the lower die, made an incoming wound about **1.9 Rating lighter**. A penalty that helped the person it landed on.
+
+Worse, the take-damage dialog **pre-filled the wound Bane automatically**, so being wounded made every subsequent blow land softer. Ledger's Rating 7 wound was rolled that way: the card read "Rolled with Bane (2d6, kept lowest)" over a hit he was receiving.
+
+What changed:
+
+- `createDamageRoll` always builds `1d6 + attack − defense`. The boon/bane parameters remain so existing callers keep working, but they no longer touch the formula.
+- Both damage dialogs lose their boon/bane counters, and neither pre-fills anything.
+- The damage chat card can no longer print a "kept lowest/highest" note. The action roll card keeps its own — those were always correct.
+- The reference guide's "Boons/Banes on Damage Rolls" section said a Boon keeps the higher of 2d6. That was the source of the error and now says there are none, with the reasoning recorded so it does not come back.
+
+A wounded character's Bane, and any timed boons or banes, apply to **action rolls only**.
+
 ## 0.51.1-alpha (2026-09-13)
 
 **An "In Danger" mark on the character sheet.** It appears in the header, beside Unconscious, when a character is down and carrying a wound rated higher than their own Rating — the condition under which the rules owe a death or catatonia check. It shows the two numbers that decide it, and the Dooms that will be subtracted:

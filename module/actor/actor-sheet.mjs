@@ -735,13 +735,14 @@ export class DarkestActorSheet extends ActorSheet {
     event.preventDefault();
 
     const characterRating = this.actor.system.rating || 3;
-    const woundBanes = this.actor.system.banes || 0;
-    // Timed boons/banes apply here too. The rules say plainly that "Damage
-    // CAN have Boon/Bane" and that a wounded character ALWAYS has a Bane,
-    // with no exemption for damage rolls -- so a boon lasting "the rest of
-    // the day" helps the swing as much as it helps the action.
-    const effectBoons = this.actor.system.effectBoons || 0;
-    const effectBanes = this.actor.system.effectBanes || 0;
+    // NO boons or banes on damage. Damage is "1d6... add the attack's
+    // Rating... subtract the Rating of the victim" -- a single die, always.
+    // Prefilling them here was the bug: the player rolls their own INCOMING
+    // damage, so a Bane (keep the lower die) made the wound land lighter,
+    // and the wound Bane was applied automatically.
+    const woundBanes = 0;
+    const effectBoons = 0;
+    const effectBanes = 0;
     const activeEffects = this.actor.system.activeEffects || [];
 
     const rawMods = this.actor.system.customModifications;
@@ -907,11 +908,14 @@ export class DarkestActorSheet extends ActorSheet {
     // their base rating -- inflating every wound they took by up to 2.
     const physicalArmor = this.actor.system.effectiveArmor?.physical
       ?? this.actor.system.armor?.physical ?? 0;
-    const woundBanes = this.actor.system.banes || 0;
-    // Same reasoning as the deal-damage roll: a lasting bane hinders
-    // soaking a blow just as much as it hinders throwing one.
-    const effectBoons = this.actor.system.effectBoons || 0;
-    const effectBanes = this.actor.system.effectBanes || 0;
+    // NO boons or banes on damage. Damage is "1d6... add the attack's
+    // Rating... subtract the Rating of the victim" -- a single die, always.
+    // Prefilling them here was the bug: the player rolls their own INCOMING
+    // damage, so a Bane (keep the lower die) made the wound land lighter,
+    // and the wound Bane was applied automatically.
+    const woundBanes = 0;
+    const effectBoons = 0;
+    const effectBanes = 0;
     const activeEffects = this.actor.system.activeEffects || [];
 
     const rawMods = this.actor.system.customModifications;
