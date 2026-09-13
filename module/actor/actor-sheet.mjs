@@ -996,7 +996,7 @@ export class DarkestActorSheet extends ActorSheet {
       default: 'roll',
       render: (html) => {
         this._setupCounterButtons(html, woundBanes);
-        this._setupBoonBaneDescriptor(html, true);
+        this._setupBoonBaneDescriptor(html, true, /* incoming */ true);
 
         const woundTypeSelect = html.find('[name="woundType"]');
         const modifierSelect = html.find('[name="ratingModifier"]');
@@ -1233,7 +1233,7 @@ export class DarkestActorSheet extends ActorSheet {
   /**
    * Wire boon/bane descriptor to update live in a dialog
    */
-  _setupBoonBaneDescriptor(html, isDamageRoll = false) {
+  _setupBoonBaneDescriptor(html, isDamageRoll = false, incoming = false) {
     const boonsInput = html.find('[name="boons"]');
     const banesInput = html.find('[name="banes"]');
     const descriptor = html.find('.boon-bane-descriptor');
@@ -1244,20 +1244,50 @@ export class DarkestActorSheet extends ActorSheet {
     // Rules: max 3 dice total (action) or 2 dice (damage). Net boons/banes don't stack further.
     const totalDice = keepCount + 1; // 3 for action (keep 2), 2 for damage (keep 1)
 
+    // On an INCOMING damage roll the player is rolling the hit they are
+    // taking, so "favourable" means the SMALLER wound -- a boon of theirs
+    // keeps the low die, and a bane keeps the high one. Saying just
+    // "Bane: keep the worst" there would be actively misleading, since the
+    // worst die for them is the HIGHEST.
+    const note = html.find('.damage-keep-note');
+
     const update = () => {
       const boons = parseInt(boonsInput.val()) || 0;
       const banes = parseInt(banesInput.val()) || 0;
       const net = boons - banes;
-      if (net > 0) {
-        descriptor.show();
+
+      if (net === 0) {
+        descriptor.hide();
+        note.hide();
+        return;
+      }
+
+      const favourable = net > 0;
+      descriptor.show();
+
+      if (incoming) {
+        // Spell out whose advantage it is and which die survives.
+        const keepsHigh = !favourable;
+        descriptorText
+          .removeClass(favourable ? 'bane-text' : 'boon-text')
+          .addClass(favourable ? 'boon-text' : 'bane-text')
+          .text(favourable
+            ? `Boon: roll 2d6, keep the LOWER — the blow lands softer.`
+            : `Bane: roll 2d6, keep the HIGHER — the blow lands harder.`);
+        note.show().html(favourable
+          ? '<i class="fas fa-shield-halved"></i> You have the advantage here, so the <strong>lower</strong> die is kept — a smaller wound.'
+          : '<i class="fas fa-triangle-exclamation"></i> The enemy has the advantage here, so the <strong>higher</strong> die is kept — a larger wound.');
+        note.toggleClass('note-bad', keepsHigh).toggleClass('note-good', !keepsHigh);
+        return;
+      }
+
+      note.hide();
+      if (favourable) {
         descriptorText.removeClass('bane-text').addClass('boon-text')
           .text(`Boon: roll ${totalDice}d6, keep the best ${keepCount} — fortune favours you.`);
-      } else if (net < 0) {
-        descriptor.show();
+      } else {
         descriptorText.removeClass('boon-text').addClass('bane-text')
           .text(`Bane: roll ${totalDice}d6, keep the worst ${keepCount} — the odds are against you.`);
-      } else {
-        descriptor.hide();
       }
     };
 

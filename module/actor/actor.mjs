@@ -257,6 +257,9 @@ export class DarkestActor extends Actor {
       options.banes || 0,
       {
         woundType: woundType,
+        // The player is the VICTIM here, so a boon of theirs must keep the
+        // LOWER die -- see createDamageRoll.
+        incoming: true,
         // Instant-kill compares a wound against the target's BASE Rating,
         // not their defended rating (base + armor + situational mods) --
         // passing ownDefense here would inflate the threshold.

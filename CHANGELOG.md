@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.53.0-alpha (2026-09-13)
+
+**Boons and banes are back on damage — with the kept die flipped for the defender.**
+
+0.52.0 removed them entirely. That was an over-correction: the rulebook says plainly that "damage can have a Boon or a Bane." The real bug was never that they applied, but that **which die is kept never changed sides**.
+
+Because the player rolls both sides — "they also roll the damage die when they fail to dodge or resist an attack made against them" — high is good when dealing damage and **low is good when taking it**. So:
+
+| | Boon keeps | Bane keeps |
+|---|---|---|
+| PC dealing damage | higher | lower |
+| PC taking damage | **lower** | **higher** |
+
+A boon always helps whoever owns it; only the direction changes. This is the same principle the book already states for opposed modifiers — "NPC Boon = PC must discard highest die (acts like PC Bane)" — which exists precisely because one person rolls for both sides.
+
+**Nothing is auto-filled on a damage roll.** The wound Bane is an action-roll penalty and no longer pre-fills here; add a boon or bane by hand when the fiction calls for it. That auto-fill was how the original bug reached the table: Ledger's wound Bane was applied without anyone choosing it, and under the old maths it made his Rating 7 wound about 1.9 lighter.
+
+**The flip is explained wherever it shows.** A bane keeping the *higher* die reads as a contradiction otherwise, so the take-damage dialog carries a live note — "the enemy has the advantage here, so the higher die is kept — a larger wound" — and the chat card says "Bane — 2d6, kept higher (harder blow)".
+
+The reference guide has been corrected too. It previously said a Boon keeps the higher of 2d6 on damage with no mention of the defending case, which is where the error started.
+
 ## 0.52.0-alpha (2026-09-13)
 
 **Damage is a single d6 again — no boons, no banes.**

@@ -97,6 +97,9 @@ export class DarkestRoll extends Roll {
     this.boons = options.boons ?? 0;
     this.banes = options.banes ?? 0;
     this.isDamageRoll = options.isDamageRoll ?? false;
+    // True when the PLAYER is the victim of this damage roll, which flips
+    // which die a boon or bane keeps -- see createDamageRoll.
+    this.incoming = options.incoming ?? false;
     this.callUponWoods = options.callUponWoods ?? false;
     this.defenseRating = options.defenseRating ?? 0;
     this.woundType = options.woundType ?? 'physical';
@@ -142,45 +145,68 @@ export class DarkestRoll extends Roll {
   }
 
   /**
-   * Create a damage roll: ALWAYS 1d6 + attack rating - defense rating.
+   * Create a damage roll: 1d6 + attack rating - defense rating.
    *
-   * WHY THERE ARE NO BOONS OR BANES HERE
+   * BOONS AND BANES, AND WHY THE KEPT DIE FLIPS
    *
-   * "To calculate damage, you roll 1d6. This is called the damage die. You
-   * add the attack's Rating to the result. Then you subtract the Rating of
-   * the victim, with modifications (like armor)." A single die, always.
+   * "You never roll the Darkest Die when rolling damage, but damage CAN have
+   * a Boon or a Bane." So they apply -- but which die is kept depends on who
+   * is holding the dice, because the player rolls BOTH sides:
    *
-   * This used to honour boons and banes (2d6kh1 / 2d6kl1), which was wrong
-   * twice over. Damage is one die by rule -- and because the PLAYER rolls
-   * their own incoming damage ("when defending: damage die + foe's attack -
-   * own defense"), a low result is GOOD for them when defending. So a Bane,
-   * keeping the lower die, made an incoming wound about 1.9 Rating lighter:
-   * it helped the person it was supposed to hinder. The take-damage dialog
-   * also pre-filled the wound Bane, so being wounded made every subsequent
-   * blow land softer.
+   *   "Because players always roll the dice... they also roll the damage die
+   *    when they fail to dodge or resist an attack made against them."
    *
-   * The parameters are kept so existing callers and stored rolls still work,
-   * but they no longer affect the formula. They are recorded on the roll for
-   * display only.
+   * When the player is dealing damage, high is good for them: a Boon keeps
+   * the higher die. When the player is RECEIVING damage, low is good for
+   * them, so the same Boon must keep the LOWER die. The rulebook already
+   * states this principle for the opposed case -- "NPC Boon = PC must discard
+   * highest die (acts like PC Bane)" -- and it exists precisely because one
+   * person rolls for both sides.
+   *
+   * A boon always helps whoever owns it. Only the keep-direction flips.
+   *
+   * This was wrong in two different ways before. Originally a net bane always
+   * kept the lower die, so a wounded defender's Bane made an incoming wound
+   * about 1.9 Rating LIGHTER -- a penalty that helped its victim. The fix for
+   * that removed boons and banes from damage altogether, which contradicted
+   * the rule text. Both are now correct: they apply, and `incoming` decides
+   * which die survives.
    *
    * @param {number} attackRating - Attacker's rating
    * @param {number} defenseRating - Defender's total rating (rating + armor)
-   * @param {number} boons - Recorded only; does not change the formula
-   * @param {number} banes - Recorded only; does not change the formula
-   * @param {Object} extra - Extra options (woundType, targetRating)
+   * @param {number} boons - Boons favouring the ROLLER
+   * @param {number} banes - Banes against the ROLLER
+   * @param {Object} extra - woundType, targetRating, and `incoming` (true when
+   *   the player is the one being hit, which flips the kept die)
    */
   static createDamageRoll(attackRating, defenseRating, boons = 0, banes = 0, extra = {}, names = {}) {
-    const formula = `1d6 + ${attackRating} - ${defenseRating}`;
+    const net = boons - banes;
+    const incoming = !!extra.incoming;
+
+    // Which die survives. Net boon favours the roller; when the roller is the
+    // victim, "favourable" means the SMALLER wound.
+    let formula;
+    if (net === 0) {
+      formula = '1d6';
+    } else {
+      const favourable = net > 0;
+      // Dealing: favourable -> highest. Taking: favourable -> lowest.
+      const keepHighest = incoming ? !favourable : favourable;
+      formula = keepHighest ? '2d6kh1' : '2d6kl1';
+    }
+
+    formula += ` + ${attackRating} - ${defenseRating}`;
 
     return new DarkestRoll(formula, {}, {
       isDamageRoll: true,
       characterRating: attackRating,
       defenseRating,
-      // Zeroed rather than passed through: the card renders a "Rolled with
-      // Bane" note from these, and printing one over a single-die roll is
-      // exactly the contradiction that made the bug hard to spot.
-      boons: 0,
-      banes: 0,
+      boons,
+      banes,
+      // Carried so the chat card can say which die was kept and why -- on an
+      // incoming roll "Bane, kept highest" looks like a contradiction unless
+      // the card explains whose boon it is.
+      incoming,
       woundType: extra.woundType || 'physical',
       targetRating: extra.targetRating || 0,
       ratingAdjName: names.ratingAdjName || '',
@@ -325,7 +351,12 @@ export class DarkestRoll extends Roll {
       modifierName: this.modifierName,
       dice: this.dice,
       darkestDieRoll: this.darkestDieRoll,
-      isPlayerTakingDamage: this.isPlayerTakingDamage ?? false,
+      // One concept, two names for historical reasons: `incoming` is set at
+      // construction (it decides the formula), `isPlayerTakingDamage` was set
+      // after evaluation for the GM-whisper guard. Either being true means
+      // the player is the victim.
+      incoming: this.incoming ?? this.isPlayerTakingDamage ?? false,
+      isPlayerTakingDamage: this.isPlayerTakingDamage ?? this.incoming ?? false,
       // Game mode — affects "Woods" vs "House" labels in chat
       isHouseMode: game.settings.get('darkest-system', 'gameMode') === 'darkest-house'
     };

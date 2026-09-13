@@ -130,10 +130,24 @@
       <span class="dice-op">=</span>
       <span class="dice-total">{{total}}</span>
     </div>
-    {{!-- No boon/bane note here: damage is always a single d6. This card used
-          to print "Rolled with Bane (2d6, kept lowest)" over an incoming
-          damage roll, where keeping the lower die made the wound LIGHTER --
-          a penalty that helped the person it landed on. --}}
+    {{!-- Which die was kept, and whose advantage it was.
+          On an INCOMING roll the player is rolling the hit they are taking,
+          so their boon keeps the LOWER die and a bane keeps the higher --
+          the opposite of a roll they are dealing. Saying only "Bane" there
+          reads as a contradiction, so the note spells it out. --}}
+    {{#if (gt boons banes)}}
+      {{#if incoming}}
+      <div class="rolled-with-bonus"><i class="fas fa-shield-halved"></i> Boon — 2d6, kept lower (softer blow)</div>
+      {{else}}
+      <div class="rolled-with-bonus"><i class="fas fa-plus-circle"></i> Boon — 2d6, kept higher</div>
+      {{/if}}
+    {{else if (gt banes boons)}}
+      {{#if incoming}}
+      <div class="rolled-with-penalty"><i class="fas fa-triangle-exclamation"></i> Bane — 2d6, kept higher (harder blow)</div>
+      {{else}}
+      <div class="rolled-with-penalty"><i class="fas fa-minus-circle"></i> Bane — 2d6, kept lower</div>
+      {{/if}}
+    {{/if}}
   </div>
 
   <div class="roll-result">
