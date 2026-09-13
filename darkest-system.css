@@ -435,6 +435,46 @@
   color: white;
 }
 
+/* Down, and carrying a wound rated above them -- a death or catatonia check
+   is owed. It sits beside Unconscious rather than replacing it, because they
+   are different facts: one is a state, this is a consequence still pending.
+
+   Louder than the other two on purpose. It is the only sheet marker that
+   means a character might not survive, and it is easy to lose a button in
+   the wounds section when someone has just gone down mid-fight. */
+.status-indicator.in-danger {
+  background: #7a0b0b;
+  color: #ffe9e9;
+  font-weight: bold;
+  border: 1px solid #c62828;
+  box-shadow: 0 0 6px rgba(198, 40, 40, 0.55);
+  animation: danger-pulse 2.2s ease-in-out infinite;
+}
+
+/* Slow, so it reads as a held breath rather than an alarm -- the rules put
+   the timing in the GM's hands, so this must not nag. */
+@keyframes danger-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(198, 40, 40, 0.55); }
+  50%      { box-shadow: 0 0 12px rgba(198, 40, 40, 0.9); }
+}
+
+/* The numbers that matter: wound rating vs the character's own Rating, and
+   the Dooms that will be subtracted. */
+.status-indicator.in-danger .danger-detail {
+  margin-left: 2px;
+  padding-left: 6px;
+  border-left: 1px solid rgba(255, 233, 233, 0.35);
+  font-variant-numeric: tabular-nums;
+  font-weight: normal;
+  opacity: 0.9;
+}
+
+/* Respect a reduced-motion preference: the colour still carries the meaning,
+   so the pulse is the only thing lost. */
+@media (prefers-reduced-motion: reduce) {
+  .status-indicator.in-danger { animation: none; }
+}
+
 .status-indicator.clear-status {
   cursor: pointer;
   transition: opacity 0.15s;

@@ -51,6 +51,20 @@
         <span>{{localize "DARKEST.Status.Catatonic"}}</span>
       </div>
       {{/if}}
+
+      {{!-- In danger: down, and carrying a wound rated above them.
+            Deliberately a MARK, not a prompt -- the rules put the timing in
+            the GM's hands ("when it feels most dramatic"), and medical
+            attention before the roll avoids it entirely. This just makes sure
+            nobody forgets a check is hanging over the character. --}}
+      {{#if canDeathCheck}}
+      <div class="status-indicator in-danger"
+           title="Rating {{highestWoundRating}} wound against Rating {{system.rating}}. A {{#if (eq system.highestWoundType 'mental')}}catatonia{{else}}death{{/if}} check is owed — the GM calls for it when it suits, and medical attention beforehand avoids it entirely.{{#if unresolvedDooms.length}} {{unresolvedDooms.length}} Doom{{#if (gt unresolvedDooms.length 1)}}s{{/if}} will be subtracted from the roll.{{/if}}">
+        <i class="fas fa-skull-crossbones"></i>
+        <span>In Danger</span>
+        <span class="danger-detail">{{highestWoundRating}} vs {{system.rating}}{{#if unresolvedDooms.length}} &minus;{{unresolvedDooms.length}}{{/if}}</span>
+      </div>
+      {{/if}}
     </div>
   </header>
 

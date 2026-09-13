@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.51.1-alpha (2026-09-13)
+
+**An "In Danger" mark on the character sheet.** It appears in the header, beside Unconscious, when a character is down and carrying a wound rated higher than their own Rating — the condition under which the rules owe a death or catatonia check. It shows the two numbers that decide it, and the Dooms that will be subtracted:
+
+> ☠ **In Danger** — 7 vs 4 −1
+
+Deliberately a **mark, not a prompt**. The rules put the timing in the GM's hands — "the GM should call for that roll when it feels most dramatic" — and medical attention beforehand removes the need entirely. Nothing rolls, and nothing nags; it exists so a pending check cannot be quietly forgotten when someone goes down mid-fight. The pulse is slow for the same reason, and is dropped under a reduced-motion preference.
+
+The condition itself was already computed and correct, including the strict "higher than" — a wound *equal* to the character's Rating owes nothing. It was only reaching the sheet as one button in a row of four inside the wounds section, which is easy to miss at exactly the moment it matters. The Death Check button is unchanged and still where it was.
+
 ## 0.51.0-alpha (2026-09-07)
 
 **The unconsciousness check now follows the rule as written.** It was per-type in three places, and the rule is not:
