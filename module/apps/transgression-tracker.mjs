@@ -392,11 +392,6 @@ export class TransgressionTracker extends Application {
     const antagonist = ALL[regionSlug].witch || ALL[regionSlug].name;
 
     region.level++;
-    SessionLog.recordTransgression({
-      region: ALL[regionSlug].name,
-      level: region.level,
-      witch: ALL[regionSlug].witch,
-    });
     if (region.level > 10) {
       region.level = 1;
       region.loops++;
@@ -413,6 +408,23 @@ export class TransgressionTracker extends Application {
         );
       }
     }
+
+    // Logged AFTER the wrap, so the log agrees with the tracker and with the
+    // chat card the caller posts from the returned level.
+    //
+    // This used to run before it, recording "Transgression 11" -- a level the
+    // book has no entry for -- while the tracker and the card both said 1.
+    // The credits feed and the witch tally read the LOG, so they would have
+    // shown 11 too, and the track would look like it had jumped rather than
+    // cycled.
+    SessionLog.recordTransgression({
+      region: ALL[regionSlug].name,
+      level: region.level,
+      witch: ALL[regionSlug].witch,
+      // Which cycle this level belongs to. Without it a log spanning a wrap
+      // has two rows saying "level 3" with nothing to tell them apart.
+      loops: region.loops,
+    });
 
     await TransgressionTracker.setTransgressions(transgressions);
     // A copy: the caller only reads it, and handing back the live object

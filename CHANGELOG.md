@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.53.1-alpha (2026-09-25)
+
+Three bugs found in a review, none previously known. All were latent rather than reported — one of them by a single transgression.
+
+**A wrapping transgression track logged a level that does not exist.** `_advanceLevelUnsafe` incremented, recorded, and only then wrapped 10 → 1 — so an advance past 10 wrote "Transgression 11" to the session log while the tracker and the chat card both said 1. The credits feed and the witch tally read the log, so they would have shown 11 too, and the track would look like it had jumped rather than cycled. The record now happens after the wrap, and carries which cycle the level belongs to, so two rows reading "level 3" either side of a wrap can be told apart.
+
+**The Dismal track is at 10**, so this was one transgression away from firing.
+
+**The log's size cap evicted the wrong entries.** At 2000 entries `record()` kept the last 2000 *by insertion order*. Imports backdate their timestamps deliberately — `importHistory` uses the chat card's own time, months old; `MovementImport` walks back from now — so those rows land at the end of the array while being the oldest in the campaign. At the cap, the trim would therefore have discarded the most recent live play and kept the freshly imported history: losing the current session to a backup restore, which is the worst possible outcome for a log whose whole purpose is to survive. It now drops the oldest by time.
+
+**Damage rolls burned timed boons they no longer used.** Both damage paths called `consumeRollEffects()`. That was correct while the damage dialogs pre-filled active effects, but 0.53.0 stopped doing that — so "a Boon on your next 2 rolls" was being spent by a roll that never received it. Only the action roll consumes a charge now.
+
 ## 0.53.0-alpha (2026-09-13)
 
 **Boons and banes are back on damage — with the kept die flipped for the defender.**

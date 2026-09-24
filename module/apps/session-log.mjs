@@ -115,7 +115,25 @@ export class SessionLog extends Application {
         // millisecond.
         log.entries.push({ id: foundry.utils.randomID(), t: Date.now(), ...entry });
         if (log.entries.length > MAX_ENTRIES) {
-          log.entries = log.entries.slice(-MAX_ENTRIES);
+          // Drop the OLDEST BY TIME, not the oldest inserted.
+          //
+          // Entries are usually appended in time order, so a plain
+          // slice(-MAX) was nearly always right -- but importing backdates
+          // `t` deliberately (importHistory uses the chat card's own
+          // timestamp, months old; MovementImport walks back from now). Those
+          // rows land at the END of the array while being the OLDEST in the
+          // campaign, so at the cap the slice would discard the most recent
+          // live play and keep the freshly imported history. Losing the
+          // current session to a backup restore is the worst possible
+          // outcome for a log whose whole purpose is to survive.
+          //
+          // Sorting a copy: the array's own order is insertion order, which
+          // _chronological() and deletion-by-id both rely on staying put.
+          const byAge = [...log.entries]
+            .sort((a, b) => (a.t ?? 0) - (b.t ?? 0))
+            .slice(0, log.entries.length - MAX_ENTRIES);
+          const doomed = new Set(byAge.map(e => e.id));
+          log.entries = log.entries.filter(e => !doomed.has(e.id));
         }
         await game.settings.set('darkest-system', SETTING_LOG, log);
         SessionLog.refresh();
@@ -393,8 +411,12 @@ export class SessionLog extends Application {
   }
 
   /** A transgression fired. */
-  static recordTransgression({ region, level, witch, manual = false }) {
-    return SessionLog.record({ kind: 'transgression', region, level, witch, manual });
+  static recordTransgression({ region, level, witch, manual = false, loops = null }) {
+    // `loops` is which cycle this level belongs to. A track wraps 10 -> 1, so
+    // without it a log spanning a wrap holds two rows reading "level 3" with
+    // nothing to distinguish them. Optional: hand-entered rows and everything
+    // recorded before this existed simply have none.
+    return SessionLog.record({ kind: 'transgression', region, level, witch, manual, loops });
   }
 
   /**

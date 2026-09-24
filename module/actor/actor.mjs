@@ -228,11 +228,16 @@ export class DarkestActor extends Actor {
       Hooks.call('darkestSystem.damageDealt', roll);
     }
 
-    // A damage roll IS a roll, so it spends a charge like any other. An
-    // effect reading "next 2 rolls" covers the next two rolls the character
-    // makes, whether those are actions, damage, or one of each -- the
-    // duration counts rolls, not turns or attacks.
-    await this.consumeRollEffects();
+    // Timed boons and banes are NOT spent by a damage roll.
+    //
+    // They used to be: "a damage roll IS a roll, so it spends a charge like
+    // any other". That held while the damage dialogs pre-filled active
+    // effects into the roll. Since 0.53.0 they no longer do -- damage
+    // boons/banes are added by hand -- so consuming here would burn a use of
+    // "a Boon on your next 2 rolls" on a roll that never received it.
+    //
+    // The charge is spent by the ACTION roll, which is the only path that
+    // still applies them.
 
     return roll;
   }
@@ -291,10 +296,16 @@ export class DarkestActor extends Actor {
       }
     }
 
-    // Also a roll, so it also spends a charge. Placed after the wound is
-    // applied, so an effect reading "next 1 roll" is visibly used by the
-    // roll that spends it rather than vanishing before the result.
-    await this.consumeRollEffects();
+    // Timed boons and banes are NOT spent by a damage roll.
+    //
+    // They used to be: "a damage roll IS a roll, so it spends a charge like
+    // any other". That held while the damage dialogs pre-filled active
+    // effects into the roll. Since 0.53.0 they no longer do -- damage
+    // boons/banes are added by hand -- so consuming here would burn a use of
+    // "a Boon on your next 2 rolls" on a roll that never received it.
+    //
+    // The charge is spent by the ACTION roll, which is the only path that
+    // still applies them.
 
     return roll;
   }
