@@ -65,8 +65,8 @@
     </select>
     {{#unless hasHereRoutes}}
     <p class="travel-no-routes">
-      No routes lead out of this scene. Import the region, plan a journey
-      below, or enter a distance manually.
+      {{#if routeHint}}{{routeHint}}{{else}}No routes lead out of this scene. Import the region, plan a journey
+      below, or enter a distance manually.{{/if}}
     </p>
     {{/unless}}
   </div>

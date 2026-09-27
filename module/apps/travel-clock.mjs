@@ -1123,6 +1123,40 @@ export class TravelTool extends Application {
         label: TravelTool._routeLabel(r),
       }));
 
+    // Why there are no routes, when there are none.
+    //
+    // "No routes lead out of this scene" is true but unhelpful: the usual
+    // cause is that the SCENE cannot be resolved to a location at all, not
+    // that the location is a dead end. A scene made by hand, or imported
+    // before the flag existed, carries no `locationSlug` and silently
+    // matches nothing.
+    //
+    // The near-miss case is worth naming separately. Most location slugs
+    // carry a leading "the-" that the printed title drops -- Vantage Point
+    // is `the-vantage-point`, Firewatch Tower is `the-firewatch-tower`, and
+    // there are dozens more -- so a hand-set flag is very easily one word
+    // out, and looks correct while matching nothing.
+    let routeHint = null;
+    if (!hereRoutes.length && !this._legs?.length) {
+      if (!originSlug) {
+        routeHint = canvas?.scene
+          ? `This scene ("${canvas.scene.name}") has no location set, so the book's routes can't be looked up. Re-import it from the region compendium, or set its Location flag.`
+          : 'No scene is active, so there is nothing to look up routes from.';
+      } else if (!TRAVEL_ROUTES.some(r => r.fromSlug === originSlug || r.toSlug === originSlug)) {
+        // The slug is set but unknown. Offer the likeliest correction rather
+        // than leaving the GM to guess which form the data uses.
+        const alt = originSlug.startsWith('the-')
+          ? originSlug.slice(4)
+          : `the-${originSlug}`;
+        const altExists = TRAVEL_ROUTES.some(r => r.fromSlug === alt || r.toSlug === alt);
+        routeHint = altExists
+          ? `This scene is tagged "${originSlug}", which the book does not use — it has "${alt}". Correcting the scene's Location flag will restore its routes.`
+          : `This scene is tagged "${originSlug}", which does not appear anywhere in the book's routes.`;
+      } else {
+        routeHint = 'This is a dead end in the book — nothing leads out of it. Plan a journey below, or enter a distance manually.';
+      }
+    }
+
     // Prefer the last leg's own destination title -- a dead-end location
     // has no outgoing routes, so looking it up by fromSlug would fail.
     const originName = this._legs?.length
@@ -1160,6 +1194,7 @@ export class TravelTool extends Application {
       originSlug,
       hereRoutes,
       hasHereRoutes: hereRoutes.length > 0,
+      routeHint,
       hasRoutes: TRAVEL_ROUTES.length > 0,
       legs,
       hasLegs: legs.length > 0,

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.54.0-alpha (2026-09-28)
+
+**"No routes lead out of this scene" now says why.** The message was true and useless — it named a consequence rather than a cause, and the cause is almost never that the location is a dead end.
+
+The Travel & Time tool finds routes by reading a `locationSlug` flag off the active scene. A scene made by hand, or imported before that flag existed, carries none and silently matches nothing. The tool now says so, naming the scene.
+
+It also catches the near miss, which is the real trap: **most location slugs carry a leading "the-" that the printed title drops**. Vantage Point is `the-vantage-point`, Firewatch Tower is `the-firewatch-tower`, and there are dozens more — so a hand-set flag is easily one word out and looks perfectly correct. Tagged `vantage-point`, the tool now reports: *"This scene is tagged 'vantage-point', which the book does not use — it has 'the-vantage-point'."*
+
+A genuine dead end (the book has exactly one, Road to Dream) still reads as a dead end rather than a fault.
+
+Reported against Vantage Point, where every shipped source was in fact correct — the map pin, the travel routes, the compendium location and the compendium scene all carry the right slug. The fault was in the world's own copy of the scene, which is precisely the case the old message gave no way to diagnose.
+
 ## 0.53.1-alpha (2026-09-25)
 
 Three bugs found in a review, none previously known. All were latent rather than reported — one of them by a single transgression.
