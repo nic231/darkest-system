@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.54.1-alpha (2026-09-28)
+
+**Compatibility check against Foundry v14.** Audited against the installed core's own deprecation table rather than release notes. Only one call needed changing.
+
+**The portrait popout used a signature removed in v15.** `new ImagePopout(src, { title })` — a bare string path and a top-level `title` — is deprecated since v13 and removed in v15. It now uses the single-options form, `{ src, window: { title } }`, which the travel tool's art preview already used.
+
+Everything else checked out:
+
+- **The V1 Application framework** (`Application`, `Dialog`, `ActorSheet`, `ItemSheet`) is deprecated since v13 but not removed until **v16**. It works in v14; expect a one-time console warning. Migrating the system's windows and 22 dialogs to ApplicationV2 is the real job ahead, but it is not needed for v14.
+- **Utility calls** are all namespaced under `foundry.utils` already — there are no bare `mergeObject`/`duplicate`/`setProperty` calls, which is the most common v13+ breakage.
+- **Scene controls** already use the v13+ object-keyed form with `onChange`, not the removed `onClick`.
+- **No use** of `ChatMessage#getHTML`, `createDialog`, or the other APIs slated for removal in v15.
+
 ## 0.54.0-alpha (2026-09-28)
 
 **"No routes lead out of this scene" now says why.** The message was true and useless — it named a consequence rather than a cause, and the cause is almost never that the location is a dead end.

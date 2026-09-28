@@ -284,7 +284,15 @@ export class DarkestActorSheet extends ActorSheet {
     html.find('.profile-img.clickable').click(() => {
       const src = this.actor.img;
       if (!src || src === 'icons/svg/mystery-man.svg') return;
-      new ImagePopout(src, { title: this.actor.name, shareable: true }).render(true);
+      // The single-options form. The older `new ImagePopout(src, {title})`
+      // signature is deprecated since v13 and REMOVED in v15 -- both the
+      // string src and the bare `title` (now `window.title`). The travel
+      // tool's art preview already uses this shape.
+      new ImagePopout({
+        src,
+        window: { title: this.actor.name },
+        shareable: true,
+      }).render(true);
     });
 
     // Edit button triggers Foundry's native file picker via the hidden data-edit img
