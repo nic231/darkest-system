@@ -37,6 +37,7 @@ import { SessionLog, registerSessionLog } from './module/apps/session-log.mjs';
 import { MovementImport } from './module/apps/import-movements.mjs';
 import { DarkestAudio, registerAudioSettings } from './module/apps/audio.mjs';
 import { isPrimaryGM } from './module/helpers/gm.mjs';
+import { PLAYERS_HOOK, CHAT_HOOK } from './module/helpers/hooks.mjs';
 import {
   SceneDarkness,
   registerSceneDarknessSettings,
@@ -735,7 +736,7 @@ Hooks.on('canvasReady', async () => {
 /* ----------------------------------------
    Feature D — Player List Doom Overlay
 ---------------------------------------- */
-Hooks.on('renderPlayerList', (app, html) => {
+Hooks.on(PLAYERS_HOOK, (app, html) => {
   const root = html instanceof HTMLElement ? html : html[0];
   root?.querySelectorAll('li.player').forEach(li => {
     const userId = li.dataset.userId;
@@ -762,7 +763,7 @@ Hooks.on('renderPlayerList', (app, html) => {
 /* ----------------------------------------
    Feature E — Doom Skulls on Chat Messages
 ---------------------------------------- */
-Hooks.on('renderChatMessage', (message, html) => {
+Hooks.on(CHAT_HOOK, (message, html) => {
   if (!game.settings.get('darkest-system', 'showDoomSkulls')) return;
 
   // Find the actor who spoke
@@ -806,7 +807,7 @@ Hooks.on('darkestSystem.doomGained', async (actor, roll) => {
 // The Arrive / Turn back buttons are the GM's call alone. The handlers below
 // check isGM anyway, but a player shouldn't be looking at a button that does
 // nothing when they press it.
-Hooks.on('renderChatMessage', (message, html) => {
+Hooks.on(CHAT_HOOK, (message, html) => {
   if (game.user.isGM) return;
   const root = html instanceof HTMLElement ? html : html[0];
   root?.querySelector('.travel-hold-actions')?.remove();

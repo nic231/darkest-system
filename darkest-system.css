@@ -4332,6 +4332,8 @@
 /* ----------------------------------------
    Feature D — Player List Doom Overlay
 ---------------------------------------- */
+/* v13+ renamed the list #players; #player-list is the pre-v13 id. */
+#players .player,
 #player-list .player {
   display: flex;
   align-items: center;
@@ -4339,6 +4341,7 @@
 }
 
 .doom-pip-list {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   gap: 2px;

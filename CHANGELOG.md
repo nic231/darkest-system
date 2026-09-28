@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.54.2-alpha (2026-09-28)
+
+**Second v14 compatibility pass, hook-first. It found two things the first pass missed.** This time every hook the system listens for was checked against what the installed core actually fires, rather than only scanning for deprecated calls.
+
+**`renderPlayerList` has not fired since v13.** The player list was rebuilt as the ApplicationV2 `Players` window, and AppV2 names its render hooks after the class, so the hook is now `renderPlayers`. Nothing warns about this; the old listeners just never ran. Four were dead:
+
+- the doom-skull pips beside player names in the player list;
+- the re-measure that keeps the **doom badge**, the **wood folk / birdsong badges** and the **travel dial** sitting above the player list as players connect. This is why the badges could end up over a full roster.
+
+The pip overlay's CSS also targeted the old `#player-list` id; it now covers `#players` too.
+
+**`renderChatMessage` is deprecated and removed in v15.** It still works on v14 with a console warning. Both listeners (doom skulls on chat cards; hiding the GM's Arrive / Turn back buttons from players) now use `renderChatMessageHTML`. Both already handled an HTMLElement argument.
+
+The system still declares v11 as its minimum, so the new `module/helpers/hooks.mjs` picks each hook name based on whether the core has `foundry.applications.ui.Players`, instead of dropping the old names outright.
+
+Everything else was rechecked and is fine on v14: all other hooks (`getSceneControlButtons`, `getJournalEntryContextOptions`, `globalInterfaceVolumeChanged`, document hooks) are still fired. Bare `renderTemplate` / `loadTemplates` / `TextEditor` / `Actors` / `Items` / `ActorSheet` / `ItemSheet` / `ImagePopout` resolve through v14's compatibility shims until **v15**, and `Application` / `Dialog` / `FormApplication` until **v16**.
+
 ## 0.54.1-alpha (2026-09-28)
 
 **Compatibility check against Foundry v14.** Audited against the installed core's own deprecation table rather than release notes. Only one call needed changing.

@@ -23,6 +23,7 @@ import { DarkestAudio } from './audio.mjs';
 import { SceneAmbience } from './scene-ambience.mjs';
 import { TravelHistory } from './travel-history.mjs';
 import { TravelGroups } from './travel-groups.mjs';
+import { PLAYERS_HOOK } from '../helpers/hooks.mjs';
 
 const SETTING_CLOCK = 'travelClock';
 const SETTING_BIRDSONGS = 'knownBirdsongs';
@@ -2782,7 +2783,7 @@ export function registerTravelClockHooks() {
   }
   // The player list changes height as people connect/disconnect, and the
   // dial sits directly on top of it -- re-measure whenever it redraws.
-  Hooks.on('renderPlayerList', () => renderDial());
+  Hooks.on(PLAYERS_HOOK, () => renderDial());
 
   game.socket.on('system.darkest-system', (data) => {
     if (data?.type === 'travelClockUpdate') TravelClock.refresh();

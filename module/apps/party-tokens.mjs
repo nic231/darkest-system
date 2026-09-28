@@ -26,6 +26,8 @@ const ART = 'modules/darkest-woods/assets/images/artwork';
  * When the module is absent the badge falls back to the name alone rather
  * than showing a broken image -- see _symbolHtml.
  */
+import { PLAYERS_HOOK } from '../helpers/hooks.mjs';
+
 export const BIRDSONGS = [
   { key: 'woodthrush',   name: 'Wood Thrush',   img: `${ART}/Symbol-02-Birdsong-Woodthrush-1024x1024.png` },
   { key: 'cardinal',     name: 'Cardinal',      img: `${ART}/Symbol-03-Birdsong-Cardinal-1024x1024.png` },
@@ -334,7 +336,7 @@ export function registerPartyTokenHooks() {
   // whenever the player list redraws. Deferring to the end of the frame lets
   // the doom badge move first, so these measure its settled position rather
   // than where it was last tick.
-  Hooks.on('renderPlayerList', () => requestAnimationFrame(() => renderPartyBadges()));
+  Hooks.on(PLAYERS_HOOK, () => requestAnimationFrame(() => renderPartyBadges()));
 
   let resizeTimer = null;
   window.addEventListener('resize', () => {

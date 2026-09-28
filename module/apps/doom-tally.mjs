@@ -4,6 +4,8 @@
  * Visible to all players, GM can manually adjust
  */
 
+import { PLAYERS_HOOK } from '../helpers/hooks.mjs';
+
 export class DoomTally extends Application {
 
   static get defaultOptions() {
@@ -392,7 +394,7 @@ export function registerDoomTallyHooks() {
   // has not moved yet. Defer to the end of the frame rather than reordering
   // the two registrations -- that ordering is not this file's to depend on,
   // and a future edit could silently flip it back.
-  Hooks.on('renderPlayerList', () => requestAnimationFrame(() => renderDoomBadge()));
+  Hooks.on(PLAYERS_HOOK, () => requestAnimationFrame(() => renderDoomBadge()));
 
   // The height cap is computed from window.innerHeight, so it goes stale on a
   // resize or a jump to fullscreen -- the badge would keep the cap for the
