@@ -831,10 +831,20 @@ export class TransgressionTracker extends Application {
     }
     if (cfg.mode === 'rolls') {
       const done = s.rollsSinceAdvance ?? 999;
-      const ready = done > cfg.rolls;
+      // Mirrors _checkDampingUnsafe, which advances once `since >= rolls` --
+      // and a trigger is checked AFTER its own roll has been counted (noteRoll
+      // runs first on the same queue). So the NEXT roll lands when
+      // done + 1 >= rolls, and `left` is how many more rolls will still be
+      // held before that.
+      //
+      // This read `ready` as done > rolls and "rolls - done + 1 to go", which
+      // was two rolls behind the rule it describes: straight after an advance
+      // on a 3-roll cooldown it said "4 to go" when only two would be held.
+      const left = Math.max(0, cfg.rolls - 1 - done);
+      const ready = left === 0;
       return {
         label: `Cooldown ${cfg.rolls} rolls`,
-        detail: ready ? 'ready' : `${cfg.rolls - done + 1} to go`,
+        detail: ready ? 'ready' : `${left} to go`,
         ready,
       };
     }

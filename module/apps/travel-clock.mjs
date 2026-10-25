@@ -1617,7 +1617,14 @@ export class TravelTool extends Application {
     // Remember the pace the journey was planned at, so travelling it
     // later still knows whether the party was driving.
     this._lastPace = html.find('[name="pace"]').val() || 'normal';
-    this._legs.push({ route, minutes: this._computeMinutes(html) });
+    // A route the book never measured has no km to fill the form with, so
+    // the form computes 0 -- and a queued leg of 0 minutes was walked for
+    // free, where the same route travelled on its own costs the nominal
+    // UNMEASURED_LEG_MINUTES, and the planner (_findRoute) charges that too.
+    // "A few steps" (km === 0) stays 0 here: it is rolled when they set out.
+    let minutes = this._computeMinutes(html);
+    if (!minutes && route.km !== 0) minutes = TravelClock.routeMinutes(route, this._lastPace);
+    this._legs.push({ route, minutes });
     // Re-rendering repoints the dropdown at the new last stop, so the next
     // pick continues the journey rather than starting over.
     this.render();
@@ -1631,10 +1638,15 @@ export class TravelTool extends Application {
     const legs = this._legs;
     // Each "few steps" leg is rolled separately, so a chain of short hops
     // accumulates the way walking them one at a time would.
-    const totalMinutes = legs.reduce(
-      (sum, l) => sum + (l.minutes || (l.route?.km === 0 ? TravelClock.stepMinutes() : 0)),
-      0
-    );
+    //
+    // Rolled ONCE per leg, up front, and that same figure used for the total
+    // AND for each leg's own log entry. The total used to roll them while the
+    // per-leg log used the planned 0, so the intermediate stops were logged
+    // as taking no time at all and the last leg absorbed everyone else's
+    // minutes -- departing at the wrong time, and logged as longer than it was.
+    const legMinutes = legs.map(l =>
+      l.minutes || (l.route?.km === 0 ? TravelClock.stepMinutes() : 0));
+    const totalMinutes = legMinutes.reduce((sum, m) => sum + m, 0);
     const last = legs[legs.length - 1];
 
     // Describe only the FIRST leg -- the party set out that way, and
@@ -1675,16 +1687,16 @@ export class TravelTool extends Application {
       };
     };
 
-    for (const leg of legs.slice(0, -1)) {
+    for (const [i, leg] of legs.slice(0, -1).entries()) {
       const departCursor = cursor;
-      cursor = step(cursor, leg.minutes);
+      cursor = step(cursor, legMinutes[i]);
       SessionLog.recordMove({
         fromSlug: leg.route?.fromSlug,
         fromTitle: leg.route?.fromTitle,
         toSlug: leg.route?.toSlug,
         toTitle: leg.route?.toTitle,
         label: leg.route?.label,
-        minutes: leg.minutes,
+        minutes: legMinutes[i],
         km: routeKm(leg.route),
         region: TravelClock.currentRegion(),
         departDay: departCursor.day,
@@ -1716,6 +1728,11 @@ export class TravelTool extends Application {
       pace: this._lastPace,
       hold: this._holdRequested,
       departOverride: legs.length > 1 ? finalDepart : null,
+      // The clock advances by the whole journey, but the final leg is only
+      // its own share of it: it departs where the leg before it arrived, so
+      // logging the full total as its duration made it overlap every leg
+      // before it.
+      legMinutes: legs.length > 1 ? legMinutes[legMinutes.length - 1] : null,
     });
   }
 
@@ -2264,26 +2281,35 @@ export class TravelTool extends Application {
     // Record the move for the GM-only session log. The public chat message
     // above deliberately never names the destination, so this is the only
     // place the real from/to survives -- it's what the map gets drawn from.
-    if (opts.route) {
-      SessionLog.recordMove({
-        // Slugs as well as titles: the map and the backtracking check need
-        // to know WHICH place, and a title is only for reading.
-        fromSlug: opts.route.fromSlug,
-        fromTitle: opts.route.fromTitle,
-        toSlug: opts.route.toSlug,
-        toTitle: opts.route.toTitle,
-        label: opts.route.label,
-        minutes,
-        km: routeKm(opts.route),
-        region: opts.region,
-        departDay: depart.day,
-        departTime: depart.time,
-        day: result.day,
-        time: state.fixed ? state.phaseLabel : state.time,
-        pace: opts.pace,
-        groupId: TravelGroups.activeId(),
-      });
-    }
+    const leg = opts.route ? {
+      // Slugs as well as titles: the map and the backtracking check need
+      // to know WHICH place, and a title is only for reading.
+      fromSlug: opts.route.fromSlug,
+      fromTitle: opts.route.fromTitle,
+      toSlug: opts.route.toSlug,
+      toTitle: opts.route.toTitle,
+      label: opts.route.label,
+      // Its own duration -- for the last leg of a queued journey that is less
+      // than `minutes`, which is the whole journey. See _travelLegs.
+      minutes: opts.legMinutes ?? minutes,
+      km: routeKm(opts.route),
+      region: opts.region,
+      departDay: depart.day,
+      departTime: depart.time,
+      day: result.day,
+      time: state.fixed ? state.phaseLabel : state.time,
+      pace: opts.pace,
+      groupId: TravelGroups.activeId(),
+    } : null;
+
+    // A journey held for roleplay has NOT arrived yet, so its leg waits for
+    // the Arrive button (arriveFromHold) -- see _beginHold. Writing it now, at
+    // setting out, meant that pressing Turn back left the log saying the
+    // party had reached a place they never got to: the route map drew it,
+    // the backtracking check counted it, and the GM's "A -> B" whisper put it
+    // in the chat export too, from which the next route rebuild recovered it.
+    const holding = !!(opts.route && opts.hold && TravelTool.canHold());
+    if (leg && !holding) SessionLog.recordMove(leg);
 
     // Move the party to where they actually walked to.
     //
@@ -2306,8 +2332,8 @@ export class TravelTool extends Application {
       // Hold-for-roleplay takes a different path entirely: it stops at the
       // travelling scene and waits for the GM, so neither the arrival card
       // nor the travelArrive hook fires here -- the party hasn't arrived.
-      if (opts.hold && TravelTool.canHold()) {
-        await this._beginHold({ delay, fadeMs, audio, opts, minutes, timeLine, result });
+      if (holding) {
+        await this._beginHold({ delay, fadeMs, audio, opts, minutes, timeLine, result, leg });
         TravelClock.refresh();
         this.render();
         return;
@@ -2428,7 +2454,7 @@ export class TravelTool extends Application {
    * rather than recomputed: the arrival card should report the time they got
    * there, which was fixed the moment they set out.
    */
-  async _beginHold({ delay, fadeMs, audio, opts, minutes, timeLine, result }) {
+  async _beginHold({ delay, fadeMs, audio, opts, minutes, timeLine, result, leg = null }) {
     const travelScene = TravelTool.travelScene();
     const origin = canvas?.scene ?? null;
 
@@ -2472,6 +2498,10 @@ export class TravelTool extends Application {
         TravelTool.broadcastVeil('arrive', null, { fadeMs });
       }
 
+      // They arrived after all, so the leg is real -- it was held back in
+      // _passTime on the understanding that the hold would record it.
+      if (leg) SessionLog.recordMove(leg);
+
       await TravelTool._postArrival({
         route: opts.route, scene, timeLine, result,
         now: TravelClock.dayStructure(result.day),
@@ -2488,6 +2518,7 @@ export class TravelTool extends Application {
         scene: scene ?? null,
         region: scene?.getFlag('darkest-woods', 'region') ?? null,
         day: result.day,
+        time: leg?.time ?? null,
       });
       return;
     }
@@ -2503,6 +2534,14 @@ export class TravelTool extends Application {
       day: result.day,
       originSceneUuid: origin?.uuid ?? null,
       startedAt: Date.now(),
+      // Who is walking, fixed at setting out: arriveFromHold checks the
+      // backtrack for this group, and the GM may switch the tool to another
+      // group while this one is still on the road. It read `hold.groupId`
+      // before the hold ever stored one.
+      groupId: leg?.groupId ?? TravelGroups.activeId(),
+      // The leg itself, written when the journey actually resolves --
+      // recorded on Arrive, or turned into a stay at the origin on Turn back.
+      leg,
     });
 
     // Re-resolve the soundscape now the hold exists.
@@ -2586,6 +2625,11 @@ export class TravelTool extends Application {
       await TravelTool.setHold(null);
     }
 
+    // Now the journey has happened, put it in the log. A hold started by an
+    // older version carries no leg -- it was written at setting out -- so
+    // there is nothing to add and nothing is doubled.
+    if (hold.leg) SessionLog.recordMove(hold.leg);
+
     await TravelTool._postArrival({
       route: { toSlug: hold.toSlug, toTitle: hold.toTitle },
       scene,
@@ -2612,6 +2656,7 @@ export class TravelTool extends Application {
       scene: scene ?? null,
       region: scene?.getFlag('darkest-woods', 'region') ?? null,
       day: hold.day,
+      time: hold.leg?.time ?? null,
     });
 
     TravelClock.refresh();
@@ -2656,6 +2701,25 @@ export class TravelTool extends Application {
       TravelTool._travelling = false;
       TravelTool.broadcastVeil('arrive', null, { fadeMs });
       await TravelTool.setHold(null);
+    }
+
+    // What actually happened: the time passed, and they ended up where they
+    // started. Recorded as a stay at the origin -- the same shape as any
+    // other time spent in one place -- so the route has no phantom leg to the
+    // destination and the next leg does not read as a gap.
+    if (hold.leg) {
+      SessionLog.recordStay({
+        slug: hold.leg.fromSlug ?? null,
+        title: hold.leg.fromTitle ?? 'Where they were',
+        minutes: hold.leg.minutes,
+        region: hold.leg.region ?? null,
+        departDay: hold.leg.departDay,
+        departTime: hold.leg.departTime,
+        day: hold.leg.day,
+        time: hold.leg.time,
+        groupId: hold.leg.groupId ?? hold.groupId ?? null,
+        reason: 'turned back',
+      });
     }
 
     await ChatMessage.create({

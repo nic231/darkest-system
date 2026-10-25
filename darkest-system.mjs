@@ -417,6 +417,13 @@ Hooks.once('ready', function() {
         DarkestAudio.playBirdsong(data.bird);
         break;
 
+      case 'transgressionVignette':
+        // The woods closing in, drawn on every screen. The primary GM's
+        // client decides to play it (see TransgressionFx._screen) and draws
+        // its own copy; this is everyone else's.
+        TransgressionFx._vignette(data.vignette ?? {}).catch(() => {});
+        break;
+
       case 'logRoll':
         // Players can't write the GM-scoped session log, so their rolls
         // arrive here for a GM client to record. The damping cooldown counts
@@ -650,9 +657,8 @@ Hooks.on('darkestSystem.damageDealt', async (roll) => {
    updateItem hook, firing after a wound is actually marked healed, is the
    correct place.
 ---------------------------------------- */
-Hooks.on('updateItem', async (item, changes, options, userId) => {
+async function clearRecoveredStatus(item, userId) {
   if (item.type !== 'wound') return;
-  if (!foundry.utils.hasProperty(changes, 'system.healed')) return;
 
   const actor = item.parent;
   if (!actor || actor.documentName !== 'Actor') return;
@@ -677,6 +683,21 @@ Hooks.on('updateItem', async (item, changes, options, userId) => {
   if (Object.keys(updateData).length) {
     await actor.update(updateData);
   }
+}
+
+Hooks.on('updateItem', async (item, changes, options, userId) => {
+  if (!foundry.utils.hasProperty(changes, 'system.healed')) return;
+  await clearRecoveredStatus(item, userId);
+});
+
+// A wound can also leave by being DELETED -- the sheet's Heal Wound button
+// (magical healing, "completely erases one wound") deletes it outright rather
+// than marking it healed. That never reached the hook above, so healing a
+// character's last physical wound by magic left them flagged unconscious.
+// The item is already out of actor.items when this fires, so the same check
+// reads the actor as it now is.
+Hooks.on('deleteItem', async (item, options, userId) => {
+  await clearRecoveredStatus(item, userId);
 });
 
 /* ----------------------------------------
@@ -824,6 +845,32 @@ Hooks.on(CHAT_HOOK, (message, html) => {
 // Not gated on isPrimaryGM: an assistant GM should be able to press Arrive.
 // Two GMs pressing it at the same instant would double-fade, which is a race
 // not worth more machinery than the null check inside.
+/**
+ * Retire a GM prompt's buttons, here AND in the stored message.
+ *
+ * Replacing them only in this browser's DOM left the message itself
+ * untouched, so a reload -- or a second GM's client, which never saw the
+ * click -- brought the buttons back, and the same Darkest Die or backtrack
+ * could be applied to the track a second time. Writing the outcome into the
+ * message content makes the decision part of the record, which is also what
+ * a chat export then carries.
+ */
+async function resolvePrompt(btn, html) {
+  $(btn).closest('.backtrack-actions').html(html);
+  const id = btn.closest('[data-message-id]')?.dataset.messageId;
+  const message = id ? game.messages.get(id) : null;
+  if (!message?.isOwner) return;
+  try {
+    const doc = new DOMParser().parseFromString(message.content, 'text/html');
+    const actions = doc.querySelector('.backtrack-actions');
+    if (!actions) return;
+    actions.innerHTML = html;
+    await message.update({ content: doc.body.innerHTML });
+  } catch (err) {
+    console.warn('Darkest System | could not record the prompt outcome', err);
+  }
+}
+
 // Backtracking: apply the transgression, or let it pass. The players have
 // already seen the woods take notice either way -- these only decide whether
 // the track advances, so "let it pass" simply retires the prompt.
@@ -836,9 +883,14 @@ $(document).on('click', '.backtrack-apply', async function(event) {
     ui.notifications.warn('No region set — open the Transgression Tracker and pick one.');
     return;
   }
+  // Disabled at once, for the same reason as .transgression-apply below: the
+  // advance round-trips, and a double-click inside that window would apply
+  // one backtrack twice.
+  if (btn.disabled) return;
+  btn.disabled = true;
   // bypassDamping: this is one deliberate press, not a flurry of dice.
   await TransgressionTracker.incrementTransgression(region, { bypassDamping: true });
-  $(btn).closest('.backtrack-actions').html('<em class="backtrack-done">Transgression applied.</em>');
+  await resolvePrompt(btn, '<em class="backtrack-done">Transgression applied.</em>');
 });
 
 // The roll-driven confirm prompt ("Ask before each transgression"). Distinct
@@ -863,6 +915,7 @@ $(document).on('click', '.transgression-apply', async function(event) {
   }
   // Disable immediately: ChatMessage.create() round-trips, and a double-click
   // in that window would advance the track twice for one Darkest Die.
+  if (btn.disabled) return;
   btn.disabled = true;
   const result = await TransgressionTracker.incrementTransgression(region, {
     skipConfirm: true, silent: true,
@@ -870,15 +923,13 @@ $(document).on('click', '.transgression-apply', async function(event) {
   const held = result && result.level != null
     ? ` <span class="damped-reason">(track at ${result.level})</span>`
     : '';
-  $(btn).closest('.backtrack-actions')
-    .html(`<em class="backtrack-done">Transgression applied.${held}</em>`);
+  await resolvePrompt(btn, `<em class="backtrack-done">Transgression applied.${held}</em>`);
 });
 
-$(document).on('click', '.backtrack-dismiss', function(event) {
+$(document).on('click', '.backtrack-dismiss', async function(event) {
   event.preventDefault();
   if (!game.user.isGM) return;
-  $(event.currentTarget).closest('.backtrack-actions')
-    .html('<em class="backtrack-done">Let pass.</em>');
+  await resolvePrompt(event.currentTarget, '<em class="backtrack-done">Let pass.</em>');
 });
 
 $(document).on('click', '.travel-arrive-btn', async function(event) {

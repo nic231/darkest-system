@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.55.0-alpha (2026-10-25)
+
+**A full review of the system and the content module.** Every source file was read, and each finding was confirmed against the code, the rulebook, the real chat history, or the world export of 11 Oct before it was changed. Three new verification suites cover the fixes; 41 of their assertions fail against 0.54.2.
+
+### Restoring from the module
+
+**Restore Chat posted the GM's whispers publicly.** Foundry's chat export carries no whisper information, so the builder has to infer what was private, and it only ever marked transgression cards. Everything else the system whispers would have gone back to the whole table: the GM's "A → B" travel cards naming the destination (31 of them), the **"A Darkest Die — your call"** prompts, which quote the witch's next scripted event word for word, the backtracking prompts, the NPC defeat thresholds, the dawn notes, and every private message sent with the Whisper tool. The builder now recognises each whispered shape the system writes. **Fixed in content module 1.27.1**, so rebuild and re-upload the zip; the system's restore already honoured the flag.
+
+**Restore Movement duplicated every leg logged live.** A restore replaced only the rows an earlier restore had written. That is right straight after a clear, but wrong once play resumes, because the module's route grows each session from the same exports the live log was recorded alongside. The 11 Oct world held 60 live legs, and a restore would have added 46 of them again. Now a saved row is written only where the log has nothing live for that stretch of game time, and the dialog says how many will be kept and how many added. Overlap rather than equality is the test, because a night the travel tool logged as seven waits is one stay in the saved route.
+
+### Travel
+
+**Turn back left a phantom arrival.** A journey held for roleplay wrote its leg (and the GM's "A → B" whisper) when the party set out. Pressing Turn back then left the log, the route map and the backtracking check all believing the party had reached a place they never got to. The leg is now written on **Arrive**, and Turn back records a stay at the origin instead. The hold also now remembers which group was walking; Arrive read a `groupId` the hold never stored.
+
+**Multi-leg journeys logged their times wrongly.** The "few steps" minutes were rolled for the journey total but logged as zero on the legs themselves. The last leg was logged with the whole journey's duration, so it overlapped every leg before it. A route the book never measured cost nothing when queued with **Add leg**, but 15 minutes when travelled alone or planned. All three now agree.
+
+### Transgressions
+
+**The witch tally froze at 10.** The session log and the credits counted a witch's transgressions as the highest level seen, and a track wraps 10 → 1. Live entries have recorded which cycle they belong to since 0.53.1, and the tally now uses it (`loops × 10 + level`). Entries without it are taken at face value rather than read as wraps: the world shows the Dismal went 9 → 1 because its track was reset, not because it looped.
+
+**Answered prompts could be answered again.** Apply and Let it pass replaced the buttons only in the clicking browser, so a reload (or a second GM) brought them back and one Darkest Die could advance the track twice. The outcome is now written into the message itself. Backtrack Apply also disables itself before the advance, as the roll-driven Apply already did.
+
+**The transgression vignette now reaches players.** It replaced a Sequencer sprite, which broadcast by itself, but it was drawn only in the primary GM's browser. Players at a remote table never saw the woods close in. It is now broadcast, and every client draws its own.
+
+**The pacing readout was two rolls out.** On a 3-roll cooldown it said "4 to go" straight after an advance, when only two rolls would be held. It now matches the check exactly; the check itself is unchanged.
+
+### Rolls and wounds
+
+- **Special Success indicator.** The roll dialog still tested `<` after the roll itself was corrected to `<=` in 0.53, so Rating 5 against Task 4 was announced as "NOT possible" for a result the dice could produce.
+- **Death check display.** The dialog's "Need" ignored Dooms, so a character with two Dooms was shown a target two easier than the roll they were about to make. The roll itself was always right.
+- **Timed boons and banes are now spent exactly when they are applied.** The shift-click quick roll spent a charge without applying the effect, and it now applies it. A rest applied effects (its dialog pre-fills them) but spent nothing, and it now spends one charge per wound rolled.
+- **Medical attention uses the healer's Rating.** The rest dialog said "rolls their OWN Rating" and quietly used the patient's. There is now a Healer's Rating field for wounds treated past their 24-hour lock. For an unconscious or catatonic character it applies to every wound, as the rules require.
+- **Heal Wound clears Unconscious and Catatonic.** Magical healing deletes the wound rather than marking it healed, which never reached the status clean-up.
+
+### Smaller
+
+- The session log's Markdown export no longer prints "Darkest Die 1s rolled" (0.47.4 missed it), and the dice chart no longer highlights 1s. The comment that justified it had the rule backwards: a Darkest Die wakes the woods by beating both kept dice, and a 1 never can. The export now includes the witch tracks.
+- The boon/bane item sheet's Description label used a key that doesn't exist.
+- Out-of-date comments in the damage dialogs (which still said damage takes no boons or banes) now describe what the code does.
+
 ## 0.54.2-alpha (2026-09-28)
 
 **Second v14 compatibility pass, hook-first. It found two things the first pass missed.** This time every hook the system listens for was checked against what the installed core actually fires, rather than only scanning for deprecated calls.

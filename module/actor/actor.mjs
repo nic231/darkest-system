@@ -236,8 +236,8 @@ export class DarkestActor extends Actor {
     // boons/banes are added by hand -- so consuming here would burn a use of
     // "a Boon on your next 2 rolls" on a roll that never received it.
     //
-    // The charge is spent by the ACTION roll, which is the only path that
-    // still applies them.
+    // The charge is spent by the rolls that apply them: the action roll and
+    // the rest roll.
 
     return roll;
   }
@@ -304,8 +304,8 @@ export class DarkestActor extends Actor {
     // boons/banes are added by hand -- so consuming here would burn a use of
     // "a Boon on your next 2 rolls" on a roll that never received it.
     //
-    // The charge is spent by the ACTION roll, which is the only path that
-    // still applies them.
+    // The charge is spent by the rolls that apply them: the action roll and
+    // the rest roll.
 
     return roll;
   }
@@ -669,9 +669,14 @@ export class DarkestActor extends Actor {
           const targetNeed = html.find('.target-need');
           const effectiveRatingDisplay = html.find('.effective-rating-display');
 
+          // From the Doom-reduced rating, exactly as the roll computes
+          // finalRating. This used the raw Rating, and since it runs straight
+          // away on render it overwrote the template's correct figures: a
+          // character carrying Dooms was shown a "Need" one per Doom easier
+          // than the roll they were about to make.
           const updateDisplay = () => {
             const ratingMod = parseInt(modifierSelect.find('option:selected').data('modifier')) || 0;
-            const effective = characterRating + ratingMod;
+            const effective = Math.max(1, effectiveRatingWithDooms + ratingMod);
             const need = (7 + highestWound) - effective;
             effectiveRatingDisplay.text(effective);
             targetNeed.text(need);
@@ -871,19 +876,21 @@ export class DarkestActor extends Actor {
   }
 
   /**
-   * Spend one roll from every counted effect.
+   * Spend rolls from every counted effect -- one per roll made.
    *
-   * Called after a roll resolves. Effects that hit zero are removed by the
-   * sweep rather than here, so "next 1 roll" is still visibly applied to the
-   * roll that consumes it.
+   * Called after the roll(s) resolve. Effects that hit zero are removed by
+   * the sweep rather than here, so "next 1 roll" is still visibly applied to
+   * the roll that consumes it. `rolls` is for a rest, which rolls once per
+   * wound; it never takes an effect below zero.
    */
-  async consumeRollEffects() {
+  async consumeRollEffects(rolls = 1) {
+    const n = Math.max(1, Math.floor(rolls) || 1);
     const counted = this.items.filter(i =>
       i.type === 'effect' && i.system.duration === 'rolls' && (i.system.rollsRemaining ?? 0) > 0);
     if (!counted.length) return;
     await this.updateEmbeddedDocuments('Item', counted.map(i => ({
       _id: i.id,
-      'system.rollsRemaining': i.system.rollsRemaining - 1,
+      'system.rollsRemaining': Math.max(0, i.system.rollsRemaining - n),
     })));
     await this.sweepExpiredEffects();
   }
@@ -944,6 +951,24 @@ export class DarkestActor extends Actor {
       return;
     }
 
+    // Medical attention: "The healer rolls using their own Rating instead of
+    // the wounded character's Rating" -- and "if the wounded character is
+    // unconscious, must use the healer's Rating". The dialog promised the
+    // first for a long time while every roll quietly used the patient's.
+    //
+    // An unconscious (or catatonic) character cannot tend their own wounds,
+    // so for them the healer's Rating governs EVERY wound, and the field is
+    // shown from the start rather than behind the override.
+    const incapacitated = !!(this.system.unconscious || this.system.catatonic);
+    const healerField = (hidden) => `
+      <div class="form-group rest-healer"${hidden ? ' style="display:none"' : ''}>
+        <label>Healer's Rating</label>
+        <input type="number" name="healer-rating" value="${characterRating}" min="1" max="10" step="1" />
+        <small class="hint">${incapacitated
+          ? `${this.name} cannot tend their own wounds — whoever does rolls with their Rating.`
+          : 'The healer rolls with their own Rating for the wounds above.'}</small>
+      </div>`;
+
     // Locked wounds are OFFERED rather than withheld. The rules give an
     // explicit way through -- "a character with relevant skill and
     // appropriate equipment... allows recovery on a wound they failed to
@@ -960,6 +985,7 @@ export class DarkestActor extends Actor {
           <p class="hint">Normally these can't be treated again for 24 hours. A character with
           relevant skill and proper equipment can try anyway — and rolls their OWN Rating.</p>
           <label class="rest-override"><input type="checkbox" name="rest-override" /> Treat them anyway (specialised care)</label>
+          ${incapacitated ? '' : healerField(true)}
         </div>`
       : '';
 
@@ -1029,6 +1055,7 @@ export class DarkestActor extends Actor {
           <span class="rest-sep">·</span>
           <span><strong>${recoverableWounds.length}</strong> wound(s) to roll for</span>
         </div>
+        ${incapacitated ? healerField(false) : ''}
         ${lockedNote}
         ${physicalSection}
         ${mentalSection}
@@ -1072,10 +1099,24 @@ export class DarkestActor extends Actor {
 
               const restSpeaker = ChatMessage.getSpeaker({ actor: this });
 
+              // Whose Rating each wound is rolled with: the healer's for a
+              // wound being treated past its lock, or for every wound when
+              // the character is out cold -- the patient's otherwise.
+              const healerInput = parseInt(html.find('[name="healer-rating"]').val());
+              const healerRating = Number.isFinite(healerInput)
+                ? Math.max(1, Math.min(10, healerInput))
+                : characterRating;
+              const lockedIds = new Set(lockedWounds.map(w => w.id));
+              const ratingFor = (wound) =>
+                (incapacitated || (override && lockedIds.has(wound.id)))
+                  ? healerRating
+                  : characterRating;
+
               for (const wound of toRoll) {
                 const boons = wound.system.type === 'mental' ? mentBoons : physBoons;
                 const banes = wound.system.type === 'mental' ? mentBanes : physBanes;
-                const roll = DarkestRoll.createActionRoll(characterRating, wound.system.rating, boons, banes, false);
+                const rollRating = ratingFor(wound);
+                const roll = DarkestRoll.createActionRoll(rollRating, wound.system.rating, boons, banes, false);
                 await roll.evaluate();
 
                 // Roll the dice on screen.
@@ -1148,7 +1189,7 @@ export class DarkestActor extends Actor {
 
                 results.push({
                   success, label: woundLabel, total: roll.total, target: roll.targetNumber,
-                  diceHtml, rating: characterRating, keptDice, discardedDice,
+                  diceHtml, rating: rollRating, keptDice, discardedDice,
                   darkestDie: roll.darkestDieResult,
                   isTransgression: roll.isTransgression,
                 });
@@ -1234,6 +1275,14 @@ export class DarkestActor extends Actor {
               // selected token rather than the resting actor.
               for (const roll of pendingEffects) roll.dispatchRollEffects(restSpeaker);
 
+              // A rest applies the timed boons and banes in effect (the dialog
+              // pre-fills them, per "include any Boon or Bane in effect"), so
+              // it spends them too -- one charge per wound rolled, since each
+              // is a roll. It used to apply them and spend nothing, so "a Boon
+              // on your next roll" helped a rest and was then still there for
+              // the next action as well.
+              await this.consumeRollEffects(toRoll.length);
+
               resolve(true);
             }
           },
@@ -1255,6 +1304,11 @@ export class DarkestActor extends Actor {
             if (btn.classList.contains('increment')) value = Math.min(value + 1, 10);
             else if (btn.classList.contains('decrement')) value = Math.max(value - 1, min);
             input.val(value);
+          });
+          // The healer's Rating only means something once someone is
+          // actually treating the locked wounds.
+          html.find('[name="rest-override"]').on('change', (ev) => {
+            html.find('.locked-wounds-note .rest-healer').toggle(ev.currentTarget.checked);
           });
         },
         close: () => { this._restDialog = null; }

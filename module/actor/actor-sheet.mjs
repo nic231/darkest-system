@@ -416,11 +416,17 @@ export class DarkestActorSheet extends ActorSheet {
     // Bane per the rules, and the full dialog pre-populates it from
     // system.banes. The quick roll has to apply it too, or shift-clicking
     // silently rolls a clean 2d6 for a wounded character.
+    //
+    // The same goes for timed boons and banes, which the dialog pre-fills the
+    // same way. Leaving them out was worse than inconsistent: rollAction()
+    // spends a charge of every "next N rolls" effect regardless, so a quick
+    // roll used up "a Boon on your next roll" without ever applying it.
     if (event.shiftKey) {
+      const sys = this.actor.system;
       return this.actor.rollAction({
         taskRating: 4,
-        boons: 0,
-        banes: this.actor.system.banes || 0,
+        boons: sys.effectBoons || 0,
+        banes: (sys.banes || 0) + (sys.effectBanes || 0),
         callUponWoods: false,
         ratingModifier: 0,
         modifierName: null
@@ -693,7 +699,13 @@ export class DarkestActorSheet extends ActorSheet {
             if (!specialEnabled) {
               indicator.hide();
             } else {
-              const isPossible = targetNumber < 6 + effectiveRating;
+              // <=, matching the roll itself (DarkestRoll.evaluate): a 6 on
+              // one die plus the Rating is the best a single die can do, so
+              // the target only has to be within reach of it. This still
+              // said `<` after the roll was corrected, so at the exact
+              // boundary -- Rating 5 against Task 4 -- the dialog announced
+              // "NOT possible" for a result the dice could and did produce.
+              const isPossible = targetNumber <= 6 + effectiveRating;
               indicator.show();
               if (isPossible) {
                 indicator.addClass('possible').removeClass('not-possible');
@@ -743,11 +755,11 @@ export class DarkestActorSheet extends ActorSheet {
     event.preventDefault();
 
     const characterRating = this.actor.system.rating || 3;
-    // NO boons or banes on damage. Damage is "1d6... add the attack's
-    // Rating... subtract the Rating of the victim" -- a single die, always.
-    // Prefilling them here was the bug: the player rolls their own INCOMING
-    // damage, so a Bane (keep the lower die) made the wound land lighter,
-    // and the wound Bane was applied automatically.
+    // Nothing is PRE-FILLED on damage. "Damage can have a Boon or a Bane", so
+    // the counters are there to add one by hand when the fiction calls for
+    // it -- but a wounded character's Bane is for action rolls, and timed
+    // effects are spent by the rolls that apply them, so neither is put in
+    // automatically. (See createDamageRoll for which die a boon keeps.)
     const woundBanes = 0;
     const effectBoons = 0;
     const effectBanes = 0;
@@ -916,11 +928,10 @@ export class DarkestActorSheet extends ActorSheet {
     // their base rating -- inflating every wound they took by up to 2.
     const physicalArmor = this.actor.system.effectiveArmor?.physical
       ?? this.actor.system.armor?.physical ?? 0;
-    // NO boons or banes on damage. Damage is "1d6... add the attack's
-    // Rating... subtract the Rating of the victim" -- a single die, always.
-    // Prefilling them here was the bug: the player rolls their own INCOMING
-    // damage, so a Bane (keep the lower die) made the wound land lighter,
-    // and the wound Bane was applied automatically.
+    // Nothing is PRE-FILLED on damage taken either. A boon or bane can be
+    // added by hand, and because the player is rolling the hit they are
+    // taking, the kept die flips (see createDamageRoll and the note this
+    // dialog shows). The wound Bane is deliberately not applied here.
     const woundBanes = 0;
     const effectBoons = 0;
     const effectBanes = 0;

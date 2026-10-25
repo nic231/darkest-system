@@ -39,8 +39,10 @@
  * recorded.
  *
  * ONLY THE PRIMARY GM DRIVES THIS. Syrinscape's own session sync carries
- * audio to players, and the screen effects fan out over their own modules'
- * sockets -- firing on five clients would play everything five times.
+ * audio to players, and FXMaster's filters fan out over its own socket --
+ * firing on five clients would play everything five times. The vignette is
+ * this system's own, so it fans out over this system's socket: the primary
+ * GM decides, every client draws.
  */
 
 import { isPrimaryGM } from '../helpers/gm.mjs';
@@ -400,6 +402,15 @@ export const TransgressionFx = {
     // install, and it covers the whole viewport by construction. FXMaster is
     // still tried below when this is unavailable for any reason.
     if (spec.vignette) {
+      // On EVERY screen, not just this one. The JB2A sprite this replaced was
+      // played through Sequencer, which broadcasts by itself; a div drawn here
+      // reaches only the browser that drew it -- and this only ever runs on
+      // the primary GM's -- so the players at a remote table never saw the
+      // woods close in at all. Emitted first, so theirs starts with ours.
+      game.socket.emit('system.darkest-system', {
+        type: 'transgressionVignette',
+        vignette: spec.vignette,
+      });
       try {
         await TransgressionFx._vignette(spec.vignette);
         return;

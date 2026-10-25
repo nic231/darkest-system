@@ -942,21 +942,8 @@ export class SessionLog extends Application {
         when: SessionLog._whenTransgression(t)
       })).reverse(),
       transgressionCount: transgressions.length,
-      // Each witch's track, for the dice tab. The LEVEL is the tally, not the
-      // number of rows: a transgression track counts up, so level 6 is six
-      // transgressions however many entries recorded it -- and the history has
-      // at least one level recorded twice, which a row count would inflate.
-      witchTracks: (() => {
-        const by = new Map();
-        for (const t of transgressions) {
-          const who = t.witch || 'The woods';
-          const prev = by.get(who) ?? 0;
-          by.set(who, Math.max(prev, Number(t.level) || prev));
-        }
-        return [...by.entries()]
-          .map(([witch, level]) => ({ witch, level }))
-          .sort((a, b) => b.level - a.level);
-      })(),
+      // Each witch's track, for the dice tab. See witchTally().
+      witchTracks: SessionLog.witchTally(transgressions),
       // Whether the module carries a saved route, so the empty movement tab
       // can say so rather than leaving the GM to guess there is a way back.
       hasSavedRoute: ROUTE_HISTORY.length > 0,
@@ -968,6 +955,39 @@ export class SessionLog extends Application {
   static _clock(e) {
     const d = new Date(e.t);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  /**
+   * How many times each witch has acted, from transgression entries.
+   *
+   * The LEVEL is the tally, not the number of rows: a track counts up, so
+   * level 6 is six transgressions however many entries recorded it -- and the
+   * history has at least one level recorded twice, which a row count would
+   * inflate.
+   *
+   * But a track also WRAPS, 10 -> 1, so the highest level alone stops at 10:
+   * the eleventh transgression reads as 1 and the tally freezes for good.
+   * `loops` -- recorded with every live advance since 0.53.1 -- says which
+   * cycle a level belongs to, so the count is loops * 10 + level.
+   *
+   * Entries without it (hand-entered, imported from chat, or older) are taken
+   * at face value. Inferring a wrap from a level that drops would be a guess,
+   * and a wrong one in practice: the Dismal's track went 9 -> 1 because it was
+   * reset by hand, and the tracker still has it on loop 0.
+   *
+   * Shared with the credits sequence, so the two tallies cannot disagree.
+   */
+  static witchTally(transgressions) {
+    const by = new Map();
+    for (const t of transgressions ?? []) {
+      const who = t.witch || 'The woods';
+      const level = Number(t.level) || 0;
+      const count = (Number(t.loops) || 0) * 10 + level;
+      by.set(who, Math.max(by.get(who) ?? 0, count));
+    }
+    return [...by.entries()]
+      .map(([witch, level]) => ({ witch, level }))
+      .sort((a, b) => b.level - a.level);
   }
 
   /**
@@ -1303,8 +1323,11 @@ export class SessionLog extends Application {
       (byWho[who] ??= []).push(r);
     }
 
-    // Darkest Die distribution -- a 1 is what wakes the witch, so the
-    // count of 1s is the number the GM actually cares about.
+    // Darkest Die distribution. Just the spread of faces: what wakes the
+    // woods is the Darkest Die beating BOTH kept dice, which no single face
+    // decides (a 6 usually does, a 1 never can). The count of 1s this used to
+    // single out answered nothing a GM could act on, and the "Called" column
+    // and the witch tracks replaced it.
     const dd = Array.from({ length: 6 }, (_, i) => ({
       face: i + 1,
       count: rolls.filter(r => r.darkestDie === i + 1).length
@@ -1330,7 +1353,6 @@ export class SessionLog extends Application {
         .map(([who, list]) => ({ who, ...tally(list) }))
         .sort((a, b) => b.total - a.total),
       darkestDie: dd,
-      onesRolled: dd[0].count,
       byTaskRating: Object.values(ratings)
         .sort((a, b) => a.taskRating - b.taskRating)
         .map(r => ({ ...r, successPct: Math.round(100 * r.success / r.count) }))
@@ -1474,12 +1496,20 @@ export class SessionLog extends Application {
       // module exactly as the chat history does, so nothing needs pasting.
       // Pasting stays as the fallback for a log the module has not caught up
       // with, or a route from another table.
+      // Say what pressing it will actually DO. The module's route overlaps
+      // whatever was logged live since the last clear, and those legs are
+      // kept rather than duplicated -- so "78 movements" alone would promise
+      // a restore that mostly skips.
       const savedNote = saved
         ? `<p>The content module carries a saved route of
              <strong>${saved.rows}</strong> movement${saved.rows === 1 ? '' : 's'}` +
           (saved.problems.length
             ? `, though ${saved.problems.length} row(s) name a place this map does not have.`
-            : '.') + `</p>`
+            : '.') + `</p>` +
+          (saved.covered
+            ? `<p class="hint">${saved.covered} of them are already in this log from play and
+                 will be kept as recorded; <strong>${saved.fresh}</strong> would be added.</p>`
+            : '')
         : `<p class="hint">The content module carries no saved route. Export a session
              log and run <code>build_route_history.py</code> to put one there.</p>`;
 
@@ -1497,7 +1527,9 @@ export class SessionLog extends Application {
         buttons: {
           saved: {
             icon: '<i class="fas fa-box-archive"></i>',
-            label: saved ? `Restore ${saved.rows} from module` : 'Nothing saved',
+            label: saved
+              ? (saved.covered ? `Restore ${saved.fresh} from module` : `Restore ${saved.rows} from module`)
+              : 'Nothing saved',
             callback: async () => {
               if (!saved) {
                 ui.notifications.warn('No saved route in the content module.');
@@ -1591,7 +1623,7 @@ export class SessionLog extends Application {
 
   /** Dump the log as Markdown, for pasting into notes or a map tool. */
   _export() {
-    const { moves, route, routes, multipleGroups, stats, transgressions } = this.getData();
+    const { moves, route, routes, multipleGroups, stats, transgressions, witchTracks } = this.getData();
     const lines = ['# Darkest Woods — session log', ''];
 
     // One path per group once the party has split. Exporting the merged
@@ -1635,11 +1667,17 @@ export class SessionLog extends Application {
       stats.byCharacter.forEach(c => {
         lines.push(`| ${c.who} | ${c.total} | ${c.success} (${c.successPct}%) | ${c.partial} | ${c.failure} | ${c.calledWoods} |`);
       });
-      lines.push('', `Darkest Die 1s rolled: **${stats.onesRolled}**`);
-      if (stats.overall.calledWoods) {
-        lines.push(`Called upon the woods: **${stats.overall.calledWoods}** `
-          + `(each one a Doom and a transgression)`);
-      }
+      // The 0.47.4 change that replaced "Darkest 1s" with the Called count in
+      // the window and the credits missed this export, which went on printing
+      // it.
+      lines.push('', `Called upon the woods: **${stats.overall.calledWoods}** `
+        + `(each one a Doom and a transgression)`);
+      lines.push('');
+    }
+
+    if (witchTracks.length) {
+      lines.push('## The woods, roused', '', '| Witch | Transgressions |', '|---|---|');
+      witchTracks.forEach(w => lines.push(`| ${w.witch} | ${w.level} |`));
       lines.push('');
     }
 

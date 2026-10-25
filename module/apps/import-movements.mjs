@@ -44,6 +44,59 @@ function parseGameTime(cell) {
   };
 }
 
+/**
+ * The stretch of game time an entry occupies, as [start, end) in whole
+ * minutes, or null when it is undated and so cannot be compared.
+ *
+ * Departure to arrival, at least a minute wide so a zero-length hop still
+ * occupies its moment. A fixed-time region stores a phase label rather than a
+ * clock reading; that places at the start of its day, as everywhere else.
+ */
+export function spanOf(e) {
+  const at = (day, time) => {
+    if (day == null || day === '') return null;
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(time ?? ''));
+    return (Number(day) * 1440) + (m ? (Number(m[1]) * 60) + Number(m[2]) : 0);
+  };
+  const end = at(e.day, e.time);
+  const start = at(e.departDay ?? e.day, e.departTime ?? e.time);
+  if (end == null || start == null) return null;
+  const a = Math.min(start, end);
+  return [a, Math.max(end, start, a + 1)];
+}
+
+/**
+ * Split saved rows into those the log still needs and those it already has.
+ *
+ * A restore used to remove only what an EARLIER restore wrote, and keep every
+ * leg the system had logged live. That is right when the log was wiped -- the
+ * case this was built for -- and wrong the moment play resumes: the module's
+ * route grows every session from the same chat exports the live log was
+ * recorded alongside, so restoring again re-added each of those legs a second
+ * time. A world restored after a clear and then played for three sessions
+ * held sixty live legs that a restore would have doubled.
+ *
+ * So a saved row is written only where the log has nothing live for that
+ * stretch of game time. Live entries win: they carry the group, the distance
+ * and the pace, which the export cannot. The test is overlap rather than
+ * equality because the two disagree on granularity -- a night the travel tool
+ * logged as seven separate waits is ONE stay in the saved route.
+ */
+export function uncoveredRows(rows, liveEntries) {
+  const spans = (liveEntries ?? [])
+    .filter(e => e.kind === 'move' && !e.importTag)
+    .map(spanOf)
+    .filter(Boolean);
+  const fresh = [];
+  let covered = 0;
+  for (const r of rows) {
+    const s = spanOf(r);
+    if (s && spans.some(([b0, b1]) => s[0] < b1 && b0 < s[1])) { covered++; continue; }
+    fresh.push(r);
+  }
+  return { fresh, covered };
+}
+
 /** "1m", "2h", "2h 30m", "8h", "3h 15m" -> minutes. */
 function parseTook(cell) {
   const s = String(cell || '').trim();
@@ -189,7 +242,7 @@ export const MovementImport = {
         day: r.day, time: r.time,
       });
     }
-    if (dryRun) return { rows: rows.length, problems };
+    if (dryRun) return MovementImport._preview(rows, problems);
     return MovementImport._write(rows, problems);
   },
 
@@ -197,7 +250,8 @@ export const MovementImport = {
    * Write the parsed rows into the session log.
    *
    * Idempotent: anything a previous run wrote is removed first, so a corrected
-   * export can simply be pasted again.
+   * export can simply be pasted again -- and anything the log already holds
+   * from live play is kept rather than duplicated (see uncoveredRows).
    */
   async apply(markdown, { mapData, dryRun = false } = {}) {
     if (!game.user.isGM) {
@@ -211,13 +265,21 @@ export const MovementImport = {
       ui.notifications.error('No movements found. Paste the whole exported log, including its Movements table.');
       return { rows: 0, problems };
     }
-    if (dryRun) return { rows: rows.length, problems };
+    if (dryRun) return MovementImport._preview(rows, problems);
     return MovementImport._write(rows, problems);
   },
 
+  /** What a restore WOULD do, for the dialog. Writes nothing. */
+  _preview(rows, problems = []) {
+    const { fresh, covered } = uncoveredRows(rows, SessionLog.getLog().entries);
+    return { rows: rows.length, fresh: fresh.length, covered, problems };
+  },
+
   /** The shared write, used by both the pasted and the saved route. */
-  async _write(rows, problems = []) {
+  async _write(allRows, problems = []) {
     const removed = await SessionLog.remove(e => e.importTag === TAG);
+    // Read AFTER the removal, so only genuinely live entries can cover a row.
+    const { fresh: rows, covered } = uncoveredRows(allRows, SessionLog.getLog().entries);
 
     // Ordered `t` values a second apart, ending now. The credits bracket rolls
     // against `t`, so the legs must at least run in the right order; the game
@@ -242,11 +304,14 @@ export const MovementImport = {
 
     SessionLog.refresh();
     const note = problems.length ? ` ${problems.length} row(s) skipped.` : '';
+    const kept = covered
+      ? ` ${covered} already in the log from play — kept as recorded.`
+      : '';
     ui.notifications.info(
       `Restored ${rows.length} movement${rows.length === 1 ? '' : 's'}` +
-      `${removed ? `, replacing ${removed}` : ''}.${note}`);
+      `${removed ? `, replacing ${removed}` : ''}.${kept}${note}`);
     if (problems.length) console.warn('darkest-system | movement import', problems);
-    return { rows: rows.length, removed, problems };
+    return { rows: rows.length, removed, covered, problems };
   },
 
   /** Remove everything this wrote. */

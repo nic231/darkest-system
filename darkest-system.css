@@ -5627,11 +5627,6 @@
   color: var(--darkest-text-muted, #9a9186);
 }
 
-.session-log-container .log-dd-row.is-one .log-dd-face {
-  color: var(--darkest-accent-light, #b9a6e0);
-  font-weight: bold;
-}
-
 .session-log-container .log-dd-bar {
   flex: 1;
   height: 12px;
@@ -5644,10 +5639,6 @@
   display: block;
   height: 100%;
   background: var(--darkest-purple, #4e3f6e);
-}
-
-.session-log-container .log-dd-row.is-one .log-dd-fill {
-  background: var(--darkest-accent-light, #b9a6e0);
 }
 
 .session-log-container .log-dd-count {

@@ -224,6 +224,9 @@ export function buildEvents(entries, moves) {
       where: t.region || null,
       who: t.witch || 'The woods',
       level: t.level,
+      // Which cycle of the track this level is on, so the tally can count
+      // past a wrap -- see SessionLog.witchTally.
+      loops: t.loops ?? null,
     });
   }
 
@@ -660,22 +663,19 @@ export class CreditsApp extends Application {
     // belongs beside the dice: the Darkest Die is only interesting because of
     // what it wakes, so a count of 1s said nothing a GM could act on, while
     // "the Isolating Pack is at 6" is the state of the campaign.
-    const byWitch = new Map();
-    for (const t of this._revealedTrans) {
-      const who = t.who || 'The woods';
-      // The LEVEL is the tally, not the number of entries -- a transgression
-      // track counts up, and level 6 IS six transgressions, however many rows
-      // recorded it.
-      const prev = byWitch.get(who) ?? 0;
-      byWitch.set(who, Math.max(prev, Number(t.level) || prev));
-    }
-    const trans = byWitch.size ? `
+    //
+    // The session log's own tally, on the slice revealed so far -- the same
+    // reasoning as _rollStats above. Counting the highest LEVEL alone froze at
+    // 10 the moment a track wrapped; the shared helper counts the cycles too.
+    const witches = SessionLog.witchTally(
+      this._revealedTrans.map(t => ({ witch: t.who, level: t.level, loops: t.loops })));
+    const trans = witches.length ? `
       <div class="credits-stat-head">The woods, roused</div>
       <table class="credits-stat-table credits-trans-table">
-        <tbody>${[...byWitch.entries()].map(([who, lvl]) => `
+        <tbody>${witches.map(({ witch, level }) => `
           <tr>
-            <td>${esc(who)}</td>
-            <td class="credits-stat-transgression">${esc(lvl)}</td>
+            <td>${esc(witch)}</td>
+            <td class="credits-stat-transgression">${esc(level)}</td>
           </tr>`).join('')}</tbody>
       </table>` : '';
 
